@@ -216,10 +216,20 @@ mod tests {
 
     #[test]
     fn data_dir_prefers_an_absolute_xdg_data_home() {
-        let home = PathBuf::from("/home/you");
+        // An absolute path is platform-shaped: `C:\…`/UNC on Windows, `/…`
+        // elsewhere — `is_absolute` is false for `/…` on Windows.
+        #[cfg(windows)]
+        let absolute = PathBuf::from(r"C:\custom\data");
+        #[cfg(not(windows))]
+        let absolute = PathBuf::from("/custom/data");
+        let home = PathBuf::from(if cfg!(windows) {
+            r"C:\Users\you"
+        } else {
+            "/home/you"
+        });
         assert_eq!(
-            data_dir(Some(OsString::from("/custom/data")), home.clone()),
-            PathBuf::from("/custom/data")
+            data_dir(Some(absolute.clone().into_os_string()), home.clone()),
+            absolute
         );
         // Relative values are discarded, per the XDG spec.
         assert_eq!(
@@ -227,8 +237,8 @@ mod tests {
             home.join(".local").join("share")
         );
         assert_eq!(
-            data_dir(None, home),
-            PathBuf::from("/home/you/.local/share")
+            data_dir(None, home.clone()),
+            home.join(".local").join("share")
         );
     }
 
