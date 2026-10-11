@@ -71,18 +71,14 @@
   balances or credit spend) previously rendered as a percentage across panel
   cells, card gauges, and popup rows. It now honors the headline and displays
   the value string, falling back to the percentage only when the value is empty.
-- **An empty menu-bar bar draws a visible capsule.** A 0% row used to
-  vanish against the dark menu bar — its bare track was all but invisible
-  there. It now draws the whole track at the remainder's strength, like the
-  popover's empty meter.
-- **Early-window weekly usage no longer triggers a false critical pace alert.**
-  In long reset windows (such as SuperGrok, Grok Bot, or Claude/Codex weekly),
-  normal session usage during the opening stretch of a cycle (< 15% elapsed,
-  e.g. the first ~25 hours of a week) previously pushed the ratio past 130%
-  and the absolute gap past 5 percentage points, marking the metric as critical
-  (flame icon, and run-out date). In the opening 15% of a window with at least
-  50% allowance remaining, accelerated usage now warns as "over" pace (yellow)
-  rather than a run-out crisis (#390).
+
+- **KDE plasmoid: a Claude Code session row no longer colours the vendor
+  card.** The card view took its accent from the worst severity of every
+  metric row, grouped or not, so a context session at 90% of its window
+  painted the Claude card critical while the quota windows sat at 29%. The
+  accent now applies the same partition the headline and the panel cells
+  do: ungrouped quota rows first, grouped rows standing in only when an
+  entry has nothing else.
 
 ## [1.34.0] — 2026-10-08
 
