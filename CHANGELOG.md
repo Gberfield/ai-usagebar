@@ -48,6 +48,38 @@
   the rule every other provider's plan and model placeholders already
   follow.
 
+- **An empty menu-bar bar draws a visible capsule.** A 0% row used to
+  vanish against the dark menu bar — its bare track was all but invisible
+  there. It now draws the whole track at the remainder's strength, like the
+  popover's empty meter.
+- **Early-window weekly usage no longer triggers a false critical pace alert.**
+  In long reset windows (such as SuperGrok, Grok Bot, or Claude/Codex weekly),
+  normal session usage during the opening stretch of a cycle (< 15% elapsed,
+  e.g. the first ~25 hours of a week) previously pushed the ratio past 130%
+  and the absolute gap past 5 percentage points, marking the metric as critical
+  (flame icon, and run-out date). In the opening 15% of a window with at least
+  50% allowance remaining, accelerated usage now warns as "over" pace (yellow)
+  rather than a run-out crisis (#390).
+
+- **Nous Research credit amounts no longer display a trailing decimal point.**
+  When a credit balance had a fractional remainder that rounded to zero within
+  six decimal places (such as floating-point residue near a whole number),
+  trimming trailing zeros stripped the digits but retained the decimal point,
+  displaying values like "1." or "0.". Trailing dots are now stripped so whole
+  and rounded credit values format cleanly.
+- **An empty menu-bar bar draws a visible capsule.** A 0% row used to
+  vanish against the dark menu bar — its bare track was all but invisible
+  there. It now draws the whole track at the remainder's strength, like the
+  popover's empty meter.
+- **Early-window weekly usage no longer triggers a false critical pace alert.**
+  In long reset windows (such as SuperGrok, Grok Bot, or Claude/Codex weekly),
+  normal session usage during the opening stretch of a cycle (< 15% elapsed,
+  e.g. the first ~25 hours of a week) previously pushed the ratio past 130%
+  and the absolute gap past 5 percentage points, marking the metric as critical
+  (flame icon, and run-out date). In the opening 15% of a window with at least
+  50% allowance remaining, accelerated usage now warns as "over" pace (yellow)
+  rather than a run-out crisis (#390).
+
 ## [1.34.0] — 2026-10-08
 
 ### Added
