@@ -118,6 +118,46 @@
   refresh, no retry, no `agy` spawn; every other 403 keeps the existing
   behavior (#405).
 
+- **Ollama Cloud credit-based Pro plans no longer show an empty quota.**
+  Fetch the documented `/api/balance` endpoint instead of `/api/usage`, which
+  now returns request/token history. Automatically detect monthly included
+  credits (such as Pro's $60 allowance) or legacy session/weekly limits.
+  Show remaining/allowance dollars and purchased credits, derive monthly
+  utilization from included credits, and preserve billing resets and actual
+  period lengths. Historical quota caches remain readable; usage-history
+  payloads are rejected rather than silently accepted as empty limits.
+
+- **Model Studio reads the Token Plan's monthly window, not just the 5-hour
+  and weekly ones.** The gateway's `per1MonthPercentage`/`per1MonthResetTime`
+  fields were already present on accounts that report no 5-hour or weekly
+  quota (the individual Token Plan is one such shape), but neither
+  ai-usagebar nor the upstream `bl` CLI parsed them, leaving those accounts
+  on "no usage windows reported". Two things were wrong and both are fixed:
+  the tolerant unwrap reproduced the CLI verbatim (`data.DataV2?.data?.data
+  ?? …` — starting from the outer `data` the dispatcher always emits, never
+  a bare top-level `DataV2`), and the monthly window is parsed, cached,
+  rendered and documented. The monthly window draws its own bar with the
+  exact reset countdown in the widget, TUI, report JSON and popover cards.
+  Like OpenCode Go's monthly, it keeps the reset but no pace glyph — the
+  cycle length is plan-dependent (28–31 days), so pacing would guess a
+  denominator. New `30d {mst_monthly_pct}%` default bar text and
+  `{mst_monthly_pct|reset|elapsed|pace|pace_indicator}` placeholders.
+
+- **Nous Research credit amounts no longer display a trailing decimal point.**
+  When a credit balance had a fractional remainder that rounded to zero within
+  six decimal places (such as floating-point residue near a whole number),
+  trimming trailing zeros stripped the digits but retained the decimal point,
+  displaying values like "1." or "0.". Trailing dots are now stripped so whole
+  and rounded credit values format cleanly.
+
+- **The placeholder reference covers Nous Research.** `docs/format-placeholders.md`
+  had a section for every provider except Nous, so `{nous_pct}`,
+  `{nous_renewal}`, `{nous_plan}` and the six credit placeholders were
+  discoverable only in the source. The new section states what each carries,
+  how credits are formatted, the default format, and which shared placeholders
+  alias them.
+
+
 ### Security
 
 - **Credential keyring lookups no longer inherit provider keys.** Antigravity's

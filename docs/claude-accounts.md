@@ -280,6 +280,12 @@ quits and reopens Claude Desktop when that account also has a Desktop profile.
 The star spins while the switch runs, and a failed switch turns it red with
 the reason in its tooltip.
 
+A card for an account that exists **only** in the Desktop app (saved with
+`ai-usagebar account add <label> --desktop`) carries the star too; it runs
+`account switch --desktop`, which quits Claude.app, moves the local history
+to that account, and reopens the app. Because the app restarts, arming the
+switch takes a second click.
+
 ### Side-by-side profiles
 
 Claude Desktop can be launched against an alternative profile with
