@@ -90,6 +90,11 @@
   do: ungrouped quota rows first, grouped rows standing in only when an
   entry has nothing else.
 
+
+- **Omarchy panel no longer logs a binding loop for the Flow layouts.** Both
+  provider-list and Cursor pool-toggle Flows bound `height` to
+  `childrenRect.height`, feeding their own geometry back through their content
+  rect; they now bind `implicitHeight`.
 ## [1.34.0] — 2026-10-08
 
 ### Added
