@@ -12,11 +12,122 @@
   logins, so a Desktop-only account could not be switched from the menu bar
   as the old Swift app's Preferences allowed.
 
+- **Ollama Cloud provider mark in the Omarchy bar and panel.** Ship the
+  monochrome Lobe Icons SVG under MIT, with source provenance and the
+  existing LobeHub licence notice. The same mark is used for custom
+  providers that declare `brand = "ollama"`.
+
+
+- **OpenCode Go reads the official CLI's own credential.** A signed-in OpenCode
+  CLI (`opencode auth login`) now shows up on its own: the key is read
+  read-only from `~/.local/share/opencode/auth.json` (`$XDG_DATA_HOME`
+  honoured; `[opencode-go] auth_paths` overrides the file), and an explicit
+  `OPENCODE_GO_API_KEY` / `[opencode-go] api_key` still wins. Detection, waybar,
+  and the TUI follow the same resolution, and the CLI file is never written,
+  copied, or cached.
+
 - **Claude Code mod to switch the Claude Desktop account** (`claude-code-mod/`).
   `/claude-account` in a Claude Code session opens a pane with the saved
   Desktop accounts, each with its quota windows, and switches the app with
   `account switch --desktop` after a dry run. The switch is handed to launchd
   so it outlives Claude.app quitting, which takes the session down with it.
+### Changed
+
+- **Meters fill with what is consumed in both readings.** PR #389 made the
+  bar geometry follow the Show Usage As toggle, so in Left mode the fill
+  painted what *remained* while the color and the verdict kept speaking about
+  consumption — SuperGrok's "88% left" drew as an almost-full red bar that
+  read as nearly spent, and the monochrome menu-bar bars told the story
+  backwards too: the healthiest windows carried the most ink while a spent
+  one shrank to a barely visible track. The fill is now always the consumed
+  share on the popover and the compact bars alike; the Used/Left toggle reads
+  only the headline number, the chips, and the tooltip, and the pace tick
+  keeps sitting at the elapsed share of the window.
+
+- **Ollama Cloud quota now comes from `/api/balance`.** `/api/usage` returned
+  request and token history rather than quota, so the provider reads the
+  documented balance route instead. Both account shapes are served there —
+  verified against a real capture from a session/weekly account — so existing
+  quota users see no change beyond the source.
+
+### Fixed
+
+- **Windows tray icon no longer turns red for a Claude Code session row.**
+  The icon takes the hottest metric of every entry, and that count
+  included the context session rows under the Claude entry's "Sessions"
+  heading, so a session at 90% of its context window painted the tray
+  critical while the quota windows sat at 29%. The icon now ranks the
+  ungrouped quota windows first, grouped rows standing in only when an
+  entry has nothing else, the partition the Omarchy, Mint and KDE
+  frontends and the macOS menu bar already apply.
+
+- **Custom format placeholders escape the remaining API-controlled text.**
+  Claude's `{plan}` (built from the credentials file) and `{scoped_model}`
+  (the API's model display name), Codex's `{oai_credit_balance}` (kept as
+  the string OpenAI sent when it is not a plain number) and Ollama's
+  `{oll_cost}` were substituted into the bar text and a custom
+  `--tooltip-format` unescaped, and Ollama's default tooltip printed the
+  activity period raw. All of them reach Waybar's Pango markup, where an `&`
+  or `<` breaks the module. They are now escaped at the projection boundary,
+  the rule every other provider's plan and model placeholders already
+  follow.
+
+- **Omarchy settings view localizes Lyceum's billing credits note.**
+  The Lyceum API key card note ("billing credits") was missing from the
+  Omarchy I18n dictionary and fell back to raw English. It is now mapped
+  and localized across all supported languages (ru, pt-BR, ko, es, and en).
+
+- **An empty menu-bar bar draws a visible capsule.** A 0% row used to
+  vanish against the dark menu bar — its bare track was all but invisible
+  there. It now draws the whole track at the remainder's strength, like the
+  popover's empty meter.
+- **Early-window weekly usage no longer triggers a false critical pace alert.**
+  In long reset windows (such as SuperGrok, Grok Bot, or Claude/Codex weekly),
+  normal session usage during the opening stretch of a cycle (< 15% elapsed,
+  e.g. the first ~25 hours of a week) previously pushed the ratio past 130%
+  and the absolute gap past 5 percentage points, marking the metric as critical
+  (flame icon, and run-out date). In the opening 15% of a window with at least
+  50% allowance remaining, accelerated usage now warns as "over" pace (yellow)
+  rather than a run-out crisis (#390).
+
+- **KDE plasmoid displays value headlines as their value.** A metric declaring
+  `headline: "value"` with a non-null consumed percentage (such as prepaid
+  balances or credit spend) previously rendered as a percentage across panel
+  cells, card gauges, and popup rows. It now honors the headline and displays
+  the value string, falling back to the percentage only when the value is empty.
+
+- **KDE plasmoid: a Claude Code session row no longer colours the vendor
+  card.** The card view took its accent from the worst severity of every
+  metric row, grouped or not, so a context session at 90% of its window
+  painted the Claude card critical while the quota windows sat at 29%. The
+  accent now applies the same partition the headline and the panel cells
+  do: ungrouped quota rows first, grouped rows standing in only when an
+  entry has nothing else.
+
+
+- **Omarchy panel no longer logs a binding loop for the Flow layouts.** Both
+  provider-list and Cursor pool-toggle Flows bound `height` to
+  `childrenRect.height`, feeding their own geometry back through their content
+  rect; they now bind `implicitHeight`.
+
+- **Antigravity's 'plan has no quota' message reaches the user again.** The
+  friendly subscription 403 (#256) was misclassified as an auth rejection on
+  the full remote path, so a free-plan account watched a token refresh burn
+  and then read 'session expired' — the re-sign-in-for-nothing the fix was
+  meant to prevent. The subscription verdict now passes straight through, no
+  refresh, no retry, no `agy` spawn; every other 403 keeps the existing
+  behavior (#405).
+
+### Security
+
+- **Credential keyring lookups no longer inherit provider keys.** Antigravity's
+  saved-session read spawns `secret-tool` (Linux) / `security` (macOS), and the
+  Cursor database, Claude Desktop safe-storage, and Anthropic keychain reads,
+  writes and deletes spawn `security` — each child inherited every vendor
+  secret variable of this process (`ZAI_API_KEY`, `OPENROUTER_API_KEY`, the
+  named accounts' `api_key_env` names) it has no use for. They are dropped
+  before the lookup runs, the scrub the Grok Bot keyring lookups, `claude`,
+  `codex login`, `gh` and `agy` already apply (#402).
 
 ## [1.34.0] — 2026-10-08
 
@@ -176,14 +287,6 @@
   rename on either side fails rather than leaving the two agreeing about a
   placeholder nothing produces.
 
-
-- **Antigravity's 'plan has no quota' message reaches the user again.** The
-  friendly subscription 403 (#256) was misclassified as an auth rejection on
-  the full remote path, so a free-plan account watched a token refresh burn
-  and then read 'session expired' — the re-sign-in-for-nothing the fix was
-  meant to prevent. The subscription verdict now passes straight through, no
-  refresh, no retry, no `agy` spawn; every other 403 keeps the existing
-  behavior (#405).
 ### Security
 
 - **The tray's self-update stops reading a response once it passes its size
