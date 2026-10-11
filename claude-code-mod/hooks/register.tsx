@@ -8,8 +8,7 @@ type Engine = EngineInterface
 
 const PANE = 'claude-account'
 const COMMAND = 'claude-account'
-const BINARIES = ['ai-usagebar', 'ai-usagebar-tray']
-const APP_DIRS = ['/Applications/AI Usage.app/Contents/MacOS', '~/Applications/AI Usage.app/Contents/MacOS']
+const BIN = 'ai-usagebar'
 const FIXED_DIRS = ['~/.cargo/bin', '/opt/homebrew/bin', '/usr/local/bin']
 
 const desktop = atom({ plugin: 'desktop-accounts', key: 'desktop' } as const, null)
@@ -28,18 +27,16 @@ async function resolveBin($: Engine): Promise<string | undefined> {
   if (bin) return bin
   const h = await home($)
   const path = ((await $.env.get('PATH')) ?? '').split(':').filter(Boolean)
-  const dirs = [...path, ...FIXED_DIRS, ...APP_DIRS].map(d => d.replace(/^~(?=\/)/, h))
-  for (const name of BINARIES) {
-    for (const dir of dirs) {
-      if (await $.fs.exists(`${dir}/${name}`)) return (bin = `${dir}/${name}`)
-    }
+  const dirs = [...path, ...FIXED_DIRS].map(d => d.replace(/^~(?=\/)/, h))
+  for (const dir of dirs) {
+    if (await $.fs.exists(`${dir}/${BIN}`)) return (bin = `${dir}/${BIN}`)
   }
   return undefined
 }
 
 async function cli($: Engine, argv: string[]) {
   const b = await resolveBin($)
-  if (!b) throw new Error('ai-usagebar not found (PATH, ~/.cargo/bin, /Applications/AI Usage.app)')
+  if (!b) throw new Error('ai-usagebar not found (PATH, ~/.cargo/bin, /opt/homebrew/bin, /usr/local/bin)')
   return $.process.run([b, ...argv], { timeoutMs: 60_000 })
 }
 
@@ -69,22 +66,25 @@ async function refresh($: Engine): Promise<DesktopStatus | null> {
 async function loadQuota($: Engine): Promise<void> {
   try {
     const out = await cli($, ['usage', '--json'])
-    if (out.exitCode !== 0) return
+    if (out.exitCode !== 0) throw new Error(out.stderr.trim() || `exit ${out.exitCode}`)
     const parsed = JSON.parse(out.stdout) as { entries?: unknown } | unknown[]
     const entries = (Array.isArray(parsed) ? parsed : (parsed.entries as unknown[]) ?? []) as {
       id?: string
-      sections?: { type?: string; label?: string; percent?: number; resets_at?: string | null }[]
+      sections?: { type?: string; label?: string; percent?: number; reset_at?: string | null }[]
     }[]
     const byLabel: Record<string, QuotaMetric[]> = {}
     for (const entry of entries) {
       if (!entry.id?.startsWith('anthropic@')) continue
       byLabel[entry.id.slice('anthropic@'.length)] = (entry.sections ?? [])
         .filter(s => s.type === 'metric' && typeof s.percent === 'number' && s.label)
-        .map(s => ({ label: s.label as string, percent: s.percent as number, resets_at: s.resets_at ?? null }))
+        .map(s => ({ label: s.label as string, percent: s.percent as number, reset_at: s.reset_at ?? null }))
     }
     await update($, quota, () => byLabel)
-  } catch {
-    // Quota is a nicety beside the switch; the rows stay without it.
+  } catch (err) {
+    // Quota is a nicety beside the switch; the rows stay without it, but say
+    // so instead of leaving "reading quota…" up forever.
+    await update($, quota, () => ({}))
+    await update($, problem, () => `usage failed: ${err instanceof Error ? err.message : err}`)
   }
 }
 
@@ -147,7 +147,6 @@ export const register: Register = on => {
       description: 'Switch which account the Claude Desktop app is signed in as',
     })
     void refresh($)
-    void loadQuota($)
     return next(e)
   })
 
@@ -229,7 +228,7 @@ export const register: Register = on => {
                     <Text dimColor>{short(m.label)}</Text>
                     <Text color={m.percent >= 90 ? 'red' : m.percent >= 70 ? 'yellow' : 'green'}>{bar(m.percent)}</Text>
                     <Text>{Math.round(m.percent)}%</Text>
-                    {until(m.resets_at, now) && <Text dimColor>↻ {until(m.resets_at, now)}</Text>}
+                    {until(m.reset_at, now) && <Text dimColor>↻ {until(m.reset_at, now)}</Text>}
                   </Box>
                 ))}
               </Box>

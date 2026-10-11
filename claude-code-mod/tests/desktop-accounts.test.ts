@@ -20,17 +20,40 @@ const STATUS = {
   cli: {},
 }
 
+// Mirrors what `ai-usagebar usage --json` emits (src/report.rs `json_rows`):
+// metric sections are `{ type: 'metric', label, percent, value, detail,
+// headline, severity, reset_at, window_secs? }` — `reset_at`, not `resets_at`.
 const USAGE = {
+  schema_version: 1,
+  primary: 'anthropic@gmail',
   entries: [
     {
       id: 'anthropic@gmail',
+      name: 'Claude',
+      display_name: 'Claude (gmail)',
+      short_name: 'claude',
+      icon: '◐',
+      plan: 'Pro',
+      status: 'ready',
+      error: null,
+      stale: false,
+      fetched_at: '2026-10-10T12:00:00Z',
+      metrics: [
+        { label: 'Session (5h)', percent: 2, value: '2%', detail: '', headline: 'percent', severity: 'low', reset_at: null, window_secs: 18000 },
+        { label: 'Weekly (7d)', percent: 93, value: '93%', detail: '', headline: 'percent', severity: 'critical', reset_at: null, window_secs: 604800 },
+      ],
       sections: [
-        { type: 'metric', label: 'Session (5h)', percent: 2, resets_at: null },
-        { type: 'metric', label: 'Weekly (7d)', percent: 93, resets_at: null },
-        { type: 'note', label: 'plan' },
+        { type: 'metric', label: 'Session (5h)', percent: 2, value: '2%', detail: '', headline: 'percent', severity: 'low', reset_at: null, window_secs: 18000 },
+        { type: 'metric', label: 'Weekly (7d)', percent: 93, value: '93%', detail: '', headline: 'percent', severity: 'critical', reset_at: null, window_secs: 604800 },
+        { type: 'text', label: 'plan', value: 'Pro' },
       ],
     },
-    { id: 'openai@gmail', sections: [{ type: 'metric', label: 'Weekly', percent: 50 }] },
+    {
+      id: 'openai@gmail',
+      sections: [
+        { type: 'metric', label: 'Weekly', percent: 50, value: '50%', detail: '', headline: 'percent', severity: 'mid', reset_at: null },
+      ],
+    },
   ],
 }
 
@@ -150,12 +173,14 @@ test('confirming launches the switch as a detached launchd job with the label as
   await pane.unmount()
 })
 
-test('falls back to the AI Usage app bundle tray binary', async ($, on) => {
-  const tray = '/Applications/AI Usage.app/Contents/MacOS/ai-usagebar-tray'
-  const w = world(on, [tray])
+test('says so when ai-usagebar is not installed, instead of a silent empty quota', async ($, on) => {
+  const w = world(on, [])
   await start($)
   const pane = await open($, 'terminal')
-  expect(w.argvs[0]).toEqual([tray, 'account', 'status', '--json'])
+  expect(await pane.find({ type: 'Text', text: /ai-usagebar not found/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '  reading quota…' })).toBeUndefined()
+  expect(await pane.find({ key: 'switch:gmail' })).toBeUndefined()
+  expect(w.argvs).toEqual([])
   await pane.unmount()
 })
 

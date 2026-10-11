@@ -176,6 +176,14 @@
   rename on either side fails rather than leaving the two agreeing about a
   placeholder nothing produces.
 
+
+- **Antigravity's 'plan has no quota' message reaches the user again.** The
+  friendly subscription 403 (#256) was misclassified as an auth rejection on
+  the full remote path, so a free-plan account watched a token refresh burn
+  and then read 'session expired' — the re-sign-in-for-nothing the fix was
+  meant to prevent. The subscription verdict now passes straight through, no
+  refresh, no retry, no `agy` spawn; every other 403 keeps the existing
+  behavior (#405).
 ### Security
 
 - **The tray's self-update stops reading a response once it passes its size

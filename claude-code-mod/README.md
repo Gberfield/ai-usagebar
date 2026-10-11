@@ -8,8 +8,8 @@ quota beside it and drives `ai-usagebar account switch --desktop`.
 
 - macOS with the Claude Desktop app.
 - Claude Code **2.1.287+**, the first version that loads mods.
-- `ai-usagebar` installed, as AI Usage.app in `/Applications` or the CLI on
-  `PATH` / `~/.cargo/bin`.
+- `ai-usagebar` installed on `PATH` or in `~/.cargo/bin` (Homebrew's
+  `/opt/homebrew/bin` and `/usr/local/bin` are also checked).
 - At least one Desktop account saved:
 
   ```bash
@@ -69,9 +69,11 @@ mod hands the switch to launchd instead:
 - **First run:** macOS may ask once to let the switch control Claude. If you deny it, `ai-usagebar` quits the app with signals instead.
 
 `ai-usagebar` is looked up in `$PATH`, then `~/.cargo/bin`, `/opt/homebrew/bin`,
-`/usr/local/bin`, then `/Applications/AI Usage.app/Contents/MacOS` and
-`~/Applications/AI Usage.app/Contents/MacOS`. It tries `ai-usagebar` before
-`ai-usagebar-tray` and passes the absolute path, since launchd's `PATH` is minimal.
+and `/usr/local/bin`, and the absolute path is passed to launchd, since
+launchd's `PATH` is minimal. The AI Usage.app bundle's `ai-usagebar-tray`
+binary is deliberately not used: the mod drives the supported `ai-usagebar`
+CLI only, and says so when it is not installed rather than showing an empty
+quota.
 
 ## Limits
 

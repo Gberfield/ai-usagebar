@@ -13,7 +13,7 @@ export type DesktopStatus = {
 export type QuotaMetric = {
   label: string
   percent: number
-  resets_at: string | null
+  reset_at: string | null
 }
 
 /** The switch being confirmed: its label and the dry run's plan, once it has one. */

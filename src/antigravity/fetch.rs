@@ -593,8 +593,10 @@ impl Renewal<'_> {
 ///
 /// A rejected token gets one refresh and one retry, unless it was refreshed a
 /// moment ago — then the rejection is Google's verdict on the session, and
-/// the user has to sign in again. The plan name is best-effort: the summary is
-/// the figure, and a missing name must not cost it.
+/// the user has to sign in again. A plan-verdict 403 (`SUBSCRIPTION_REQUIRED`,
+/// #405) is not a rejection: it is passed through untouched, without spending
+/// a refresh or an `agy` run on a session that is fine. The plan name is
+/// best-effort: the summary is the figure, and a missing name must not cost it.
 async fn fetch_remote(
     client: &reqwest::Client,
     cache: &Cache,
@@ -622,6 +624,9 @@ async fn fetch_remote(
         };
 
     let quota = match cloud::fetch_quota(client, endpoints, &access.value).await {
+        // The plan is the problem, not the session: refreshing or running
+        // `agy` would only repeat the same verdict.
+        Err(e) if cloud::is_no_plan_quota(&e) => return Err(e),
         Err(e) if is_auth_rejection(&e) && !access.just_refreshed => {
             access = if oauth.is_none() {
                 let Some(renewed) = renewal.renewed(cache, now).await else {
@@ -635,7 +640,9 @@ async fn fetch_remote(
             cloud::fetch_quota(client, endpoints, &access.value)
                 .await
                 .map_err(|e| {
-                    if is_auth_rejection(&e) {
+                    if cloud::is_no_plan_quota(&e) {
+                        e
+                    } else if is_auth_rejection(&e) {
                         session_expired()
                     } else {
                         e
@@ -3323,6 +3330,103 @@ mod tests {
             .await
             .expect_err("rejected after refresh");
 
+        token.assert_async().await;
+        assert!(matches!(err, AppError::Credentials(_)), "{err}");
+        assert!(err.to_string().contains("sign in again"), "{err}");
+    }
+
+    /// #405: a plan without Antigravity quota is Google's verdict on the plan,
+    /// not on the session. The friendly message must reach the user as-is —
+    /// no refresh round-trip, no `agy` run, no "sign in again" detour.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_subscription_403_surfaces_the_plan_message_without_a_refresh_or_agy_run() {
+        let mut server = mockito::Server::new_async().await;
+        let eps = endpoints(&server);
+        let quota = server
+            .mock("POST", "/daily/quota")
+            .match_header("authorization", "Bearer KEYRING-AT")
+            .with_status(403)
+            .with_body(
+                r#"{"error":{"code":403,"status":"PERMISSION_DENIED","details":
+                     [{"reason":"SUBSCRIPTION_REQUIRED","domain":"cloud.google.com"}]}}"#,
+            )
+            .expect(1)
+            .create_async()
+            .await;
+        let prod = server
+            .mock("POST", "/prod/quota")
+            .expect(0)
+            .create_async()
+            .await;
+        let token = token_mock(&mut server).expect(0).create_async().await;
+        let (td, cache) = fixture();
+        let file = td.path().join("credential");
+        std::fs::write(&file, keyring_blob(VALID, true)).unwrap();
+        let runs = td.path().join("runs");
+        let agy = fake_agy(td.path(), &runs, &file, &keyring_blob(VALID, true));
+
+        let err = run_without_oauth(
+            &cache,
+            RemoteOverride {
+                credential: SavedCredential::File(&file),
+                endpoints: Some(&eps),
+                local_bases: Some(vec![]),
+                agy: super::super::agy::AgyCommand::At(agy),
+            },
+        )
+        .await
+        .expect_err("a plan without quota is an error, not a snapshot");
+
+        quota.assert_async().await;
+        prod.assert_async().await;
+        token.assert_async().await;
+        match err {
+            AppError::Http { status, body } => {
+                assert_eq!(status, 403);
+                assert!(body.contains("paid subscription"), "{body}");
+            }
+            other => panic!("expected Http, got {other:?}"),
+        }
+        assert!(
+            !runs.exists(),
+            "a subscription verdict must not spawn `agy`"
+        );
+    }
+
+    /// #405: the pass-through is exactly the subscription verdict — any other
+    /// 403 is still a rejected token: one refresh, one retry, then the session
+    /// verdict.
+    #[tokio::test]
+    async fn a_non_subscription_403_keeps_the_refresh_and_retry_behavior() {
+        let mut server = mockito::Server::new_async().await;
+        let eps = endpoints(&server);
+        let rejected = server
+            .mock("POST", "/daily/quota")
+            .match_header("authorization", "Bearer KEYRING-AT")
+            .with_status(403)
+            .with_body(r#"{"error":{"message":"acl detail"}}"#)
+            .expect(1)
+            .create_async()
+            .await;
+        let retried = server
+            .mock("POST", "/daily/quota")
+            .match_header("authorization", "Bearer NEW-AT")
+            .with_status(403)
+            .with_body(r#"{"error":{"message":"acl detail"}}"#)
+            .expect(1)
+            .create_async()
+            .await;
+        let token = token_mock(&mut server).expect(1).create_async().await;
+        let blob = keyring_blob(VALID, true);
+        let (_td, cache) = fixture();
+
+        let err = run(&cache, remote(&blob, &eps), Duration::ZERO)
+            .await
+            .expect_err("still a rejected session");
+
+        rejected.assert_async().await;
+        retried.assert_async().await;
         token.assert_async().await;
         assert!(matches!(err, AppError::Credentials(_)), "{err}");
         assert!(err.to_string().contains("sign in again"), "{err}");
