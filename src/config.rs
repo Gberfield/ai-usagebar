@@ -88,8 +88,9 @@ pub struct UiConfig {
     /// `None` → fall back to anthropic for backward compatibility.
     pub primary: Option<VendorId>,
     /// Which vendors the Overview shows (the TUI's first tab and the macOS
-    /// menu-bar's top section), in this order. `None` → every enabled vendor,
-    /// in the canonical order.
+    /// menu-bar's top section), in this order. The TUI tab bar leads with the
+    /// same list; enabled vendors left off it follow in the canonical order.
+    /// `None` → every enabled vendor, in the canonical order.
     pub overview_vendors: Option<Vec<VendorId>>,
     /// Layout style for vendor navigation in the TUI: sidebar | navbar | none.
     pub vendor_box: Option<VendorBoxStyle>,

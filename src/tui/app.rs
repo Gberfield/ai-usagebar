@@ -173,6 +173,27 @@ pub fn tabs_with_desktop(config: &Config) -> Vec<TabId> {
     build_tabs(config, &desktop_profile_labels(config))
 }
 
+/// Enabled vendors in `[ui] overview_vendors` order. Unlisted vendors keep
+/// the canonical order and follow the listed ones. Unset means canonical.
+fn vendors_for_tabs(config: &Config) -> Vec<VendorId> {
+    let enabled = config.enabled_vendors();
+    let Some(wanted) = config.ui.overview_vendors.as_ref() else {
+        return enabled;
+    };
+    let mut ordered = Vec::with_capacity(enabled.len());
+    for vendor in wanted {
+        if enabled.contains(vendor) && !ordered.contains(vendor) {
+            ordered.push(*vendor);
+        }
+    }
+    for vendor in enabled {
+        if !ordered.contains(&vendor) {
+            ordered.push(vendor);
+        }
+    }
+    ordered
+}
+
 /// Core expansion, parameterized on the Desktop account labels so it stays pure
 /// and unit-testable. Desktop accounts follow the CLI accounts and count toward
 /// "Anthropic has accounts" for the default-tab suppression.
@@ -188,7 +209,7 @@ pub fn tabs_with_desktop(config: &Config) -> Vec<TabId> {
 fn build_tabs(config: &Config, desktop_labels: &[String]) -> Vec<TabId> {
     let desktop_set: HashSet<&str> = desktop_labels.iter().map(String::as_str).collect();
     let mut tabs = Vec::new();
-    for vendor in config.enabled_vendors() {
+    for vendor in vendors_for_tabs(config) {
         if vendor == VendorId::Anthropic {
             let accounts: Vec<_> = config
                 .anthropic
@@ -1241,6 +1262,40 @@ mod tests {
                 TabId::vendor(VendorId::Anthropic),
                 TabId::account("work"),
                 TabId::account("personal"),
+            ]
+        );
+    }
+
+    #[test]
+    fn tabs_follow_overview_vendors_and_keep_the_rest() {
+        let mut config = Config::default();
+        config.zai.enabled = false;
+        config.openrouter.enabled = false;
+        config.commandcode.enabled = false;
+        config.supergrok.enabled = true;
+        config.antigravity.enabled = true;
+        config.opencode_go.enabled = true;
+        config.copilot.enabled = true;
+        config.ui.overview_vendors = Some(vec![
+            VendorId::Anthropic,
+            VendorId::Openai,
+            VendorId::Supergrok,
+            VendorId::OpenCodeGo,
+            VendorId::Antigravity,
+        ]);
+        let vendors: Vec<VendorId> = tabs_from_config(&config)
+            .iter()
+            .filter_map(TabId::vendor_id)
+            .collect();
+        assert_eq!(
+            vendors,
+            vec![
+                VendorId::Anthropic,
+                VendorId::Openai,
+                VendorId::Supergrok,
+                VendorId::OpenCodeGo,
+                VendorId::Antigravity,
+                VendorId::Copilot,
             ]
         );
     }

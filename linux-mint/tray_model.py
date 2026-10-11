@@ -95,6 +95,37 @@ def connection_help(entry, language=None):
               "A autenticação deste provedor ainda não está disponível. Consulte o guia de autenticação.", language)
 
 
+def entry_vendor(entry):
+    entry_id = str(entry.get("id") or "")
+    slug = entry_id.split("@", 1)[0]
+    return slug or str(entry.get("name") or "")
+
+
+def dashboard_entries(data):
+    """Report order, with `overview_vendors` leading when the report carries it.
+
+    Without that list the configured `primary` stays first, which is what the
+    dashboard did before the list existed.
+    """
+    entries = list((data or {}).get("entries") or [])
+    order = (data or {}).get("overview_vendors") or []
+    if isinstance(order, list) and order:
+        return ordered_entries(entries, [item for item in order if isinstance(item, str)])
+    primary = (data or {}).get("primary")
+    entries.sort(key=lambda entry: (entry.get("id") != primary and entry.get("name") != primary))
+    return entries
+
+
+def ordered_entries(entries, order):
+    """Listed vendors first, in list order. Unlisted vendors keep report order."""
+    if not order:
+        return list(entries)
+    rank = {slug: index for index, slug in enumerate(order)}
+    indexed = list(enumerate(entries))
+    indexed.sort(key=lambda pair: (rank.get(entry_vendor(pair[1]), len(rank)), pair[0]))
+    return [entry for _, entry in indexed]
+
+
 def report_sections(entry):
     """Keep the report order and expose metric subgroups as headings."""
     sections = entry.get("sections") or [

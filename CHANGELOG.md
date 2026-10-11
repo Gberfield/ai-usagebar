@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+### Changed
+
+- **TUI tabs follow `[ui] overview_vendors`.** Listed vendors lead the sidebar
+  in that order. Enabled vendors left off the list keep the canonical order
+  after them. The Overview tab still lists only the named vendors.
+  `usage --json` includes `overview_vendors` when the list is set and omits
+  the field otherwise, so the Linux Mint dashboard can follow it without
+  reading `config.toml`. Without the list, that dashboard still leads with
+  `primary`.
+
+### Fixed
+
+- **Linux Mint dashboard opens on Wayland.** Asking an X11 server time no
+  longer crashes when WSLg (or any Wayland session) hands back a Wayland
+  window.
+
 ## [1.35.0] — 2026-10-11
 
 ### Added

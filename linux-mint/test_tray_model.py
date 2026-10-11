@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
-from tray_model import connection_help, installed_binary, is_not_connected, meter_color, metric_display, metric_pace, metric_usage_label, report_sections, summary_metric, tr
+from tray_model import connection_help, dashboard_entries, installed_binary, is_not_connected, meter_color, metric_display, metric_pace, metric_usage_label, report_sections, summary_metric, tr
 
 
 NOW = datetime(2026, 9, 25, 12, 0, tzinfo=timezone.utc)
@@ -111,6 +111,31 @@ class TrayModelTest(unittest.TestCase):
         self.assertFalse(is_not_connected({"status": "error", "error": "HTTP 500"}))
         self.assertFalse(is_not_connected({"status": "error", "error": "credentials error: expired", "stale": True,
                                            "metrics": [{"label": "Weekly", "percent": 45}]}))
+
+    def test_overview_vendors_order_the_dashboard_and_keep_the_rest(self):
+        entries = [
+            {"id": "anthropic", "name": "anthropic"},
+            {"id": "openai", "name": "openai"},
+            {"id": "copilot", "name": "copilot"},
+            {"id": "supergrok", "name": "supergrok"},
+            {"id": "antigravity", "name": "antigravity"},
+            {"id": "opencode-go", "name": "opencode-go"},
+            {"id": "anthropic@work", "name": "anthropic"},
+        ]
+        ordered = dashboard_entries({
+            "entries": entries,
+            "overview_vendors": ["anthropic", "openai", "supergrok", "opencode-go", "antigravity"],
+        })
+        self.assertEqual(
+            [entry["id"] for entry in ordered],
+            ["anthropic", "anthropic@work", "openai", "supergrok", "opencode-go", "antigravity", "copilot"],
+        )
+        primary_first = dashboard_entries({"entries": entries, "primary": "openai"})
+        self.assertEqual(primary_first[0]["id"], "openai")
+        self.assertEqual(
+            [entry["id"] for entry in primary_first[1:]],
+            ["anthropic", "copilot", "supergrok", "antigravity", "opencode-go", "anthropic@work"],
+        )
 
     def test_report_sections_preserve_order_and_metric_groups(self):
         entry = {"sections": [
