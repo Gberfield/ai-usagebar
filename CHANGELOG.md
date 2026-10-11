@@ -5,10 +5,12 @@
 - **TUI tabs follow `[ui] overview_vendors`.** Listed vendors lead the sidebar
   in that order. Enabled vendors left off the list keep the canonical order
   after them. The Overview tab still lists only the named vendors.
-  `usage --json` includes `overview_vendors` when the list is set and omits
-  the field otherwise, so the Linux Mint dashboard can follow it without
-  reading `config.toml`. Without the list, that dashboard still leads with
-  `primary`.
+  `usage --json` includes `overview_vendors` when the list is set, including
+  an empty list, and omits the field otherwise. `entries` follow the tab
+  order, so a consumer that renders the payload in order follows the list
+  too. A repeated slug keeps its first occurrence. The Linux Mint dashboard
+  reads that field instead of `config.toml`. When the field is absent it
+  still leads with `primary`; an empty list does not.
 
 ### Fixed
 

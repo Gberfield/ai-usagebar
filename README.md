@@ -695,9 +695,11 @@ from `entries` — with named accounts, the first entry of the configured
 vendor (so `anthropic` reports `anthropic@claude-me` when that is the entry
 present); a primary naming a vendor with no entries keeps the vendor slug.
 When `[ui] overview_vendors` is set, the report also includes that slug list
-as `overview_vendors` and omits the field otherwise. Frontends that order
-cards should follow it and leave vendors missing from the list after it; the
-report's `entries` array itself stays in tab order.
+as `overview_vendors`, even when the list is empty, and omits the field
+otherwise. A repeated slug keeps its first occurrence. Frontends that order
+cards should follow the field and leave vendors missing from the list after
+it. An empty list means the report order, not "promote `primary`". The
+`entries` array itself stays in tab order, which now leads with that list.
 Each entry has
 `display_name`, `short_name`, `status`, `stale`, and `fetched_at`; metric rows
 may add `severity`, an absolute `reset_at`, and `window_secs`, the exact length

@@ -101,26 +101,41 @@ def entry_vendor(entry):
     return slug or str(entry.get("name") or "")
 
 
-def dashboard_entries(data):
-    """Report order, with `overview_vendors` leading when the report carries it.
+def vendor_slugs(order):
+    """First occurrence of each non-empty string. Anything else is ignored."""
+    if not isinstance(order, list):
+        return []
+    slugs = []
+    seen = set()
+    for item in order:
+        if isinstance(item, str) and item and item not in seen:
+            seen.add(item)
+            slugs.append(item)
+    return slugs
 
-    Without that list the configured `primary` stays first, which is what the
-    dashboard did before the list existed.
+
+def dashboard_entries(data):
+    """Report order, with `overview_vendors` leading when that field is present.
+
+    An empty or unusable list is still configured: cards stay in report order
+    and `primary` is not promoted. The primary fallback is only for a report
+    that omits the field, which is what the dashboard did before the list existed.
     """
-    entries = list((data or {}).get("entries") or [])
-    order = (data or {}).get("overview_vendors") or []
-    if isinstance(order, list) and order:
-        return ordered_entries(entries, [item for item in order if isinstance(item, str)])
-    primary = (data or {}).get("primary")
+    data = data or {}
+    entries = list(data.get("entries") or [])
+    if "overview_vendors" in data:
+        return ordered_entries(entries, data.get("overview_vendors"))
+    primary = data.get("primary")
     entries.sort(key=lambda entry: (entry.get("id") != primary and entry.get("name") != primary))
     return entries
 
 
 def ordered_entries(entries, order):
-    """Listed vendors first, in list order. Unlisted vendors keep report order."""
-    if not order:
+    """Listed vendors first, in first-seen order. Unlisted vendors keep report order."""
+    slugs = vendor_slugs(order)
+    if not slugs:
         return list(entries)
-    rank = {slug: index for index, slug in enumerate(order)}
+    rank = {slug: index for index, slug in enumerate(slugs)}
     indexed = list(enumerate(entries))
     indexed.sort(key=lambda pair: (rank.get(entry_vendor(pair[1]), len(rank)), pair[0]))
     return [entry for _, entry in indexed]

@@ -17,7 +17,8 @@
 # primary = "anthropic"
 # Which vendors the Overview lists (the TUI's first tab / the macOS menu-bar's
 # top section), in this order. The TUI tab bar leads with the same list;
-# enabled vendors left off it follow in the canonical order. Omit for every
+# enabled vendors left off it follow in the canonical order. A repeated slug
+# keeps its first occurrence. An empty list is set; omit the key for every
 # enabled vendor, in the canonical order.
 # overview_vendors = ["anthropic", "cursor", "openai"]
 # Presentation of vendor tab navigation: sidebar (vertical box) | navbar (top strip) | none (hidden).

@@ -333,8 +333,7 @@ class UsageDashboard(Gtk.Window):
         for child in self.cards_box.get_children():
             self.cards_box.remove(child)
 
-        entries = data.get("entries", [])
-        active_entries = list(entries)
+        active_entries = dashboard_entries(data)
 
         if not active_entries:
             empty_lbl = Gtk.Label(label=tr("No active provider or detected credentials.",
@@ -344,7 +343,6 @@ class UsageDashboard(Gtk.Window):
             self.cards_box.show_all()
             return
 
-        active_entries = dashboard_entries(data)
         for entry in active_entries:
             group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
             group.get_style_context().add_class("provider-group")

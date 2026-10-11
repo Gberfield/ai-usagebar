@@ -316,7 +316,7 @@ async fn entry_for_report_target(
 
 pub async fn run(json: bool) -> i32 {
     let (entries, primary, overview) = match collect_entries().await {
-        Ok(pair) => pair,
+        Ok(collected) => collected,
         Err(message) => {
             eprintln!("ai-usagebar usage: {message}");
             return 1;

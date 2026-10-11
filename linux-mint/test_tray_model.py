@@ -136,6 +136,26 @@ class TrayModelTest(unittest.TestCase):
             [entry["id"] for entry in primary_first[1:]],
             ["anthropic", "copilot", "supergrok", "antigravity", "opencode-go", "anthropic@work"],
         )
+        repeated = dashboard_entries({
+            "entries": entries,
+            "primary": "openai",
+            "overview_vendors": ["anthropic", "openai", "anthropic", 1, ""],
+        })
+        self.assertEqual(repeated[0]["id"], "anthropic")
+        self.assertEqual(repeated[1]["id"], "anthropic@work")
+        self.assertEqual(repeated[2]["id"], "openai")
+        empty = dashboard_entries({
+            "entries": entries,
+            "primary": "openai",
+            "overview_vendors": [],
+        })
+        self.assertEqual([entry["id"] for entry in empty], [entry["id"] for entry in entries])
+        junk = dashboard_entries({
+            "entries": entries,
+            "primary": "openai",
+            "overview_vendors": [1, 2],
+        })
+        self.assertEqual([entry["id"] for entry in junk], [entry["id"] for entry in entries])
 
     def test_report_sections_preserve_order_and_metric_groups(self):
         entry = {"sections": [

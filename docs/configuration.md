@@ -27,8 +27,10 @@ ai-usagebar-tui --config ./config.test.toml
 #                         # | orcarouter | modelstudio | lyceum | devin
 # Which vendors the Overview lists, in this order. The TUI tab bar leads with
 # the same list; enabled vendors left off it follow in the canonical order.
-# Omit for every enabled vendor. `usage --json` includes `overview_vendors`
-# only when this is set, so a frontend can order cards without reading this file.
+# Omit for every enabled vendor. A repeated slug keeps its first occurrence;
+# an empty list is set, and is not the same as omitting the key.
+# `usage --json` includes `overview_vendors` only when this is set, so a
+# frontend can order cards without reading this file.
 # overview_vendors = ["anthropic", "openai", "supergrok"]
 
 [context]

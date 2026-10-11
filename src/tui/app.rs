@@ -156,8 +156,10 @@ impl TabId {
 
 /// Expand enabled vendors into the tab list. Claude, OpenRouter, and Codex
 /// (OpenAI) yield their default account followed by configured named accounts;
-/// every other vendor is a single tab. With no extra accounts the result equals
-/// `config.enabled_vendors()`, preserving the historical tab set and order.
+/// every other vendor is a single tab. With no extra accounts and
+/// `overview_vendors` unset, the result equals `config.enabled_vendors()` in
+/// canonical order. When the list is set, listed vendors lead and unlisted
+/// enabled vendors follow in that same canonical order.
 ///
 /// Config-only and pure — no Desktop profiles. Production uses
 /// [`tabs_with_desktop`]; this stays for the hermetic unit tests and any caller
@@ -543,20 +545,25 @@ impl App {
     /// Tabs the Overview should list: `overview_vendors` filtered against the
     /// live tab set (preserving the config order), or all tabs when unset.
     /// The filter names built-in vendors only, so a configured list excludes
-    /// every custom provider tab; the unset default includes them.
+    /// every custom provider tab; the unset default includes them. A repeated
+    /// vendor is listed once, at its first occurrence.
     pub fn overview_tabs(&self) -> Vec<usize> {
         match &self.overview_vendors {
             None => (0..self.tabs_meta.len()).collect(),
-            Some(wanted) => wanted
-                .iter()
-                .flat_map(|v| {
-                    self.tabs_meta
-                        .iter()
-                        .enumerate()
-                        .filter(move |(_, t)| t.vendor_id() == Some(*v))
-                        .map(|(i, _)| i)
-                })
-                .collect(),
+            Some(wanted) => {
+                let mut seen = HashSet::new();
+                wanted
+                    .iter()
+                    .filter(|vendor| seen.insert(**vendor))
+                    .flat_map(|v| {
+                        self.tabs_meta
+                            .iter()
+                            .enumerate()
+                            .filter(move |(_, t)| t.vendor_id() == Some(*v))
+                            .map(|(i, _)| i)
+                    })
+                    .collect()
+            }
         }
     }
 }
@@ -1207,6 +1214,10 @@ mod tests {
         // A listed-but-absent vendor is simply skipped.
         app.overview_vendors = Some(vec![VendorId::Grok, VendorId::Openai]);
         assert_eq!(app.overview_tabs(), vec![1]);
+
+        // A repeated vendor is listed once, at its first occurrence.
+        app.overview_vendors = Some(vec![VendorId::Anthropic, VendorId::Anthropic]);
+        assert_eq!(app.overview_tabs(), vec![0]);
     }
 
     fn config_with_accounts(labels: &[&str]) -> Config {
@@ -1278,7 +1289,9 @@ mod tests {
         config.copilot.enabled = true;
         config.ui.overview_vendors = Some(vec![
             VendorId::Anthropic,
+            VendorId::Zai,
             VendorId::Openai,
+            VendorId::Anthropic,
             VendorId::Supergrok,
             VendorId::OpenCodeGo,
             VendorId::Antigravity,
