@@ -237,6 +237,15 @@ enabled = true             # disabled by default; enable once you've run `kiro-c
 # data.sqlite3 after you logged in there.
 # db_path = "/home/you/.local/share/kiro-cli/data.sqlite3"
 
+[opencode-go]
+enabled = true             # disabled by default; enable once signed in or configured
+# Reads the API key the official OpenCode CLI already wrote to its own
+# auth.json (default $XDG_DATA_HOME/opencode or ~/.local/share/opencode),
+# read-only, so a signed-in CLI shows up on its own. An explicit key still
+# wins: OPENCODE_GO_API_KEY (or `api_key`) is resolved before the file.
+# api_key = "..."                          # or export OPENCODE_GO_API_KEY
+# auth_paths = ["/custom/opencode/auth.json"]  # non-standard install
+
 [modelstudio]
 enabled = false            # disabled by default; enable after `bl auth login --console`
 # Alibaba Cloud Model Studio (Bailian) Token Plan. No API key: the credential

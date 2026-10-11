@@ -2,6 +2,14 @@
 
 ### Added
 
+- **OpenCode Go reads the official CLI's own credential.** A signed-in OpenCode
+  CLI (`opencode auth login`) now shows up on its own: the key is read
+  read-only from `~/.local/share/opencode/auth.json` (`$XDG_DATA_HOME`
+  honoured; `[opencode-go] auth_paths` overrides the file), and an explicit
+  `OPENCODE_GO_API_KEY` / `[opencode-go] api_key` still wins. Detection, waybar,
+  and the TUI follow the same resolution, and the CLI file is never written,
+  copied, or cached.
+
 - **Ollama Cloud provider mark in the Omarchy bar and panel.** Ship the
   monochrome Lobe Icons SVG under MIT, with source provenance and the
   existing LobeHub licence notice. The same mark is used for custom
