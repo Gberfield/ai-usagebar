@@ -941,10 +941,10 @@ async fn build_outcome(client: &Client, config: &Config, tab: &TabId) -> Result<
             ))
         }
         VendorId::OpenCodeGo => {
-            let api_key = crate::config::resolve_api_key(
-                "OpenCode Go",
+            let api_key = crate::opencode_go::creds::resolve_key(
                 &config.opencode_go.api_key_env,
                 config.opencode_go.api_key.as_deref(),
+                config.opencode_go.auth_paths.as_deref(),
             )?;
             let cache = crate::cache::Cache::for_vendor("opencode-go")?;
             let endpoints = crate::opencode_go::fetch::Endpoints::default();

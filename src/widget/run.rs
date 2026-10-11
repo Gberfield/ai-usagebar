@@ -229,10 +229,10 @@ async fn nous_output(cli: &Cli) -> Result<WaybarOutput> {
 }
 
 async fn opencode_go_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
-    let api_key = crate::config::resolve_api_key(
-        "OpenCode Go",
+    let api_key = crate::opencode_go::creds::resolve_key(
         &config.opencode_go.api_key_env,
         config.opencode_go.api_key.as_deref(),
+        config.opencode_go.auth_paths.as_deref(),
     )?;
     let client = http_client()?;
     let cache = vendor_cache(cli, "opencode-go")?;

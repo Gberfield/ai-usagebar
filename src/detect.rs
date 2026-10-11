@@ -94,7 +94,13 @@ pub fn has_local_credentials(vendor: VendorId, config: &Config) -> bool {
             );
             matches!(store.read_unlocked(), Ok(Some(_)))
         }
-        VendorId::OpenCodeGo => key_present(config, vendor),
+        // An explicit key wins; otherwise the read-only credential the
+        // official OpenCode CLI already wrote (a signed-in user appears even
+        // before configuring anything).
+        VendorId::OpenCodeGo => {
+            key_present(config, vendor)
+                || crate::opencode_go::creds::probe(config.opencode_go.auth_paths.as_deref())
+        }
         VendorId::CommandCode => {
             crate::commandcode::creds::resolve(config.commandcode.auth_paths.as_deref()).is_ok()
         }
