@@ -67,18 +67,13 @@
   trimming trailing zeros stripped the digits but retained the decimal point,
   displaying values like "1." or "0.". Trailing dots are now stripped so whole
   and rounded credit values format cleanly.
-- **An empty menu-bar bar draws a visible capsule.** A 0% row used to
-  vanish against the dark menu bar — its bare track was all but invisible
-  there. It now draws the whole track at the remainder's strength, like the
-  popover's empty meter.
-- **Early-window weekly usage no longer triggers a false critical pace alert.**
-  In long reset windows (such as SuperGrok, Grok Bot, or Claude/Codex weekly),
-  normal session usage during the opening stretch of a cycle (< 15% elapsed,
-  e.g. the first ~25 hours of a week) previously pushed the ratio past 130%
-  and the absolute gap past 5 percentage points, marking the metric as critical
-  (flame icon, and run-out date). In the opening 15% of a window with at least
-  50% allowance remaining, accelerated usage now warns as "over" pace (yellow)
-  rather than a run-out crisis (#390).
+
+- **The placeholder reference covers Nous Research.** `docs/format-placeholders.md`
+  had a section for every provider except Nous, so `{nous_pct}`,
+  `{nous_renewal}`, `{nous_plan}` and the six credit placeholders were
+  discoverable only in the source. The new section states what each carries,
+  how credits are formatted, the default format, and which shared placeholders
+  alias them.
 
 ## [1.34.0] — 2026-10-08
 
