@@ -308,7 +308,8 @@ assert.match(panelSource, /Model\.brandIconFile\(root\.entry\)/);
 // the panel edge when more providers are configured than fit on one line.
 assert.match(panelSource, /Flow\s*\{[\s\S]*?id:\s*providerList/);
 assert.match(panelSource, /flow:\s*Flow\.LeftToRight/);
-assert.match(panelSource, /height:\s*visible\s*\?\s*childrenRect\.height\s*:\s*0/);
+assert.match(panelSource, /height:\s*visible\s*\?\s*implicitHeight\s*:\s*0/);
+assert.doesNotMatch(panelSource, /childrenRect\.height/, 'childrenRect feeds the item\'s own geometry back — a binding loop');
 assert.match(panelSource, /width:\s*implicitWidth/);
 assert.doesNotMatch(panelSource, /orientation:\s*ListView\.Horizontal/);
 assert.match(panelSource, /providerList\.forceLayout\(\)/);
