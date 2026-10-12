@@ -340,7 +340,10 @@ fn target_key(endpoints: &Endpoints, user_id: &str) -> String {
     for byte in digest {
         let _ = write!(fingerprint, "{byte:02x}");
     }
-    format!("{}|user:{fingerprint}", endpoints.base)
+    // `v2` marks the ledger schema that records each charge's wallet. A cache
+    // written before it summed every wallet against the subscription caps, so
+    // it must be re-walked rather than re-read.
+    format!("{}|user:{fingerprint}|v2", endpoints.base)
 }
 
 fn state_repr(target: &str, state: &State) -> Value {
@@ -361,7 +364,14 @@ fn state_repr(target: &str, state: &State) -> Value {
         "ledger": state
             .ledger
             .iter()
-            .map(|entry| serde_json::json!([entry.id, entry.created_at.to_rfc3339(), entry.cost]))
+            .map(|entry| {
+                serde_json::json!([
+                    entry.id,
+                    entry.created_at.to_rfc3339(),
+                    entry.cost,
+                    entry.wallet
+                ])
+            })
             .collect::<Vec<_>>(),
     })
 }
@@ -393,6 +403,7 @@ fn parse_cache(body: &[u8], target: &str) -> Result<State> {
                     .ok()?
                     .with_timezone(&Utc),
                 cost: row.get(2)?.as_f64()?,
+                wallet: row.get(3)?.as_str()?.to_string(),
             })
         })
         .collect();
@@ -481,7 +492,11 @@ mod tests {
     fn usage_body(rows: &[(&str, &str, i64)], next: Option<&str>) -> String {
         let items = rows
             .iter()
-            .map(|(id, at, cost)| format!(r#"{{"id":"{id}","createdAt":"{at}","costUsd":{cost}}}"#))
+            .map(|(id, at, cost)| {
+                format!(
+                    r#"{{"id":"{id}","createdAt":"{at}","costUsd":{cost},"aiModelTypeName":"cline-pass"}}"#
+                )
+            })
             .collect::<Vec<_>>()
             .join(",");
         let next = next
@@ -783,6 +798,87 @@ mod tests {
         .await
         .expect_err("nothing to show and nothing to fetch");
         assert!(error.to_string().contains("expired"));
+    }
+
+    #[tokio::test]
+    async fn a_free_model_charge_does_not_move_the_subscription_gauge() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", "/api/v1/users/me/plan")
+            .with_body(PLAN_BODY)
+            .create_async()
+            .await;
+        // The ledger mixes wallets: the same account's free-model call sits
+        // beside the subscription one and is billed to `z-ai`.
+        server
+            .mock("GET", "/api/v1/users/usr-1/usages")
+            .match_query(mockito::Matcher::Any)
+            .with_body(
+                r#"{"data":{"items":[
+                    {"id":"usg-2","createdAt":"2026-09-09T19:30:00Z","costUsd":900,
+                     "aiModelTypeName":"z-ai"},
+                    {"id":"usg-1","createdAt":"2026-09-09T19:00:00Z","costUsd":100,
+                     "aiModelTypeName":"cline-pass"}
+                ]}}"#,
+            )
+            .create_async()
+            .await;
+        let (_dir, cache) = cache_fixture();
+
+        let output = fetch_snapshot(
+            &reqwest::Client::new(),
+            &credential(),
+            &cache,
+            &Endpoints { base: server.url() },
+            Duration::ZERO,
+            now(),
+        )
+        .await
+        .expect("a successful refresh");
+
+        assert_eq!(output.snapshot.five_hour.expect("5h").used, 100.0);
+    }
+
+    #[tokio::test]
+    async fn a_ledger_cached_before_wallets_were_recorded_is_rewalked() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("GET", "/api/v1/users/me/plan")
+            .with_body(PLAN_BODY)
+            .create_async()
+            .await;
+        server
+            .mock("GET", "/api/v1/users/usr-1/usages")
+            .match_query(mockito::Matcher::Any)
+            .with_body(usage_body(&[("usg-1", "2026-09-09T19:00:00Z", 100)], None))
+            .expect(1)
+            .create_async()
+            .await;
+        let (_dir, cache) = cache_fixture();
+        // A payload in the previous schema: three-column rows, no wallet, and
+        // the old target key. Serving it would keep reporting inflated windows.
+        cache
+            .write_payload(
+                br#"{"target":"http://example.invalid|user:deadbeef",
+                     "complete_from":null,
+                     "plan":{"name":"Cline Pass (Monthly)","caps":{"five_hour":1000.0,
+                             "seven_day":2500.0,"thirty_day":5000.0},"period_end":null},
+                     "ledger":[["usg-old","2026-09-09T19:45:00Z",900.0]]}"#,
+            )
+            .expect("seed the old cache");
+
+        let output = fetch_snapshot(
+            &reqwest::Client::new(),
+            &credential(),
+            &cache,
+            &Endpoints { base: server.url() },
+            Duration::from_secs(600),
+            now(),
+        )
+        .await
+        .expect("the stale-schema cache is replaced, not served");
+
+        assert_eq!(output.snapshot.five_hour.expect("5h").used, 100.0);
     }
 
     #[tokio::test]

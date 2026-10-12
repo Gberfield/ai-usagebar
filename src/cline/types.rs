@@ -67,12 +67,34 @@ pub struct Plan {
     pub period_end: Option<DateTime<Utc>>,
 }
 
+/// The wallet ClinePass usage is billed to. The ledger mixes several — a
+/// subscription charge sits next to a free-model charge and a credits charge —
+/// and only this one is measured against the plan's caps.
+pub const CLINE_PASS_WALLET: &str = "cline-pass";
+
 /// One inference charge from the ledger.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Entry {
     pub id: String,
     pub created_at: DateTime<Utc>,
     pub cost: f64,
+    /// `aiModelTypeName`: which wallet paid for this call — `cline-pass` for
+    /// the subscription, `cline-free`, `z-ai`, `deepseek`… for the rest.
+    /// Kept for every charge, billable or not, because the walk stops at the
+    /// newest charge it already holds and that marker must exist whatever
+    /// wallet paid for it.
+    pub wallet: String,
+}
+
+impl Entry {
+    /// Only subscription charges count against the ClinePass caps. Measured:
+    /// a free-model call lands in the ledger with `aiModelTypeName` `z-ai` and
+    /// leaves the Cline Credits balance untouched, so counting it against a
+    /// subscription window overstates it — by 4.4 points over 30 days on a
+    /// real account.
+    pub fn is_billable(&self) -> bool {
+        self.wallet == CLINE_PASS_WALLET
+    }
 }
 
 impl Eq for Entry {}
@@ -227,6 +249,13 @@ fn parse_entry(value: &Value) -> Option<Entry> {
             .and_then(Value::as_str)
             .and_then(parse_timestamp)?,
         cost,
+        // An unnamed wallet is not assumed to be the subscription: a charge
+        // that cannot be attributed must not inflate a quota bar.
+        wallet: value
+            .get("aiModelTypeName")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
     })
 }
 
@@ -260,7 +289,7 @@ pub fn windows_from(entries: &[Entry], caps: &Caps, now: DateTime<Utc>) -> [Opti
         let start = now - span;
         let inside = entries
             .iter()
-            .filter(|entry| entry.created_at > start)
+            .filter(|entry| entry.created_at > start && entry.is_billable())
             .collect::<Vec<_>>();
         Some(Window {
             used: inside.iter().map(|entry| entry.cost).sum(),
@@ -299,10 +328,15 @@ mod tests {
     }
 
     fn entry(id: &str, created_at: &str, cost: f64) -> Entry {
+        wallet_entry(id, created_at, cost, CLINE_PASS_WALLET)
+    }
+
+    fn wallet_entry(id: &str, created_at: &str, cost: f64, wallet: &str) -> Entry {
         Entry {
             id: id.into(),
             created_at: at(created_at),
             cost,
+            wallet: wallet.into(),
         }
     }
 
@@ -404,6 +438,50 @@ mod tests {
         assert_eq!(five.expect("5h").used, 100.0);
         assert_eq!(seven.expect("7d").used, 700.0);
         assert_eq!(thirty.expect("30d").used, 700.0);
+    }
+
+    #[test]
+    fn only_subscription_charges_count_against_the_caps() {
+        let now = at("2026-09-09T20:00:00Z");
+        let entries = vec![
+            entry("sub", "2026-09-09T19:00:00Z", 100.0),
+            wallet_entry("free", "2026-09-09T19:10:00Z", 900.0, "cline-free"),
+            wallet_entry("zai", "2026-09-09T19:20:00Z", 900.0, "z-ai"),
+            wallet_entry("nameless", "2026-09-09T19:30:00Z", 900.0, ""),
+        ];
+        let caps = Caps {
+            five_hour: Some(1000.0),
+            ..Caps::default()
+        };
+
+        let window = windows_from(&entries, &caps, now)[0]
+            .clone()
+            .expect("5h window");
+        // 100, not 2800: a free-model call lands in the same ledger and leaves
+        // the Cline Credits balance untouched, so it is not subscription usage.
+        assert_eq!(window.used, 100.0);
+        assert_eq!(window.pct(), 10);
+        // The reset countdown follows the charges that were counted, so an
+        // unbillable charge cannot invent one either.
+        assert_eq!(window.oldest, Some(at("2026-09-09T19:00:00Z")));
+    }
+
+    #[test]
+    fn the_wallet_comes_from_the_ledger_row() {
+        let value = serde_json::json!({"data": {"items": [
+            {"id": "usg-1", "createdAt": "2026-09-09T19:00:00Z", "costUsd": 10,
+             "aiModelTypeName": "cline-pass"},
+            {"id": "usg-2", "createdAt": "2026-09-09T18:00:00Z", "costUsd": 10,
+             "aiModelTypeName": "z-ai"},
+            {"id": "usg-3", "createdAt": "2026-09-09T17:00:00Z", "costUsd": 10}
+        ]}});
+
+        let page = parse_usage_page(&value).expect("page must parse");
+        assert!(page.items[0].is_billable());
+        assert!(!page.items[1].is_billable());
+        // A row that names no wallet is kept — the walk needs its id as a
+        // marker — but it is not assumed to be subscription usage.
+        assert!(!page.items[2].is_billable());
     }
 
     #[test]
