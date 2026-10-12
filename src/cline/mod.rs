@@ -1,8 +1,8 @@
 //! Cline (ClinePass) subscription quota integration.
 //!
-//! Cline publishes the caps on the plan and the consumption as a ledger, and
-//! nothing joins the two — so this vendor does. See [`types`] for the window
-//! arithmetic and the reason no figure here is printed in dollars.
+//! Cline computes the three ClinePass limits (5 hours, weekly, monthly) itself;
+//! this vendor reads them from `usage-limits`, the same call the dashboard
+//! makes. See [`types`] for why they are not recomputed from the charge ledger.
 
 pub mod creds;
 pub mod fetch;

@@ -946,9 +946,9 @@ async fn cline_live() {
     .await
     .expect("cline fetch should succeed against the real API");
 
-    // A ClinePass plan must report all three windows. A plan without the
+    // A ClinePass plan must report all three limits. A plan without the
     // entitlement legitimately reports none — but never a partial set, which
-    // is what a renamed threshold field would look like.
+    // is what a renamed `type` value would look like.
     let present = out
         .snapshot
         .windows()
@@ -957,25 +957,11 @@ async fn cline_live() {
         .count();
     assert!(
         present == 0 || present == 3,
-        "cline reported {present} of 3 windows — a cap field was renamed"
+        "cline reported {present} of 3 limits — a limit type was renamed"
     );
     for (label, window) in out.snapshot.windows() {
         let Some(window) = window else { continue };
         assert_pct(&format!("cline.{label}"), window.pct());
-        assert!(
-            window.limit > 0.0,
-            "cline.{label} reported a non-positive cap"
-        );
-    }
-    // The ledger walk is the half a cursor rename breaks: the response calls
-    // the page cursor `nextToken` and the request reads it as `cursor`, and a
-    // walk that silently re-reads page one still returns a plausible-looking
-    // 5-hour figure. A complete history is the only observable difference.
-    if present == 3 {
-        assert!(
-            !out.snapshot.truncated,
-            "cline could not walk the ledger back 30 days — the page cursor is not being honoured"
-        );
     }
     println!(
         "✅ cline — plan={:?}, 5h={:?}%, 7d={:?}%, 30d={:?}%",

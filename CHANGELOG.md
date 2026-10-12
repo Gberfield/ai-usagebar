@@ -1,6 +1,5 @@
 ## [Unreleased]
 
-<<<<<<< HEAD
 ## [1.35.0] — 2026-10-11
 
 ### Added
@@ -2395,7 +2394,6 @@
   still names the buckets it did receive. `docs/vendor-endpoints.md` gains the
   Antigravity row it never had — it was the only provider missing from that
   table — and the placeholder reference no longer promises all four windows.
-=======
 ### Added
 
 - **Cline (ClinePass)** as a vendor: the three rolling windows ClinePass meters
@@ -2415,7 +2413,6 @@
   conversion would be a guess. While the CLI's ~5-hour token is lapsed the
   cached ledger is still served, marked stale and re-folded at the current
   instant, instead of blanking the bar between two Cline sessions.
->>>>>>> 6eb126c (feat(cline): add Cline / ClinePass as a vendor)
 
 ## [1.9.1] — 2026-08-30
 

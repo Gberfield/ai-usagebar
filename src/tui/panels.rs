@@ -1410,9 +1410,8 @@ fn commandcode_sections(
     sections
 }
 
-/// Cline shows one bar per ClinePass window. The reset row is a countdown to
-/// the moment the window's oldest charge ages out — the windows roll, so
-/// there is no scheduled reset to name.
+/// Cline shows one bar per ClinePass limit. The reset row counts down to the
+/// reset time Cline reports; a limit with no open window has none ("—").
 fn cline_sections(s: &crate::cline::types::Snapshot, now: DateTime<Utc>) -> SectionBuilder {
     let mut sections = SectionBuilder::new(vec![Section::Title {
         left: s.plan.clone().unwrap_or_else(|| "Cline".into()),
@@ -1421,8 +1420,8 @@ fn cline_sections(s: &crate::cline::types::Snapshot, now: DateTime<Utc>) -> Sect
     let mut any = false;
     for (label, window) in [
         ("5 hours", s.five_hour.as_ref()),
-        ("7 days", s.seven_day.as_ref()),
-        ("30 days", s.thirty_day.as_ref()),
+        ("Weekly", s.seven_day.as_ref()),
+        ("Monthly", s.thirty_day.as_ref()),
     ] {
         let Some(window) = window else {
             continue;
@@ -1435,19 +1434,12 @@ fn cline_sections(s: &crate::cline::types::Snapshot, now: DateTime<Utc>) -> Sect
                 pct: pct.clamp(0, 100) as u16,
                 severity: severity_for(pct),
                 value_label: format!("{pct}%"),
-                // The unit behind Cline's cost integers is undocumented, so
-                // the share of the cap is the only figure that can be stated
-                // exactly; see `cline::types`.
-                footnote: if s.truncated {
-                    "at least (history truncated)".into()
-                } else {
-                    String::new()
-                },
+                footnote: String::new(),
             },
             window.resets_at(),
         );
         sections.push(Section::Text {
-            label: "Frees up".into(),
+            label: "Resets in".into(),
             value: window
                 .resets_at()
                 .map(|at| countdown::format(Some(at), now))

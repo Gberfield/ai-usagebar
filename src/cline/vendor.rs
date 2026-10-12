@@ -172,8 +172,8 @@ fn render_tooltip(
     let mut present = false;
     for (label, window) in [
         ("5 hours ", snap.five_hour.as_ref()),
-        ("7 days  ", snap.seven_day.as_ref()),
-        ("30 days ", snap.thirty_day.as_ref()),
+        ("Weekly  ", snap.seven_day.as_ref()),
+        ("Monthly ", snap.thirty_day.as_ref()),
     ] {
         let Some(window) = window else {
             continue;
@@ -191,13 +191,6 @@ fn render_tooltip(
         lines.push(TooltipLine::Body(format!(
             " <span foreground='{}'>this plan has no ClinePass quota</span>",
             theme.dim
-        )));
-    }
-    if snap.truncated {
-        lines.push(TooltipLine::Body(String::new()));
-        lines.push(TooltipLine::Body(format!(
-            " <span foreground='{}'>  ≥  Longer windows are lower bounds</span>",
-            theme.orange
         )));
     }
     if stale {
@@ -231,7 +224,6 @@ fn render_tooltip(
 
 #[cfg(test)]
 mod tests {
-    use chrono::Duration as ChronoDuration;
 
     use super::*;
 
@@ -239,23 +231,20 @@ mod tests {
         value.parse().expect("RFC3339 timestamp")
     }
 
-    fn window(used: f64, limit: f64, hours: i64, oldest: Option<&str>) -> Window {
+    fn window(percent: f64, reset: Option<&str>) -> Window {
         Window {
-            used,
-            limit,
-            span: ChronoDuration::hours(hours),
-            oldest: oldest.map(at),
+            percent,
+            reset: reset.map(at),
         }
     }
 
     fn sample() -> Snapshot {
         Snapshot {
             plan: Some("Cline Pass (Monthly)".into()),
-            five_hour: Some(window(100.0, 1000.0, 5, Some("2026-09-09T17:00:00Z"))),
-            seven_day: Some(window(1250.0, 2500.0, 24 * 7, Some("2026-09-05T17:00:00Z"))),
-            thirty_day: Some(window(500.0, 5000.0, 24 * 30, Some("2026-08-20T17:00:00Z"))),
+            five_hour: Some(window(10.0, Some("2026-09-09T22:00:00Z"))),
+            seven_day: Some(window(50.0, Some("2026-09-12T17:00:00Z"))),
+            thirty_day: Some(window(10.0, Some("2026-09-19T17:00:00Z"))),
             period_end: Some(at("2026-10-01T05:17:51Z")),
-            truncated: false,
         }
     }
 
@@ -282,8 +271,7 @@ mod tests {
                 seven_day: None,
                 thirty_day: None,
                 period_end: None,
-                truncated: false,
-            },
+                },
             at("2026-09-09T20:00:00Z"),
         );
 
@@ -304,7 +292,7 @@ mod tests {
     #[test]
     fn an_idle_window_shows_no_countdown() {
         let mut snapshot = sample();
-        snapshot.five_hour = Some(window(0.0, 1000.0, 5, None));
+        snapshot.five_hour = Some(window(0.0, None));
         let values = build_placeholders(&snapshot, at("2026-09-09T20:00:00Z"));
 
         assert_eq!(values["cline_5h_pct"], "0");
@@ -314,7 +302,7 @@ mod tests {
     #[test]
     fn severity_follows_the_most_exhausted_window() {
         let mut snapshot = sample();
-        snapshot.thirty_day = Some(window(4900.0, 5000.0, 24 * 30, None));
+        snapshot.thirty_day = Some(window(98.0, None));
         assert_eq!(severity(&snapshot), severity_for(98));
     }
 
