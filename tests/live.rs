@@ -913,5 +913,75 @@ async fn devin_live() {
             .as_ref()
             .map(|window| window.utilization_pct),
         out.snapshot.overage_balance_micros,
+#[tokio::test]
+#[ignore = "live API; run with --ignored"]
+async fn cline_live() {
+    use ai_usagebar::cline;
+
+    let credential = match cline::creds::resolve(None, cline::creds::API_KEY_ENV, None) {
+        Ok(credential) => credential,
+        Err(error) => {
+            eprintln!("cline_live: {error} — skipping Cline smoke test");
+            return;
+        }
+    };
+    if credential.expired {
+        eprintln!("cline_live: the CLI's token has lapsed — run `cline` once and retry; skipping");
+        return;
+    }
+    let cache = xdg_cache_for("cline");
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .build()
+        .unwrap();
+    let now = chrono::Utc::now();
+    let out = cline::fetch::fetch_snapshot(
+        &client,
+        &credential,
+        &cache,
+        &cline::fetch::Endpoints::default(),
+        Duration::from_secs(0),
+        now,
+    )
+    .await
+    .expect("cline fetch should succeed against the real API");
+
+    // A ClinePass plan must report all three windows. A plan without the
+    // entitlement legitimately reports none — but never a partial set, which
+    // is what a renamed threshold field would look like.
+    let present = out
+        .snapshot
+        .windows()
+        .into_iter()
+        .filter(|(_, window)| window.is_some())
+        .count();
+    assert!(
+        present == 0 || present == 3,
+        "cline reported {present} of 3 windows — a cap field was renamed"
+    );
+    for (label, window) in out.snapshot.windows() {
+        let Some(window) = window else { continue };
+        assert_pct(&format!("cline.{label}"), window.pct());
+        assert!(
+            window.limit > 0.0,
+            "cline.{label} reported a non-positive cap"
+        );
+    }
+    // The ledger walk is the half a cursor rename breaks: the response calls
+    // the page cursor `nextToken` and the request reads it as `cursor`, and a
+    // walk that silently re-reads page one still returns a plausible-looking
+    // 5-hour figure. A complete history is the only observable difference.
+    if present == 3 {
+        assert!(
+            !out.snapshot.truncated,
+            "cline could not walk the ledger back 30 days — the page cursor is not being honoured"
+        );
+    }
+    println!(
+        "✅ cline — plan={:?}, 5h={:?}%, 7d={:?}%, 30d={:?}%",
+        out.snapshot.plan,
+        out.snapshot.five_hour.as_ref().map(|w| w.pct()),
+        out.snapshot.seven_day.as_ref().map(|w| w.pct()),
+        out.snapshot.thirty_day.as_ref().map(|w| w.pct()),
     );
 }

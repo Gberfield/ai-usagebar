@@ -47,6 +47,7 @@ pub(crate) const VENDOR_SECRET_ENV_VARS: &[&str] = &[
     "GH_TOKEN",
     "GITHUB_TOKEN",
     "OLLAMA_API_KEY",
+    "CLINE_API_KEY",
 ];
 
 /// Env var names a `[[custom]]` provider reads its token from. They are not
@@ -212,6 +213,7 @@ impl AuthKind {
             AuthKind::Local => "local",
         }
     }
+    Cline,
 }
 
 impl VendorId {
@@ -244,6 +246,7 @@ impl VendorId {
             VendorId::ModelStudio => "modelstudio",
             VendorId::Lyceum => "lyceum",
             VendorId::Devin => "devin",
+            VendorId::Cline => "cline",
         }
     }
 
@@ -317,6 +320,7 @@ impl VendorId {
             VendorId::ModelStudio => VendorId::ModelStudio.short_name(),
             VendorId::Lyceum => VendorId::Lyceum.short_name(),
             VendorId::Devin => VendorId::Devin.short_name(),
+            VendorId::Cline => "Cline",
         }
     }
 
@@ -353,6 +357,7 @@ impl VendorId {
             VendorId::ModelStudio => "mst",
             VendorId::Lyceum => "lyc",
             VendorId::Devin => "dvn",
+            VendorId::Cline => "cln",
         }
     }
 
@@ -602,6 +607,7 @@ impl VendorId {
             VendorId::ModelStudio,
             VendorId::Lyceum,
             VendorId::Devin,
+            VendorId::Cline,
         ]
     }
 

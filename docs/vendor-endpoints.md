@@ -54,6 +54,7 @@ or stored, and no vendor asks the user to paste a session cookie.
 |---|---|---|
 | **Xiaomi MiMo** (Token Plan) | Not implementable | The quota routes (`platform.xiaomimimo.com/api/v1/tokenPlan/{usage,detail}`) authenticate with a Xiaomi Account **web SSO session**, not the plan's API key. The API key reaches only the inference gateway, which exposes no quota surface and returns no rate-limit headers. The effective session credential is an HttpOnly cookie, so there is no CLI-written file to read — only a browser profile. Waiting on Xiaomi to expose quota to API keys. (#146) |
 | **Meta Muse** (Muse Spark) | Not implementable as a native vendor | `https://api.meta.ai/v1` serves inference only: Meta publishes no usage, quota, or billing endpoint for it. The `dev.meta.ai` dashboard reads team spend through a private GraphQL route on a browser session — a browser credential, which this project never uses. The Muse Code OAuth token (macOS Keychain `ai.meta.dev.credentials`, `~/.config/muse/auth.json`) reaches the same inference gateway, so there is no quota-bearing credential to read. Workaround inside the rules: tally the per-call token usage Muse Code already writes to its local `~/.local/share/muse/sessions` logs (`model_completed` events) and serve it through a `[[custom]]` provider — see the commented `muse` recipe in `config.example.toml`. |
+| **Cline** | `api.cline.bot` `/api/v1/users/me/plan` for the ClinePass caps + `/api/v1/users/{id}/usages` for the charge ledger (undocumented; the same routes the official `cline` CLI and the web dashboard use) | ClinePass's three rolling windows — 5 hours, 7 days, 30 days — as % of the plan's cap, with the countdown to the next capacity freed | No — widget/TUI only |
 
 
 ## Stability notes
@@ -61,6 +62,7 @@ or stored, and no vendor asks the user to paste a session cookie.
 | Provider | Status |
 |---|---|
 | Claude | Undocumented usage endpoint, but used by the official `claude` CLI. Less fragile than a scraped web page. |
+| Cline | Two undocumented routes the official CLI calls. No aggregate usage route exists at all: the caps live on the plan and consumption is a paginated ledger, which the widget sums itself — as Cline's own dashboard does. Note the asymmetry that a live test would catch first: the page cursor is returned as `nextToken` and accepted only as `cursor`. |
 | Codex | Undocumented ChatGPT usage endpoint used by the official `codex` CLI. Windows are identified by duration instead of response position. |
 | GitHub Copilot | Private endpoint used by VS Code. It requires a GitHub OAuth token and VS Code-compatible client headers; ai-usagebar gets it from the official `gh auth token` command after `gh auth login --web`. A non-empty `GITHUB_COPILOT_TOKEN` is an optional explicit override. GitHub CLI/editor/browser credentials are never parsed, copied, or stored. |
 | Z.AI | Reverse-engineered from a third-party plugin. Treat this as the most fragile integration. |

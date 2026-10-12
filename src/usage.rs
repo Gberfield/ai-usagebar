@@ -476,6 +476,7 @@ impl VendorSnapshot {
             _ => None,
         }
     }
+    Cline(crate::cline::types::Snapshot),
 }
 
 /// Google Antigravity 2.0 / CLI snapshot. The API groups models into Gemini

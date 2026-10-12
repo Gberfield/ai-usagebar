@@ -958,6 +958,25 @@ async fn build_outcome(client: &Client, config: &Config, tab: &TabId) -> Result<
             .await?;
             Ok(outcome.into())
         }
+        VendorId::Cline => {
+            let credential = crate::cline::creds::resolve(
+                config.cline.auth_paths.as_deref(),
+                &config.cline.api_key_env,
+                config.cline.api_key.as_deref(),
+            )?;
+            let cache = crate::cache::Cache::for_vendor("cline")?;
+            let endpoints = crate::cline::fetch::Endpoints::default();
+            let outcome = crate::cline::fetch::fetch_snapshot(
+                client,
+                &credential,
+                &cache,
+                &endpoints,
+                DEFAULT_TTL,
+                Utc::now(),
+            )
+            .await?;
+            Ok(outcome.into())
+        }
         VendorId::CommandCode => {
             let credential =
                 crate::commandcode::creds::resolve(config.commandcode.auth_paths.as_deref())?;

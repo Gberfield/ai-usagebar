@@ -99,6 +99,29 @@ pub fn cycle_at(
 
 fn parse_slug(s: &str) -> Option<VendorId> {
     VendorId::from_slug(s)
+    match s {
+        "anthropic" => Some(VendorId::Anthropic),
+        "anthropic_api" => Some(VendorId::AnthropicApi),
+        "openai" => Some(VendorId::Openai),
+        "zai" => Some(VendorId::Zai),
+        "openrouter" => Some(VendorId::Openrouter),
+        "deepseek" => Some(VendorId::Deepseek),
+        "kimi" => Some(VendorId::Kimi),
+        "kilo" => Some(VendorId::Kilo),
+        "novita" => Some(VendorId::Novita),
+        "moonshot" => Some(VendorId::Moonshot),
+        "grok" => Some(VendorId::Grok),
+        "supergrok" => Some(VendorId::Supergrok),
+        "antigravity" => Some(VendorId::Antigravity),
+        "cursor" => Some(VendorId::Cursor),
+        "minimax" => Some(VendorId::Minimax),
+        "kiro" => Some(VendorId::Kiro),
+        "nous" => Some(VendorId::NousResearch),
+        "opencode-go" => Some(VendorId::OpenCodeGo),
+        "commandcode" => Some(VendorId::CommandCode),
+        "cline" => Some(VendorId::Cline),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

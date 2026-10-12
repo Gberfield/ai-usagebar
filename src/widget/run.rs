@@ -176,6 +176,7 @@ async fn build_output(cli: &Cli) -> Result<WaybarOutput> {
         Vendor::Lyceum => lyceum_output(cli, &config).await,
         Vendor::ModelStudio => modelstudio_output(cli, &config).await,
         Vendor::Devin => devin_output(cli, &config).await,
+        Vendor::Cline => cline_output(cli, &config).await,
     }
 }
 
@@ -255,6 +256,44 @@ async fn opencode_go_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> 
     let snapshot = outcome.snapshot.clone();
     let vendor_outcome: VendorOutcome = outcome.into();
     Ok(crate::opencode_go::vendor::render(
+        &vendor_outcome,
+        &snapshot,
+        &theme_from_cli(cli),
+        &RenderOpts::from_cli(cli),
+        Utc::now(),
+    ))
+}
+
+/// Cline reuses the credential the Cline CLI maintains; see
+/// [`crate::cline::creds`] for why this never refreshes it.
+async fn cline_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
+    let credential = crate::cline::creds::resolve(
+        config.cline.auth_paths.as_deref(),
+        &config.cline.api_key_env,
+        config.cline.api_key.as_deref(),
+    )?;
+    let client = http_client()?;
+    let cache = vendor_cache(cli, "cline")?;
+    let endpoints = crate::cline::fetch::Endpoints::default();
+    let outcome = match crate::cline::fetch::fetch_snapshot(
+        &client,
+        &credential,
+        &cache,
+        &endpoints,
+        DEFAULT_TTL,
+        Utc::now(),
+    )
+    .await
+    {
+        Ok(outcome) => outcome,
+        Err(error) if error.is_transient() => {
+            return Ok(WaybarOutput::loading(cli.icon.as_deref()));
+        }
+        Err(error) => return Err(error),
+    };
+    let snapshot = outcome.snapshot.clone();
+    let vendor_outcome: VendorOutcome = outcome.into();
+    Ok(crate::cline::vendor::render(
         &vendor_outcome,
         &snapshot,
         &theme_from_cli(cli),

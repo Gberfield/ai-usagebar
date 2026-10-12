@@ -1,0 +1,87 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "usg-01M23V76RDSQB398JZV59RBTYH",
+        "userId": "usr-EXAMPLE",
+        "createdAt": "2026-09-09T19:44:49.933752Z",
+        "creditsUsed": 0,
+        "costUsd": 928612,
+        "operation": "chat_completion",
+        "aiInferenceProviderName": "vercel",
+        "aiModelTypeName": "cline-pass",
+        "aiModelName": "cline-pass/deepseek-v4-flash",
+        "promptTokens": 301691,
+        "completionTokens": 656,
+        "totalTokens": 302347,
+        "cachedTokens": 291840,
+        "generationId": "gen_01M23V6S651XFKGMT9F6B9PP9P",
+        "metadata": {
+          "is_byok": false,
+          "is_stream": true,
+          "model_id": "amdl-01KTV5D607AAP3C8QP0MFJ9HB4",
+          "model_type": "cline-pass",
+          "model_type_id": "amt-01KT6MW410R5SCPNWWTZ3P0H8V",
+          "provider_id": "aip-01K9SSPSK31HAR0QA88W67JZTZ",
+          "raw_model": "deepseek/deepseek-v4-flash",
+          "session_id": "sess-b24947ba76e81a8b179cf686e874249d"
+        }
+      },
+      {
+        "id": "usg-01M23V6P63Y5AVJ54RCWPAJBFD",
+        "userId": "usr-EXAMPLE",
+        "createdAt": "2026-09-09T19:44:32.963459Z",
+        "creditsUsed": 0,
+        "costUsd": 639437,
+        "operation": "chat_completion",
+        "aiInferenceProviderName": "vercel",
+        "aiModelTypeName": "cline-pass",
+        "aiModelName": "cline-pass/deepseek-v4-flash",
+        "promptTokens": 300454,
+        "completionTokens": 1067,
+        "totalTokens": 301521,
+        "cachedTokens": 298624,
+        "generationId": "gen_01M23V6AFZYZ9QH3VBQXBKR80M",
+        "metadata": {
+          "is_byok": false,
+          "is_stream": true,
+          "model_id": "amdl-01KTV5D607AAP3C8QP0MFJ9HB4",
+          "model_type": "cline-pass",
+          "model_type_id": "amt-01KT6MW410R5SCPNWWTZ3P0H8V",
+          "provider_id": "aip-01K9SSPSK31HAR0QA88W67JZTZ",
+          "raw_model": "deepseek/deepseek-v4-flash",
+          "session_id": "sess-b24947ba76e81a8b179cf686e874249d"
+        }
+      },
+      {
+        "id": "usg-01M23V64AKX6GRHVWM2BYYB012",
+        "userId": "usr-EXAMPLE",
+        "createdAt": "2026-09-09T19:44:14.675448Z",
+        "creditsUsed": 0,
+        "costUsd": 522133,
+        "operation": "chat_completion",
+        "aiInferenceProviderName": "vercel",
+        "aiModelTypeName": "cline-pass",
+        "aiModelName": "cline-pass/deepseek-v4-flash",
+        "promptTokens": 299939,
+        "completionTokens": 350,
+        "totalTokens": 300289,
+        "cachedTokens": 298624,
+        "generationId": "gen_01M23V5YC26CWTF1MRZTNDHKB0",
+        "metadata": {
+          "is_byok": false,
+          "is_stream": true,
+          "model_id": "amdl-01KTV5D607AAP3C8QP0MFJ9HB4",
+          "model_type": "cline-pass",
+          "model_type_id": "amt-01KT6MW410R5SCPNWWTZ3P0H8V",
+          "provider_id": "aip-01K9SSPSK31HAR0QA88W67JZTZ",
+          "raw_model": "deepseek/deepseek-v4-flash",
+          "session_id": "sess-b24947ba76e81a8b179cf686e874249d"
+        }
+      }
+    ],
+    "nextToken": "usg-01M23V64AKX6GRHVWM2BYYB012",
+    "total": 0
+  },
+  "success": true
+}

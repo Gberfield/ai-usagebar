@@ -643,3 +643,21 @@ enabled = false
 [devin]
 enabled = false
 # credentials_path = "/home/you/.local/share/devin/credentials.toml"
+# Cline / ClinePass (cline.bot). Disabled by default — enable it once the
+# `cline` CLI is signed in. There is no key to paste: the OAuth credential the
+# CLI maintains in ~/.cline/data/settings/providers.json is reused as-is, and
+# it is only ever read, never refreshed or rewritten (refreshing rotates the
+# refresh token and would sign the CLI itself out).
+#
+# The three bars are ClinePass's own rolling windows — 5 hours, 7 days and
+# 30 days. Cline publishes the caps on the plan and consumption only as a
+# ledger of individual charges, so the widget sums that ledger; the cost unit
+# behind those integers is undocumented, which is why every figure is a
+# percentage of the cap and never a dollar amount.
+[cline]
+enabled = false
+# api_key_env = "CLINE_API_KEY"   # a key from app.cline.bot → Settings → API
+                                  # Keys, for a machine without the CLI. The
+                                  # environment outranks the credential file.
+# api_key = "[REDACTED]"          # optional inline fallback; prefer the env var
+# auth_paths = ["~/.cline/data/settings/providers.json"]
