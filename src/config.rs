@@ -2466,6 +2466,7 @@ impl Config {
             VendorId::Minimax => self.minimax.enabled,
             VendorId::Kiro => self.kiro.enabled,
             VendorId::NousResearch => self.nous.enabled,
+            VendorId::Cline => self.cline.enabled,
             VendorId::OpenCodeGo => self.opencode_go.enabled,
             VendorId::CommandCode => self.commandcode.enabled,
             VendorId::Ollama => self.ollama.enabled,
@@ -2511,6 +2512,7 @@ impl Config {
             | VendorId::Kiro
             | VendorId::NousResearch
             | VendorId::CommandCode
+            | VendorId::Cline
             | VendorId::ModelStudio
             | VendorId::Devin => id.api_key_env(),
         }
@@ -2536,6 +2538,7 @@ impl Config {
             VendorId::Ollama => self.ollama.api_key.as_deref(),
             VendorId::OrcaRouter => self.orcarouter.api_key.as_deref(),
             VendorId::Lyceum => self.lyceum.api_key.as_deref(),
+            VendorId::Cline => self.cline.api_key.as_deref(),
             VendorId::Anthropic
             | VendorId::Openai
             | VendorId::Copilot
@@ -2677,7 +2680,6 @@ impl Config {
             // monthly allocation, so only the headline choice applies.
             VendorId::NousResearch => DisplayPrefs::balance(None, self.nous.headline),
             _ => DisplayPrefs::default(),
-            VendorId::Cline => self.cline.enabled,
         }
     }
 

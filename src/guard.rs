@@ -347,6 +347,9 @@ mod tests {
             VendorId::OrcaRouter => MacosMirror::Generic(CORE),
             // Weekly-only: no 5h window, so it renders through the weekly half.
             VendorId::Grokbot => MacosMirror::Generic(&["plan", "vendor_short", "weekly_pct"]),
+            // Three independent windows (5 h, weekly, monthly); the macOS bar
+            // reads its fields by index, so each gets its own appended slot.
+            VendorId::Cline => MacosMirror::Slot("cline_5h_pct"),
         }
     }
 

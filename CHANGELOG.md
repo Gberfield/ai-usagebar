@@ -1,4 +1,24 @@
 ## [Unreleased]
+### Added
+
+- **Cline (ClinePass)** as a vendor: the three rolling windows ClinePass meters
+  — 5 hours, 7 days, 30 days — as a percentage of the plan's own caps, with a
+  countdown to the next capacity freed. Enable `[cline]`; the credential is the
+  one the `cline` CLI already holds, and is only ever read.
+
+  Cline publishes the caps on the plan and consumption only as a paginated
+  ledger of individual charges — there is no aggregate usage route — so the
+  vendor sums the ledger and keeps it in its cache, walking down only as far as
+  the newest charge it already holds. A first walk that runs out of its page
+  budget records where it stopped rather than a sticky "truncated" bit, so the
+  snapshot stops flagging a short history once the 30-day window rolls past it.
+
+  Figures are percentages only: the caps and the charges are integers in the
+  same undocumented fixed-point unit, so their ratio is exact while a dollar
+  conversion would be a guess. While the CLI's ~5-hour token is lapsed the
+  cached ledger is still served, marked stale and re-folded at the current
+  instant, instead of blanking the bar between two Cline sessions.
+
 
 ## [1.35.0] — 2026-10-11
 
@@ -2394,26 +2414,6 @@
   still names the buckets it did receive. `docs/vendor-endpoints.md` gains the
   Antigravity row it never had — it was the only provider missing from that
   table — and the placeholder reference no longer promises all four windows.
-### Added
-
-- **Cline (ClinePass)** as a vendor: the three rolling windows ClinePass meters
-  — 5 hours, 7 days, 30 days — as a percentage of the plan's own caps, with a
-  countdown to the next capacity freed. Enable `[cline]`; the credential is the
-  one the `cline` CLI already holds, and is only ever read.
-
-  Cline publishes the caps on the plan and consumption only as a paginated
-  ledger of individual charges — there is no aggregate usage route — so the
-  vendor sums the ledger and keeps it in its cache, walking down only as far as
-  the newest charge it already holds. A first walk that runs out of its page
-  budget records where it stopped rather than a sticky "truncated" bit, so the
-  snapshot stops flagging a short history once the 30-day window rolls past it.
-
-  Figures are percentages only: the caps and the charges are integers in the
-  same undocumented fixed-point unit, so their ratio is exact while a dollar
-  conversion would be a guess. While the CLI's ~5-hour token is lapsed the
-  cached ledger is still served, marked stale and re-folded at the current
-  instant, instead of blanking the bar between two Cline sessions.
-
 ## [1.9.1] — 2026-08-30
 
 ### Fixed

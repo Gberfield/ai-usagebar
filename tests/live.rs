@@ -913,6 +913,9 @@ async fn devin_live() {
             .as_ref()
             .map(|window| window.utilization_pct),
         out.snapshot.overage_balance_micros,
+    );
+}
+
 #[tokio::test]
 #[ignore = "live API; run with --ignored"]
 async fn cline_live() {

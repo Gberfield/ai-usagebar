@@ -181,6 +181,14 @@ fn credential_present(cfg: &Config, id: VendorId, probes: &Probes) -> bool {
                 Err(_) => false,
             }
         }
+        VendorId::Cline => {
+            let paths = match cfg.cline.auth_paths.as_deref() {
+                Some(paths) if !paths.is_empty() => paths.to_vec(),
+                _ => crate::cline::creds::default_paths().unwrap_or_default(),
+            };
+            paths.iter().any(|path| crate::cline::creds::read_from(path).is_some())
+                || cfg.cline.api_key.as_deref().is_some_and(|k| !k.is_empty())
+        }
         VendorId::OpenCodeGo => {
             match crate::opencode_go::creds::effective_paths(cfg.opencode_go.auth_paths.as_deref())
             {
