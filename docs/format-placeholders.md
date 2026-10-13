@@ -21,7 +21,7 @@ metrics expand to an empty string unless noted otherwise.
 | Kiro CLI | `kir` | Nous Research | `nrs` |
 | OpenCode Go | `ocg` | Command Code | `cmc` |
 | Ollama Cloud | `oll` | SuperGrok | `sgk` |
-| Devin | `dvn` | | |
+| Devin | `dvn` | Cline | `cln` |
 
 The same codes ride the `ai-usagebar usage --json` report as each entry's
 `short_name`, so a native frontend can draw a Waybar-style provider tag without

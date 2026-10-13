@@ -20,7 +20,7 @@ ai-usagebar-tui --config ./config.test.toml
 # Which vendor the widget shows when --vendor is omitted, AND which tab
 # is selected when the TUI opens. Defaults to anthropic when not set.
 # Only a vendor that is enabled can be primary.
-# primary = "anthropic"   # anthropic | anthropic_api | openai | copilot | ollama
+# primary = "anthropic"   # any vendor slug, e.g. anthropic | openai | copilot | ollama | cline
 #                         # | zai | openrouter | deepseek | deepinfra | kimi | kilo | novita
 #                         # | moonshot | grok | supergrok | grokbot | antigravity | cursor
 #                         # | minimax | kiro | nous | opencode-go | commandcode

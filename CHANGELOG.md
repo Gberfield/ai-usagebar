@@ -16,11 +16,12 @@
 
 
 - **Prepare an inactive Claude Desktop account without switching to it (macOS).**
-  A Desktop account's card gains a Prepare action that pre-stages the account
-  in the app — the local history is copied, not moved, so the current login
-  keeps running — ready for a later switch or first run. Contributed by
-  GuohuaQiu1999 as the prepare half of #392; the switch half shipped
-  separately in v1.35.0.
+  A Desktop account's card gains a Prepare action that opens the account's
+  5-hour window server-side: one short turn with the profile's token in an
+  isolated temporary home (no tools, MCP, history persistence, or project
+  context; the directory is deleted afterward). The app is neither switched
+  nor restarted. Contributed by GuohuaQiu1999 as the prepare half of #392;
+  the switch half shipped separately in v1.35.0.
 ### Changed
 
 - **TUI tabs follow `[ui] overview_vendors`.** Listed vendors lead the sidebar

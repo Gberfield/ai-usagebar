@@ -11,7 +11,7 @@
 # Valid: anthropic | anthropic_api | openai | copilot | zai | openrouter | deepseek
 #        | kimi | kilo | novita | moonshot | grok | supergrok | grokbot | antigravity
 #        | cursor | minimax | kiro | nous | opencode-go | commandcode | ollama
-#        | orcarouter | modelstudio | lyceum | devin
+#        | orcarouter | modelstudio | lyceum | devin | cline
 # When unset, the TUI opens on the Overview (all vendors at once); set this to
 # open directly on a vendor's tab instead.
 # primary = "anthropic"
