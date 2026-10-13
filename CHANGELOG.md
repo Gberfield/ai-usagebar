@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [1.36.0] — 2026-10-12
+
 ### Added
 
 - **Cline (ClinePass)** as a vendor: the three limits ClinePass meters —
@@ -4317,7 +4319,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.35.0...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.36.0...HEAD
+[1.36.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.35.0...v1.36.0
 [1.35.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.34.0...v1.35.0
 [1.34.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.33.0...v1.34.0
 [1.33.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.32.0...v1.33.0
