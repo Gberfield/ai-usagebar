@@ -196,8 +196,8 @@ impl ReportSection {
 /// console subprocess. Errors are the same user-facing strings `usage` would
 /// print.
 pub async fn collect_json() -> std::result::Result<String, String> {
-    let (entries, primary) = collect_entries().await?;
-    Ok(render_json_for_primary(&entries, primary))
+    let (entries, primary, overview) = collect_entries().await?;
+    Ok(render_json_document(&entries, primary, overview.as_deref()))
 }
 
 /// Snapshot one configured vendor or account — the entry whose `id` is
@@ -237,7 +237,8 @@ fn tabs_matching(tabs: &[TabId], entry_id: &str) -> Vec<TabId> {
         .collect()
 }
 
-async fn collect_entries() -> std::result::Result<(Vec<Entry>, Option<&'static str>), String> {
+async fn collect_entries()
+-> std::result::Result<(Vec<Entry>, Option<&'static str>, Option<Vec<&'static str>>), String> {
     let config = Config::load().map_err(|error| error.user_message())?;
     let client = crate::widget::run::http_client().map_err(|error| error.user_message())?;
     let tabs = tabs_with_desktop(&config);
@@ -248,7 +249,16 @@ async fn collect_entries() -> std::result::Result<(Vec<Entry>, Option<&'static s
         ));
     }
     let entries = collect_entries_for(&client, &config, &tabs).await;
-    Ok((entries, config.ui.primary.map(|vendor| vendor.slug())))
+    let overview = config
+        .ui
+        .overview_vendors
+        .as_ref()
+        .map(|vendors| vendors.iter().map(|vendor| vendor.slug()).collect());
+    Ok((
+        entries,
+        config.ui.primary.map(|vendor| vendor.slug()),
+        overview,
+    ))
 }
 
 async fn collect_entries_for(
@@ -305,8 +315,8 @@ async fn entry_for_report_target(
 }
 
 pub async fn run(json: bool) -> i32 {
-    let (entries, primary) = match collect_entries().await {
-        Ok(pair) => pair,
+    let (entries, primary, overview) = match collect_entries().await {
+        Ok(collected) => collected,
         Err(message) => {
             eprintln!("ai-usagebar usage: {message}");
             return 1;
@@ -314,7 +324,10 @@ pub async fn run(json: bool) -> i32 {
     };
 
     if json {
-        println!("{}", render_json_for_primary(&entries, primary));
+        println!(
+            "{}",
+            render_json_document(&entries, primary, overview.as_deref())
+        );
     } else {
         print!("{}", render_text(&entries));
     }
@@ -835,13 +848,25 @@ fn resolve_primary(primary: Option<&str>, entries: &[Entry]) -> Option<String> {
     })
 }
 
+#[cfg(test)]
 fn render_json_for_primary(entries: &[Entry], primary: Option<&str>) -> String {
-    json!({
+    render_json_document(entries, primary, None)
+}
+
+fn render_json_document(
+    entries: &[Entry],
+    primary: Option<&str>,
+    overview: Option<&[&str]>,
+) -> String {
+    let mut value = json!({
         "schema_version": USAGE_SCHEMA_VERSION,
         "primary": resolve_primary(primary, entries),
         "entries": json_rows(entries),
-    })
-    .to_string()
+    });
+    if let Some(order) = overview {
+        value["overview_vendors"] = json!(order);
+    }
+    value.to_string()
 }
 
 /// The single-entry shape: the same rows, without a `primary` the caller
@@ -1333,6 +1358,18 @@ mod tests {
         assert_eq!(value["primary"], "openai");
         assert_eq!(value["entries"][0]["id"], "anthropic");
         assert_eq!(value["entries"][1]["id"], "openai");
+        assert!(value.get("overview_vendors").is_none());
+    }
+
+    #[test]
+    fn json_carries_overview_vendors_only_when_configured() {
+        let rendered = render_json_document(
+            &[entry("anthropic", Vec::new())],
+            None,
+            Some(&["openai", "anthropic"]),
+        );
+        let value: serde_json::Value = serde_json::from_str(&rendered).unwrap();
+        assert_eq!(value["overview_vendors"], json!(["openai", "anthropic"]));
     }
 
     /// #228: `config.ui.primary` is a vendor slug, but entry ids carry

@@ -14,6 +14,24 @@
   own percentages: no usage is re-derived from the charge ledger, and anything
   outside the reported shape is schema drift, never a silent 0%.
 
+### Changed
+
+- **TUI tabs follow `[ui] overview_vendors`.** Listed vendors lead the sidebar
+  in that order. Enabled vendors left off the list keep the canonical order
+  after them. The Overview tab still lists only the named vendors.
+  `usage --json` includes `overview_vendors` when the list is set, including
+  an empty list, and omits the field otherwise. `entries` follow the tab
+  order, so a consumer that renders the payload in order follows the list
+  too. Frontends keep a repeated slug's first occurrence. The Linux Mint dashboard
+  reads that field instead of `config.toml`. When the field is absent it
+  still leads with `primary`; an empty list does not.
+
+### Fixed
+
+- **Linux Mint dashboard opens on Wayland.** Asking an X11 server time no
+  longer crashes when WSLg (or any Wayland session) hands back a Wayland
+  window.
+
 ## [1.35.0] — 2026-10-11
 
 ### Added
