@@ -1247,7 +1247,18 @@ mod tests {
                 _ => None,
             })
             .unwrap();
-        let _ = handle_mouse(&mut app, &click_at(provider_row.x + 4, provider_row.y));
+        // The popup grows with the provider catalog. Choose a point outside
+        // its actual choice rectangles rather than assuming this row's left
+        // edge is uncovered after a provider is added.
+        let outside_x = (provider_row.x..provider_row.right())
+            .find(|x| {
+                !app.hit.borrow().settings_rows.iter().any(|(row, rect)| {
+                    matches!(row, SettingsRow::Pick(_))
+                        && rect.contains(ratatui::layout::Position::new(*x, provider_row.y))
+                })
+            })
+            .expect("provider row has a point outside the picker");
+        let _ = handle_mouse(&mut app, &click_at(outside_x, provider_row.y));
         let state = app.settings.as_ref().unwrap();
         assert!(state.picker.is_none(), "outside click closes the picker");
         assert_eq!(state.primary, VendorId::Anthropic, "no selection happened");

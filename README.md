@@ -1,6 +1,6 @@
 # ai-usagebar
 
-Native Omarchy Quattro panel, Waybar widget, and tabbed TUI for AI plan usage across **Claude**, **Codex/ChatGPT**, **GitHub Copilot**, **Z.AI (GLM)**, **OpenRouter**, **DeepSeek**, **DeepInfra**, **Kimi**, **Nous Research**, **OpenCode Go**, **Command Code**, **Devin**, **Cline**, and other supported AI coding services.
+Native Omarchy Quattro panel, Waybar widget, and tabbed TUI for AI plan usage across **Claude**, **Codex/ChatGPT**, **GitHub Copilot**, **Z.AI (GLM)**, **OpenRouter**, **DeepSeek**, **DeepInfra**, **Kimi**, **Nous Research**, **OpenCode Go**, **Command Code**, **Devin**, **Cline**, **Muse Code**, and other supported AI coding services.
 
 ai-usagebar began as a Rust port of
 [`claudebar`](https://github.com/mryll/claudebar) and remains drop-in
@@ -312,6 +312,7 @@ come from environment variables or `config.toml`.
 | Model Studio | Existing `bl auth login --console` (Alibaba Cloud) | Opt in (`[modelstudio]`), install the official `bl` CLI, and run `bl auth login --console` once. Reports the Token Plan's 5-hour, weekly and monthly percentage windows with resets, through the same console gateway the CLI uses; the credential file `~/.bailian/config.json` is only ever read. |
 | Devin | Existing official Devin CLI login | Opt in (`[devin]`) after signing in with the Devin CLI. Reuses its existing `credentials.toml` read-only; ai-usagebar never logs in, refreshes, or writes credentials. Reports daily and weekly quota usage and an optional overage balance. |
 | Cline / ClinePass | Existing `cline` CLI login | Enable `[cline]`. No key to paste; the CLI's own credential is reused. `CLINE_API_KEY` overrides it. |
+| Muse Code | Existing file-based Muse CLI OAuth login | Enable `[muse-code]` after `muse login`. Reports subscription session/weekly quota and resets. Credentials are read only; Meta can omit quotas while the session window is idle. [Setup and limitations](docs/muse-code.md). |
 
 ### Nous credits and OpenCode Go
 

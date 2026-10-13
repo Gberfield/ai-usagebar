@@ -5,6 +5,12 @@ Claude, Codex, Z.AI, and OpenRouter are enabled by default; other providers are
 opt-in. The commented example shows the defaults and provider-specific
 settings.
 
+Muse Code subscription quotas use the official CLI's existing file-based
+OAuth login. Enable `[muse-code] enabled = true`, optionally with a
+`credentials_path`. It remains opt-in during detection. See
+[Muse Code setup](muse-code.md) for paths, the five-minute request bound,
+and Meta's idle-window missing-data limitation.
+
 Both binaries accept `--config <PATH>` to use an alternate file instead of the
 default location (`%APPDATA%\ai-usagebar\config\config.toml` on Windows). The file
 must already exist; loads and the Settings overlay then read and write that

@@ -73,6 +73,8 @@ pub struct Config {
     pub modelstudio: ModelStudioConfig,
     pub lyceum: LyceumConfig,
     pub devin: DevinConfig,
+    #[serde(rename = "muse-code")]
+    pub muse: MuseConfig,
     /// Quota-threshold desktop notifications (`[notifications]`).
     pub notifications: NotificationsConfig,
     /// User-defined providers, one `[[custom]]` table each.
@@ -1290,6 +1292,14 @@ pub struct ModelStudioConfig {
     pub config_dir: Option<PathBuf>,
 }
 
+/// Muse Code subscription quota from the CLI's existing file-based login.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(default)]
+pub struct MuseConfig {
+    pub enabled: bool,
+    pub credentials_path: Option<PathBuf>,
+}
+
 /// Devin CLI quota — reuses its existing credentials file read-only. The
 /// provider is opt-in and stores only a path override in ai-usagebar config.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -2348,6 +2358,7 @@ impl Config {
         expand_tilde_opt(&mut self.grokbot.secrets_path);
         expand_tilde_opt(&mut self.modelstudio.config_dir);
         expand_tilde_opt(&mut self.devin.credentials_path);
+        expand_tilde_opt(&mut self.muse.credentials_path);
         self.supergrok.grok_binary = expand_tilde(&self.supergrok.grok_binary);
         expand_tilde_opt(&mut self.supergrok.auth_path);
         expand_tilde_opt(&mut self.supergrok.config_path);
@@ -2496,6 +2507,7 @@ impl Config {
             VendorId::ModelStudio => self.modelstudio.enabled,
             VendorId::Lyceum => self.lyceum.enabled,
             VendorId::Devin => self.devin.enabled,
+            VendorId::MuseCode => self.muse.enabled,
         }
     }
 
@@ -2536,7 +2548,8 @@ impl Config {
             | VendorId::CommandCode
             | VendorId::Cline
             | VendorId::ModelStudio
-            | VendorId::Devin => id.api_key_env(),
+            | VendorId::Devin
+            | VendorId::MuseCode => id.api_key_env(),
         }
     }
 
@@ -2572,7 +2585,8 @@ impl Config {
             | VendorId::NousResearch
             | VendorId::CommandCode
             | VendorId::ModelStudio
-            | VendorId::Devin => None,
+            | VendorId::Devin
+            | VendorId::MuseCode => None,
         };
         raw.filter(|key| !key.is_empty())
     }

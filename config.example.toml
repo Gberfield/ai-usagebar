@@ -11,7 +11,7 @@
 # Valid: anthropic | anthropic_api | openai | copilot | zai | openrouter | deepseek
 #        | kimi | kilo | novita | moonshot | grok | supergrok | grokbot | antigravity
 #        | cursor | minimax | kiro | nous | opencode-go | commandcode | ollama
-#        | orcarouter | modelstudio | lyceum | devin | cline
+#        | orcarouter | modelstudio | lyceum | devin | cline | muse-code
 # When unset, the TUI opens on the Overview (all vendors at once); set this to
 # open directly on a vendor's tab instead.
 # primary = "anthropic"
@@ -62,37 +62,9 @@
 # label = "Tier"
 # value = "/account/tier"        # string, number or boolean
 #
-# Recipe: Meta Muse (Muse Spark) local spend. Meta publishes no quota or
-# billing endpoint for api.meta.ai (see docs/vendor-endpoints.md), so there
-# is no native vendor — but Muse Code writes per-call token usage
-# (`model_completed` events) to ~/.local/share/muse/sessions, and a small
-# loopback server can tally it into this shape. Uncomment and point `url`
-# at your tally server:
-# [[custom]]
-# id = "muse"
-# name = "Muse"
-# short_name = "mus"             # exactly 3 lowercase letters, unique
-# enabled = true
-# url = "http://127.0.0.1:41837/usage"
-# allow_http = true              # loopback only
-# api_key_env = ""
-# api_key = "local"              # loopback only; the tally server ignores it
-# auth_header = "Authorization"
-# auth_scheme = ""               # "" sends the bare key
-# plan = "Muse Spark (local)"
-# cache_ttl_secs = 300
-# [[custom.metrics]]
-# label = "Cache miss"           # low-is-good reads correctly in severity colors
-# percent = "/cache/miss_pct"
-# [[custom.texts]]
-# label = "Today"
-# value = "/spend/today_usd"
-# [[custom.texts]]
-# label = "30 days"
-# value = "/spend/last30_usd"
-# [[custom.texts]]
-# label = "Calls today"
-# value = "/calls/today"
+# Muse Code subscription quota is now a native provider: see [muse-code]
+# below and docs/muse-code.md. Legacy custom counters may retain id = "muse"
+# and short_name = "mus"; the native provider uses "muse-code" / "msc".
 
 # Windows/macOS tray. The macOS menu bar also writes its options here from the
 # popover Settings → Menu Bar.
@@ -657,6 +629,16 @@ enabled = false
 [devin]
 enabled = false
 # credentials_path = "/home/you/.local/share/devin/credentials.toml"
+
+# Muse Code subscription quota. Requires the official CLI's existing
+# file-based OAuth login and already-issued key; neither is rewritten.
+# No Keychain-only login support in this initial integration. Requests are
+# bounded to one per login every five minutes, including forced refreshes.
+# Missing quota (possible while the session is idle) is unknown, never zero.
+[muse-code]
+enabled = false
+# credentials_path = "~/.config/muse/auth.json"
+
 # Cline / ClinePass (cline.bot). Disabled by default — enable it once the
 # `cline` CLI is signed in. There is no key to paste: the OAuth credential the
 # CLI maintains in ~/.cline/data/settings/providers.json is reused as-is, and

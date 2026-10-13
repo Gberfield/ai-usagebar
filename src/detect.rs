@@ -118,6 +118,9 @@ pub fn has_local_credentials(vendor: VendorId, config: &Config) -> bool {
         VendorId::ModelStudio => crate::modelstudio::config_path(&config.modelstudio)
             .map(|path| crate::modelstudio::creds::config_present_at(&path))
             .unwrap_or(false),
+        VendorId::MuseCode => crate::muse::creds::path(&config.muse)
+            .map(|path| path.is_file())
+            .unwrap_or(false),
         VendorId::Devin => crate::devin::credentials_path(&config.devin)
             .map(|path| path.is_file())
             .unwrap_or(false),
@@ -557,11 +560,8 @@ mod tests {
             assert!(!probed_vendors.borrow().contains(&VendorId::Devin));
             assert!(plan.known.contains(&VendorId::Devin));
         }
-        assert!(
-            VendorId::all()
-                .iter()
-                .all(|vendor| vendor.auto_detectable() == (*vendor != VendorId::Devin))
-        );
+        assert!(VendorId::all().iter().all(|vendor| vendor.auto_detectable()
+            == !matches!(vendor, VendorId::Devin | VendorId::MuseCode)));
     }
 
     #[test]

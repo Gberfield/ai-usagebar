@@ -324,6 +324,7 @@ mod tests {
             VendorId::Deepinfra => MacosMirror::Slot("dif_balance"),
             VendorId::Deepseek => MacosMirror::Slot("ds_balance"),
             VendorId::Devin => MacosMirror::Slot("devin_daily_pct"),
+            VendorId::MuseCode => MacosMirror::Generic(CORE),
             VendorId::Grok => MacosMirror::Slot("grok_balance"),
             VendorId::Kilo => MacosMirror::Slot("kilo_balance"),
             VendorId::Lyceum => MacosMirror::Slot("lyceum_balance"),
