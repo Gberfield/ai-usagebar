@@ -23,6 +23,11 @@ The report/catalog ID is `muse-code`; the short name is `msc`. The separate
 names preserve compatibility with the older local-token `[[custom]]` recipe
 whose ID/short name were `muse`/`mus`. No local counters are used by this provider.
 
+The Omarchy bar and panel use Meta's infinity mark when brand icons are enabled.
+The provider filter must be empty and **Show all providers** enabled to display
+Muse alongside the other enabled providers. Selecting `muse-code` in that filter
+limits both the bar and panel to Muse.
+
 The login path is `credentials_path`, then `MUSE_AUTH_PATH`, then an absolute
 `XDG_CONFIG_HOME` plus `muse/auth.json`, then `~/.config/muse/auth.json`.
 The file must contain the CLI's `providers.meta` OAuth `access_token` (a `dca:`
@@ -90,3 +95,22 @@ First-use key issuance and rotation cadence are undocumented, which is why this
 integration requires a standing CLI key and bounds every request.
 [Empirical key comparison](https://github.com/kunchenguid/quota-axi/blob/5cb1c94c6c26166a35f4628eb59858b5e080729a/README.md#L1080),
 [idle-window omission report](https://github.com/steipete/CodexBar/issues/4002).
+
+## Omarchy logo investigation
+
+Investigated 2026-10-14. Omarchy owns its SVG artwork in `omarchy/icons/` and
+resolves the report's `brand` (or provider ID for older reports) in
+`Model.brandIconFile`. An unregistered brand falls back to its short name, which
+is why Muse originally appeared as `msc` despite brand icons being enabled.
+
+No separate Muse Code product mark was found in the
+[official Muse Code docs](https://dev.meta.ai/docs/muse-code) or the
+[Lobe Icons source tree](https://github.com/lobehub/lobe-icons/tree/05a9b8c41e4735a4a2b6d2f1e43574bd8ec6c8cb/src).
+The integration uses the parent-company infinity mark described in
+[Meta's company brand resources](https://www.meta.com/brand/resources/meta/company-brand/).
+Its path comes from [Lobe Icons' Meta SVG](https://github.com/lobehub/lobe-icons/blob/05a9b8c41e4735a4a2b6d2f1e43574bd8ec6c8cb/packages/static-svg/icons/meta.svg)
+under [MIT](https://github.com/lobehub/lobe-icons/blob/05a9b8c41e4735a4a2b6d2f1e43574bd8ec6c8cb/LICENSE),
+with the existing LobeHub notice retained. The path is unchanged; a white fill
+and fixed 24px dimensions follow the plugin's theme-tinting and Qt contracts.
+The legacy custom `muse` recipe gains no brand unless explicitly configured
+with `brand = "muse-code"`.

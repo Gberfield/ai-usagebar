@@ -31,3 +31,4 @@ back to its `short_name` (`cmc`).
 | `nous.svg` | Nous Research | lobe-icons `nousresearch` | MIT |
 | `opencode.svg` | OpenCode Go | lobe-icons `opencode` | MIT |
 | `ollama.svg` | Ollama Cloud | lobe-icons `ollama` | MIT |
+| `muse-code.svg` | Muse Code (Meta infinity mark) | [lobe-icons static SVG](https://github.com/lobehub/lobe-icons/blob/05a9b8c41e4735a4a2b6d2f1e43574bd8ec6c8cb/packages/static-svg/icons/meta.svg), path geometry preserved; white fill and fixed 24px dimensions for Qt | MIT; notice in [LICENSE-lobe-icons.txt](LICENSE-lobe-icons.txt) |

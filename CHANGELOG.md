@@ -8,7 +8,8 @@
   attempt per login every five minutes, including forced refreshes and failures;
   credentials are never refreshed or rewritten and returned inference keys are
   discarded. Missing/expired quota is unknown, with previous observations
-  marked stale. Existing `[[custom]] id = "muse"` configurations stay valid.
+  marked stale. The Omarchy bar and panel use Meta's infinity mark. Existing
+  `[[custom]] id = "muse"` configurations stay valid.
 
 ## [1.36.0] — 2026-10-12
 

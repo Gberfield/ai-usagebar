@@ -611,6 +611,18 @@ assert.match(ollamaMark, /<path\s/);
 // White source artwork is needed for BrandMark's runtime colorization.
 assert.match(ollamaMark, /<svg\b[^>]*\bfill="#ffffff"/);
 assert.doesNotMatch(ollamaMark, /currentColor|<(?:script|image|foreignObject|use)\b|\bhref\s*=|\bon\w+\s*=/i);
+assert.equal(model.brandIconFile({id: 'muse-code'}), 'muse-code.svg');
+assert.equal(model.brandIconFile({id: 'muse-code@work'}), 'muse-code.svg');
+assert.equal(model.brandIconFile({id: 'custom:muse', brand: 'muse-code'}), 'muse-code.svg');
+// The legacy local-token recipe has no declared brand and keeps its fallback.
+assert.equal(model.brandIconFile({id: 'custom:muse'}), '');
+const museMark = fs.readFileSync(new URL('./icons/muse-code.svg', import.meta.url), 'utf8');
+assert.match(museMark, /viewBox="0 0 24 24"/);
+assert.match(museMark, /\bwidth="24"/);
+assert.match(museMark, /\bheight="24"/);
+assert.match(museMark, /<path\s/);
+assert.match(museMark, /<svg\b[^>]*\bfill="#ffffff"/);
+assert.doesNotMatch(museMark, /currentColor|<(?:script|image|foreignObject|use)\b|\bhref\s*=|\bon\w+\s*=/i);
 assert.equal(model.brandIconFile({id: 'lyceum'}), '');
 assert.equal(model.brandIconFile({id: 'commandcode'}), '');
 assert.equal(model.brandIconFile({id: 'anthropic_api'}), 'anthropic.svg');
@@ -632,7 +644,7 @@ assert.equal(model.brandIconFile({id: 'anthropic', brand: 'openai'}), 'openai.sv
 const slugs = [
   'anthropic', 'anthropic_api', 'openai', 'copilot', 'zai', 'openrouter',
   'deepseek', 'kimi', 'kilo', 'novita', 'moonshot', 'grok', 'supergrok', 'grokbot',
-  'antigravity', 'cursor', 'minimax', 'kiro', 'nous', 'opencode-go', 'lyceum', 'commandcode', 'devin', 'ollama'
+  'antigravity', 'cursor', 'minimax', 'kiro', 'nous', 'opencode-go', 'lyceum', 'commandcode', 'devin', 'ollama', 'muse-code'
 ];
 const byMark = {};
 for (const slug of slugs) {
@@ -662,6 +674,19 @@ assert.equal(strip[0].brand, 'claude.svg');
 assert.equal(strip[1].brand, 'openai.svg');
 assert.equal(strip[0].label, '29%');
 assert.equal(strip[1].label, '95%');
+const museChip = {
+  id: 'muse-code', short_name: 'msc', icon: 'msc', brand: 'muse-code',
+  sections: [{type: 'metric', label: 'Session', percent: 41}]
+};
+const withMuse = model.barChips([claudeChip, openaiChip, museChip], openaiChip,
+  true, true, false, false, false, false, 'auto', 'left', true);
+assert.equal(withMuse.map(chip => chip.id).join(','), 'anthropic@work,openai,muse-code');
+assert.equal(withMuse[2].brand, 'muse-code.svg');
+assert.equal(withMuse[2].label, '59%');
+const museText = model.barChips([claudeChip, openaiChip, museChip], museChip,
+  true, true, false, false, false, false, 'auto', 'left', false);
+assert.equal(museText[2].brand, '');
+assert.equal(museText[2].label, 'msc 59%');
 const one = model.barChips([claudeChip, openaiChip], openaiChip, false, true, false, false, false, false);
 assert.equal(one.length, 1);
 assert.equal(one[0].brand, 'openai.svg');
