@@ -10,6 +10,8 @@ import MdiStarHalfFull from "~icons/mdi/star-half-full";
 import MdiStarOutline from "~icons/mdi/star-outline";
 import MdiTune from "~icons/mdi/tune-variant";
 import MdiArrowTopRight from "~icons/mdi/arrow-top-right";
+import MdiClockStart from "~icons/mdi/clock-start";
+import MdiCheck from "~icons/mdi/check";
 import { Chip } from "@/components/Chip";
 import { Hint } from "@/components/Hint";
 import { ProviderIcon } from "@/components/ProviderIcon";
@@ -35,6 +37,7 @@ import {
   cardHasExtras,
   condensedTextRowIndexes,
   displayPlan,
+  desktopPreparation,
   explainError,
   headlineAlternate,
   headlineLabel,
@@ -161,6 +164,7 @@ export function ProviderSection({
         account={account}
         card={card}
         handle={handle}
+        nowMs={nowMs}
         onCustomize={onCustomize}
         onSwitchAccount={onSwitchAccount}
       />
@@ -230,6 +234,7 @@ interface ProviderSectionHeaderProps {
   account?: CardAccount | null;
   card: Card;
   handle?: SectionHandle;
+  nowMs?: number;
   onCustomize?: () => void;
   onSwitchAccount?: () => void;
 }
@@ -245,6 +250,7 @@ export function ProviderSectionHeader({
   account,
   card,
   handle,
+  nowMs = 0,
   onCustomize,
   onSwitchAccount,
 }: ProviderSectionHeaderProps) {
@@ -271,6 +277,7 @@ export function ProviderSectionHeader({
         </MdiAlert>
       ) : null}
       <span className="min-w-[var(--gap-controls)] flex-1" />
+      {account ? <DesktopPrepareControl account={account} card={card} nowMs={nowMs} /> : null}
       {account ? <AccountControl account={account} title={card.title} onSwitch={onSwitchAccount} /> : null}
       {onCustomize ? (
         <HeaderAction icon={<MdiTune />} label={`${m.customize()} ${card.title}`} onClick={onCustomize} />
@@ -283,6 +290,25 @@ interface AccountControlProps {
   account: CardAccount;
   title: string;
   onSwitch?: () => void;
+}
+
+/** No account swap: a separate official CLI turn and server-confirmed window. */
+function DesktopPrepareControl({ account, card, nowMs }: { account: CardAccount; card: Card; nowMs: number }) {
+  const state = desktopPreparation(card, account, nowMs);
+  if (!state) return null;
+  return (
+    <Hint content={state.hint}>
+      <span>
+        <button type="button" className={cn("desktop-account-control", account.prepareError && state.label === "Prepare" && "is-failed")}
+          disabled={state.disabled} aria-label={`${state.label} Claude Desktop account ${account.label}`}
+          onClick={() => sendCommand("prepare-account", { vendor: "claude-desktop", label: account.label })}
+          onKeyDown={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()}>
+          {account.preparing ? <MdiLoading className="animate-spin" /> : state.label === "Ready" ? <MdiCheck /> : <MdiClockStart />}
+          {state.label}
+        </button>
+      </span>
+    </Hint>
+  );
 }
 
 /**
