@@ -131,9 +131,15 @@ When cutting a new version (patch, minor, or major):
     checkouts under `/tmp` (prune with `git worktree remove --force` +
     `git worktree prune`) and their `CARGO_TARGET_DIR` side directories
     (`/tmp/opencode/*-tgt`), which each hold a full dependency build.
+    Two more leftovers the batch workflow creates: the local `pr-*` branches
+    fetched per audited PR (`git branch | grep '^  pr-' | xargs git branch -D`
+    — fetched refs, not work) and any `node_modules/` a verification lane
+    installed inside the checkout (`git status --ignored --short | grep '^!!'`
+    — a stray one has broken `omarchy plugin validate` twice).
     The next `make test` pays a full rebuild for the reclaimed space —
     that trade is correct exactly once per release, and leaving the trash
-    in place has exhausted disk storage before.
+    in place has exhausted disk storage before. Shared caches
+    (`~/.cargo/registry`, `~/.npm`) are not part of this.
 
 **Anything skipping any of 1–10 is an incomplete release.** Tags are
 immutable; do **not** force-move a tag once it's pushed. Cut a new
