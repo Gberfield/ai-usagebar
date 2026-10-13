@@ -163,11 +163,7 @@ pub async fn fetch_snapshot(
     }
 }
 
-async fn fetch_live(
-    client: &reqwest::Client,
-    endpoints: &Endpoints,
-    token: &str,
-) -> Result<State> {
+async fn fetch_live(client: &reqwest::Client, endpoints: &Endpoints, token: &str) -> Result<State> {
     let schema = |_| AppError::Schema(SCHEMA_ERROR.to_string());
     let plan = parse_plan(&get_json(client, &endpoints.plan(), token).await?).map_err(schema)?;
     let windows =
@@ -351,7 +347,15 @@ mod tests {
         ttl: Duration,
         at: DateTime<Utc>,
     ) -> Result<FetchOutcome> {
-        fetch_snapshot(&reqwest::Client::new(), credential, cache, endpoints, ttl, at).await
+        fetch_snapshot(
+            &reqwest::Client::new(),
+            credential,
+            cache,
+            endpoints,
+            ttl,
+            at,
+        )
+        .await
     }
 
     #[tokio::test]

@@ -1,24 +1,18 @@
 ## [Unreleased]
+
 ### Added
 
-- **Cline (ClinePass)** as a vendor: the three rolling windows ClinePass meters
-  — 5 hours, 7 days, 30 days — as a percentage of the plan's own caps, with a
-  countdown to the next capacity freed. Enable `[cline]`; the credential is the
-  one the `cline` CLI already holds, and is only ever read.
-
-  Cline publishes the caps on the plan and consumption only as a paginated
-  ledger of individual charges — there is no aggregate usage route — so the
-  vendor sums the ledger and keeps it in its cache, walking down only as far as
-  the newest charge it already holds. A first walk that runs out of its page
-  budget records where it stopped rather than a sticky "truncated" bit, so the
-  snapshot stops flagging a short history once the 30-day window rolls past it.
-
-  Figures are percentages only: the caps and the charges are integers in the
-  same undocumented fixed-point unit, so their ratio is exact while a dollar
-  conversion would be a guess. While the CLI's ~5-hour token is lapsed the
-  cached ledger is still served, marked stale and re-folded at the current
-  instant, instead of blanking the bar between two Cline sessions.
-
+- **Cline (ClinePass)** as a vendor: the three limits ClinePass meters —
+  5 hours, weekly, monthly — read as the percentage Cline itself reports from
+  the dashboard's `usage-limits` route (undocumented, the same calls the web
+  dashboard and the official `cline` CLI make), with the reset time of each
+  open window; the plan's billing period comes from the documented
+  `/api/v1/users/me/plan`. Enable `[cline]`; the credential is the one the
+  `cline` CLI already holds, and is only ever read — an expired token is
+  flagged, never refreshed (refreshing would sign the CLI out), and a blank
+  token is a credentials error naming `cline auth`. Figures are the server's
+  own percentages: no usage is re-derived from the charge ledger, and anything
+  outside the reported shape is schema drift, never a silent 0%.
 
 ## [1.35.0] — 2026-10-11
 

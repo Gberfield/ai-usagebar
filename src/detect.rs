@@ -104,14 +104,12 @@ pub fn has_local_credentials(vendor: VendorId, config: &Config) -> bool {
         VendorId::CommandCode => {
             crate::commandcode::creds::resolve(config.commandcode.auth_paths.as_deref()).is_ok()
         }
-        VendorId::Cline => {
-            crate::cline::creds::resolve(
-                config.cline.auth_paths.as_deref(),
-                &config.cline.api_key_env,
-                config.cline.api_key.as_deref(),
-            )
-            .is_ok()
-        }
+        VendorId::Cline => crate::cline::creds::resolve(
+            config.cline.auth_paths.as_deref(),
+            &config.cline.api_key_env,
+            config.cline.api_key.as_deref(),
+        )
+        .is_ok(),
         VendorId::Ollama => key_present(config, vendor),
         VendorId::OrcaRouter => key_present(config, vendor),
         VendorId::Lyceum => key_present(config, vendor),

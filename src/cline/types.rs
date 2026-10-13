@@ -195,10 +195,9 @@ mod tests {
 
     #[test]
     fn parses_the_real_usage_limits_response() {
-        let value: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/cline/usage-limits.json"
-        ))
-        .expect("fixture JSON must be valid");
+        let value: Value =
+            serde_json::from_str(include_str!("../../tests/fixtures/cline/usage-limits.json"))
+                .expect("fixture JSON must be valid");
 
         let [five, week, month] = parse_limits(&value).expect("limits must parse");
         let five = five.expect("5h");
@@ -215,7 +214,10 @@ mod tests {
     #[test]
     fn a_plan_without_clinepass_has_no_limits() {
         let value: Value = serde_json::json!({"data": {"limits": []}, "success": true});
-        assert_eq!(parse_limits(&value).expect("empty is valid"), [None, None, None]);
+        assert_eq!(
+            parse_limits(&value).expect("empty is valid"),
+            [None, None, None]
+        );
     }
 
     #[test]
@@ -250,12 +252,28 @@ mod tests {
     fn percentages_are_clamped_and_worst_pct_leads() {
         let snapshot = Snapshot {
             plan: None,
-            five_hour: Some(Window { percent: 0.0, reset: None }),
-            seven_day: Some(Window { percent: 5.0, reset: None }),
-            thirty_day: Some(Window { percent: 130.0, reset: None }),
+            five_hour: Some(Window {
+                percent: 0.0,
+                reset: None,
+            }),
+            seven_day: Some(Window {
+                percent: 5.0,
+                reset: None,
+            }),
+            thirty_day: Some(Window {
+                percent: 130.0,
+                reset: None,
+            }),
             period_end: None,
         };
         assert_eq!(snapshot.worst_pct(), Some(100));
-        assert_eq!(Window { percent: f64::NAN, reset: None }.pct(), 0);
+        assert_eq!(
+            Window {
+                percent: f64::NAN,
+                reset: None
+            }
+            .pct(),
+            0
+        );
     }
 }

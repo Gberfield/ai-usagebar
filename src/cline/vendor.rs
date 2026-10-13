@@ -271,7 +271,7 @@ mod tests {
                 seven_day: None,
                 thirty_day: None,
                 period_end: None,
-                },
+            },
             at("2026-09-09T20:00:00Z"),
         );
 
