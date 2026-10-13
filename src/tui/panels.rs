@@ -434,6 +434,14 @@ pub fn compact_cells(snapshot: &VendorSnapshot) -> (String, Vec<(String, PaceSev
             .collect();
             (s.plan.clone().unwrap_or_default(), cells)
         }
+        VendorSnapshot::Cline(s) => {
+            let cells = s
+                .windows()
+                .into_iter()
+                .filter_map(|(label, window)| window.map(|window| pct(label, window.pct())))
+                .collect();
+            (s.plan.clone().unwrap_or_else(|| "Cline".into()), cells)
+        }
         VendorSnapshot::OpenCodeGo(s) => {
             let cells = [
                 ("rolling", s.rolling.as_ref()),
@@ -526,6 +534,7 @@ pub fn headline_pct(snapshot: &VendorSnapshot) -> Option<i32> {
             let worst = s.worst_pct();
             (s.five_hour.is_some() || s.weekly.is_some()).then_some(worst)
         }
+        VendorSnapshot::Cline(s) => s.worst_pct(),
         VendorSnapshot::OpenCodeGo(s) => [
             s.rolling
                 .as_ref()
@@ -655,6 +664,7 @@ pub(crate) fn sections_with_metadata_for(
                 VendorSnapshot::CommandCode(s) => commandcode_sections(s, now),
                 VendorSnapshot::Ollama(s) => ollama_sections(s, now, pace_tolerance),
                 VendorSnapshot::Custom(s) => custom_sections(s),
+                VendorSnapshot::Cline(s) => cline_sections(s, now),
             };
             // Inject the (already-absolute) fetched-at instant into the title
             // row, right-aligned. Pre-snapshotted in app::refresh_one so it
@@ -1395,6 +1405,58 @@ fn commandcode_sections(
         sections.push(Section::Text {
             label: "Credits".into(),
             value: usd(credits.remaining()),
+        });
+    }
+    sections
+}
+
+/// Cline shows one bar per ClinePass limit. The reset row counts down to the
+/// reset time Cline reports; a limit with no open window has none ("—").
+fn cline_sections(s: &crate::cline::types::Snapshot, now: DateTime<Utc>) -> SectionBuilder {
+    let mut sections = SectionBuilder::new(vec![Section::Title {
+        left: s.plan.clone().unwrap_or_else(|| "Cline".into()),
+        right: None,
+    }]);
+    let mut any = false;
+    for (label, window) in [
+        ("5 hours", s.five_hour.as_ref()),
+        ("Weekly", s.seven_day.as_ref()),
+        ("Monthly", s.thirty_day.as_ref()),
+    ] {
+        let Some(window) = window else {
+            continue;
+        };
+        any = true;
+        let pct = window.pct();
+        sections.push_metric(
+            Section::Metric {
+                label: label.into(),
+                pct: pct.clamp(0, 100) as u16,
+                severity: severity_for(pct),
+                value_label: format!("{pct}%"),
+                footnote: String::new(),
+            },
+            window.resets_at(),
+        );
+        sections.push(Section::Text {
+            label: "Resets in".into(),
+            value: window
+                .resets_at()
+                .map(|at| countdown::format(Some(at), now))
+                .unwrap_or_else(|| "—".into()),
+        });
+    }
+    if !any {
+        sections.push(Section::Text {
+            label: "Quota".into(),
+            value: "this plan has no ClinePass quota".into(),
+        });
+    }
+    if let Some(period_end) = s.period_end {
+        sections.push(Section::Spacer);
+        sections.push(Section::Text {
+            label: "Renews".into(),
+            value: period_end.format("%Y-%m-%d").to_string(),
         });
     }
     sections

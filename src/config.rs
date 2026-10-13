@@ -77,6 +77,7 @@ pub struct Config {
     pub notifications: NotificationsConfig,
     /// User-defined providers, one `[[custom]]` table each.
     pub custom: Vec<CustomProviderConfig>,
+    pub cline: ClineConfig,
 }
 
 /// UI / dispatch preferences. Currently just `primary` — which vendor the
@@ -1174,6 +1175,31 @@ pub struct OpenCodeGoConfig {
     /// (`$XDG_DATA_HOME/opencode` or `~/.local/share/opencode`), for a
     /// non-standard install. The key is read read-only, never copied.
     pub auth_paths: Option<Vec<PathBuf>>,
+}
+
+/// Cline reads the OAuth credential the Cline CLI maintains in
+/// `~/.cline/data/settings/providers.json`, so it needs no API key of its own;
+/// `api_key`/`api_key_env` exist for a machine without the CLI, where a key
+/// from app.cline.bot stands in. `auth_paths` overrides the search list for a
+/// non-standard install.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct ClineConfig {
+    pub enabled: bool,
+    pub auth_paths: Option<Vec<PathBuf>>,
+    pub api_key_env: String,
+    pub api_key: Option<String>,
+}
+
+impl Default for ClineConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            auth_paths: None,
+            api_key_env: crate::cline::creds::API_KEY_ENV.to_string(),
+            api_key: None,
+        }
+    }
 }
 
 /// Command Code reads the OAuth credential from the official CLI or pi, so it
@@ -2304,6 +2330,11 @@ impl Config {
         expand_tilde_opt(&mut self.supergrok.auth_path);
         expand_tilde_opt(&mut self.supergrok.config_path);
         expand_tilde_opt(&mut self.copilot.gh_binary);
+        if let Some(paths) = &mut self.cline.auth_paths {
+            for path in paths {
+                *path = expand_tilde(path);
+            }
+        }
         for account in &mut self.anthropic.accounts {
             account.credentials_path = expand_tilde(&account.credentials_path);
         }
@@ -2339,6 +2370,7 @@ impl Config {
             self.orcarouter.api_key.as_deref(),
             self.lyceum.api_key.as_deref(),
             self.antigravity.oauth_client_secret.as_deref(),
+            self.cline.api_key.as_deref(),
         ]
         .into_iter()
         .chain(
@@ -2434,6 +2466,7 @@ impl Config {
             VendorId::Minimax => self.minimax.enabled,
             VendorId::Kiro => self.kiro.enabled,
             VendorId::NousResearch => self.nous.enabled,
+            VendorId::Cline => self.cline.enabled,
             VendorId::OpenCodeGo => self.opencode_go.enabled,
             VendorId::CommandCode => self.commandcode.enabled,
             VendorId::Ollama => self.ollama.enabled,
@@ -2479,6 +2512,7 @@ impl Config {
             | VendorId::Kiro
             | VendorId::NousResearch
             | VendorId::CommandCode
+            | VendorId::Cline
             | VendorId::ModelStudio
             | VendorId::Devin => id.api_key_env(),
         }
@@ -2504,6 +2538,7 @@ impl Config {
             VendorId::Ollama => self.ollama.api_key.as_deref(),
             VendorId::OrcaRouter => self.orcarouter.api_key.as_deref(),
             VendorId::Lyceum => self.lyceum.api_key.as_deref(),
+            VendorId::Cline => self.cline.api_key.as_deref(),
             VendorId::Anthropic
             | VendorId::Openai
             | VendorId::Copilot

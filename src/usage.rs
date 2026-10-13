@@ -456,6 +456,7 @@ pub enum VendorSnapshot {
     /// that fetched it holds the `CustomProviderConfig`, and the cache
     /// directory is keyed by its `id`.
     Custom(crate::custom::types::CustomSnapshot),
+    Cline(crate::cline::types::Snapshot),
 }
 
 impl VendorSnapshot {

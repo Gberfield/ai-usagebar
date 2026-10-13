@@ -426,6 +426,7 @@ pub enum Vendor {
     ModelStudio,
     Lyceum,
     Devin,
+    Cline,
 }
 
 impl Vendor {
@@ -458,6 +459,7 @@ impl Vendor {
             Vendor::ModelStudio => crate::vendor::VendorId::ModelStudio,
             Vendor::Lyceum => crate::vendor::VendorId::Lyceum,
             Vendor::Devin => crate::vendor::VendorId::Devin,
+            Vendor::Cline => crate::vendor::VendorId::Cline,
         }
     }
 }
@@ -557,6 +559,7 @@ fn id_to_vendor(id: crate::vendor::VendorId) -> Vendor {
         crate::vendor::VendorId::ModelStudio => Vendor::ModelStudio,
         crate::vendor::VendorId::Lyceum => Vendor::Lyceum,
         crate::vendor::VendorId::Devin => Vendor::Devin,
+        crate::vendor::VendorId::Cline => Vendor::Cline,
     }
 }
 

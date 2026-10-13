@@ -1,6 +1,7 @@
 # ai-usagebar
 
 Native Omarchy Quattro panel, Waybar widget, and tabbed TUI for AI plan usage across **Claude**, **Codex/ChatGPT**, **GitHub Copilot**, **Z.AI (GLM)**, **OpenRouter**, **DeepSeek**, **DeepInfra**, **Kimi**, **Nous Research**, **OpenCode Go**, **Command Code**, **Devin**, and other supported AI coding services.
+Native Omarchy Quattro panel, Waybar widget, and tabbed TUI for AI plan usage across **Claude**, **Codex/ChatGPT**, **Z.AI (GLM)**, **OpenRouter**, **DeepSeek**, **Kimi**, **Nous Research**, **OpenCode Go**, **Command Code**, **Cline**, and other supported AI coding services.
 
 ai-usagebar began as a Rust port of
 [`claudebar`](https://github.com/mryll/claudebar) and remains drop-in
@@ -311,6 +312,7 @@ come from environment variables or `config.toml`.
 | Command Code | Existing `commandcode` or pi login | Enable `[commandcode]` and sign in to either one once. No key to paste; `COMMANDCODE_API_KEY` overrides if you prefer one. |
 | Model Studio | Existing `bl auth login --console` (Alibaba Cloud) | Opt in (`[modelstudio]`), install the official `bl` CLI, and run `bl auth login --console` once. Reports the Token Plan's 5-hour, weekly and monthly percentage windows with resets, through the same console gateway the CLI uses; the credential file `~/.bailian/config.json` is only ever read. |
 | Devin | Existing official Devin CLI login | Opt in (`[devin]`) after signing in with the Devin CLI. Reuses its existing `credentials.toml` read-only; ai-usagebar never logs in, refreshes, or writes credentials. Reports daily and weekly quota usage and an optional overage balance. |
+| Cline / ClinePass | Existing `cline` CLI login | Enable `[cline]`. No key to paste; the CLI's own credential is reused. `CLINE_API_KEY` overrides it. |
 
 ### Nous credits and OpenCode Go
 
@@ -341,6 +343,34 @@ native Settings panel are sent to the Rust settings command over stdin and are
 never placed in QML command arguments; cache entries are tied to the endpoint
 and a one-way key fingerprint, so changing accounts cannot reuse another
 account's fresh or stale usage.
+
+### Cline (ClinePass)
+
+ClinePass has three limits — **5 hours, weekly and monthly** — and Cline computes
+them itself. The widget reads `GET /api/v1/users/me/plan/usage-limits`, the call
+the dashboard's "Usage limits" panel makes: for each limit it returns the
+percentage used and, once a window has opened, when it resets. Nothing is
+recomputed here.
+
+These are **fixed windows**: one opens at the first charge after the previous one
+closed and runs its full length. They are *not* rolling sums of the last N days.
+(An earlier version summed the charge ledger over a rolling 30 days; after one
+heavy month it showed 100 % while the dashboard said 2 %.) The figures are whole
+percentages exactly as Cline states them, so they match the dashboard.
+
+**There is no key to enter, and no key field in the settings panel.** Enable
+`[cline]` and it works. The OAuth credential comes from the `cline` CLI's own
+`~/.cline/data/settings/providers.json`, and **is only ever read** — Cline
+rotates its refresh token, so refreshing it from here would sign the user's own
+CLI out. Its access token lives about five hours, and while it is lapsed the
+widget keeps showing the cached answer, marked stale: a window whose reset has
+passed is shown empty, as it is at Cline. `CLINE_API_KEY` (or `[cline] api_key`)
+outranks the credential file for a machine without the CLI.
+
+A plan with no ClinePass entitlement — pay-as-you-go credits, or an
+organisation seat — reports no limits rather than empty ones. Cache entries are
+tied to the endpoint and a one-way fingerprint of the account id, so changing
+accounts cannot reuse another account's figures.
 
 ### Command Code
 
