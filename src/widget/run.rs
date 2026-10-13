@@ -419,12 +419,19 @@ async fn antigravity_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> 
         config.antigravity.oauth_client_id.as_deref(),
         config.antigravity.oauth_client_secret.as_deref(),
     );
-    let outcome =
-        match antigravity::fetch_snapshot(&client, &cache, DEFAULT_TTL, oauth.as_ref()).await {
-            Ok(o) => o,
-            Err(e) if e.is_transient() => return Ok(WaybarOutput::loading(cli.icon.as_deref())),
-            Err(e) => return Err(e),
-        };
+    let outcome = match antigravity::fetch_snapshot(
+        &client,
+        &cache,
+        DEFAULT_TTL,
+        oauth.as_ref(),
+        config.antigravity.ide_language_server,
+    )
+    .await
+    {
+        Ok(o) => o,
+        Err(e) if e.is_transient() => return Ok(WaybarOutput::loading(cli.icon.as_deref())),
+        Err(e) => return Err(e),
+    };
 
     let theme = theme_from_cli(cli);
     let snap = outcome.snapshot.clone();

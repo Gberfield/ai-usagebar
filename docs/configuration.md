@@ -228,6 +228,12 @@ enabled = false            # opt in after signing in with Antigravity
 #
 # Set ANTIGRAVITY_LS_ADDRESS=host:port only when automatic loopback discovery
 # fails; discovered ports are still tried after this address.
+#
+# ide_language_server = false leaves the Antigravity IDE's language server out
+# of discovery (default: true). Use it when the IDE is installed but its
+# sign-in is managed separately — a signed-out IDE answers 401/403, which
+# outranks and masks a working `agy` session (#405). No effect on Windows,
+# where the IDE's server cannot be told apart from the 2.0 app's on disk.
 
 [cursor]
 enabled = true             # disabled by default; enable once you've signed in to Cursor

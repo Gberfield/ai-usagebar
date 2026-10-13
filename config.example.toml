@@ -532,6 +532,12 @@ enabled = false
 # last used it).
 # oauth_client_id = "<client id>"
 # oauth_client_secret = "<client secret>"   # chmod 600 the file if you set this
+# Set to false when the Antigravity IDE is installed but its sign-in is
+# managed separately: its language server otherwise answers signed-out and
+# that 401/403 outranks — masks — a working `agy` session (#405). Has no
+# effect on Windows, where the IDE's server cannot be told apart on disk.
+# Default: true.
+# ide_language_server = false
 
 # Cursor. No API key: usage is read from the session token the Cursor IDE
 # already wrote to its own local state database after you signed in there —

@@ -863,9 +863,14 @@ async fn build_outcome(client: &Client, config: &Config, tab: &TabId) -> Result<
                 config.antigravity.oauth_client_id.as_deref(),
                 config.antigravity.oauth_client_secret.as_deref(),
             );
-            let outcome =
-                crate::antigravity::fetch_snapshot(client, &cache, DEFAULT_TTL, oauth.as_ref())
-                    .await?;
+            let outcome = crate::antigravity::fetch_snapshot(
+                client,
+                &cache,
+                DEFAULT_TTL,
+                oauth.as_ref(),
+                config.antigravity.ide_language_server,
+            )
+            .await?;
             Ok(outcome.into())
         }
         VendorId::Grokbot => {

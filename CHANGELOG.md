@@ -14,6 +14,13 @@
   own percentages: no usage is re-derived from the charge ledger, and anything
   outside the reported shape is schema drift, never a silent 0%.
 
+
+- **Prepare an inactive Claude Desktop account without switching to it (macOS).**
+  A Desktop account's card gains a Prepare action that pre-stages the account
+  in the app — the local history is copied, not moved, so the current login
+  keeps running — ready for a later switch or first run. Contributed by
+  GuohuaQiu1999 as the prepare half of #392; the switch half shipped
+  separately in v1.35.0.
 ### Changed
 
 - **TUI tabs follow `[ui] overview_vendors`.** Listed vendors lead the sidebar
@@ -32,6 +39,22 @@
   longer crashes when WSLg (or any Wayland session) hands back a Wayland
   window.
 
+
+- **Cursor usage requests send the full browser header set.** cursor.com sits
+  behind Vercel's WAF, which negotiates client hints and denies
+  automated-looking TLS fingerprints outright, so a risk-based 403 appeared as
+  "authentication rejected" on a session cookie the same request accepted from
+  curl. The summary call now sends the complete header set a browser sends,
+  and a 403 reads as "authentication failed or an edge block" instead of
+  blaming the credentials (#410).
+
+- **Antigravity can skip the IDE's language server in discovery.** With the
+  Antigravity IDE open but signed out, its language server answered an
+  actionable 403 that masked the working `agy` saved-session fallback (#405).
+  `[antigravity] ide_language_server = false` excludes IDE-owned candidates
+  before any probe, so the fallback answers exactly as if the IDE were closed.
+  The default keeps today's discovery; an explicit `ANTIGRAVITY_LS_ADDRESS` is
+  never skipped. A no-op on Windows (the IDE cannot be told apart by filename).
 ## [1.35.0] — 2026-10-11
 
 ### Added

@@ -1806,7 +1806,7 @@ fn default_grok_binary() -> PathBuf {
 /// OAuth client id and secret, which are not shipped in source: set them here
 /// (they are public installed-app credentials) or the fallback only lasts as
 /// long as the saved access token does.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct AntigravityConfig {
     pub enabled: bool,
@@ -1816,6 +1816,22 @@ pub struct AntigravityConfig {
     /// installed-app secret is not confidential by Google's definition, but
     /// it is still treated as an inline credential for file-permission purposes.
     pub oauth_client_secret: Option<String>,
+    /// Probe the Antigravity IDE's own language server as a quota source
+    /// (default true). Set false when the IDE is installed but its sign-in is
+    /// managed separately: a signed-out IDE language server answers 401/403,
+    /// which outranks and masks a working `agy` session (#405).
+    pub ide_language_server: bool,
+}
+
+impl Default for AntigravityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            oauth_client_id: None,
+            oauth_client_secret: None,
+            ide_language_server: true,
+        }
+    }
 }
 
 /// Cursor reads its quota through a session token the Cursor IDE already
@@ -3249,6 +3265,28 @@ enabled = true
         .unwrap();
         assert!(bare.antigravity.oauth_client_id.is_none());
         assert!(bare.antigravity.oauth_client_secret.is_none());
+    }
+
+    /// #405: the IDE language-server opt-out parses, and the default keeps
+    /// probing it so discovery is unchanged for everyone else.
+    #[test]
+    fn antigravity_ide_language_server_defaults_to_probing() {
+        assert!(Config::default().antigravity.ide_language_server);
+        let bare: Config = toml::from_str(
+            "[antigravity]
+enabled = true
+",
+        )
+        .unwrap();
+        assert!(bare.antigravity.ide_language_server);
+        let opted_out: Config = toml::from_str(
+            "[antigravity]
+enabled = true
+ide_language_server = false
+",
+        )
+        .unwrap();
+        assert!(!opted_out.antigravity.ide_language_server);
     }
 
     #[cfg(unix)]
