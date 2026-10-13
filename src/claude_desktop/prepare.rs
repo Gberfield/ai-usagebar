@@ -368,8 +368,11 @@ mod tests {
         assert!(!args.contains(&"--continue"));
         assert_eq!(cmd.get_current_dir(), Some(Path::new("/isolated")));
         let env: Vec<_> = cmd.get_envs().collect();
+        // Build expectations with the same joins the code uses — the
+        // separator is `\` on Windows.
+        let isolated_config = Path::new("/isolated").join("config");
         assert!(env.iter().any(|(key, value)| *key == "CLAUDE_CONFIG_DIR"
-            && *value == Some(std::ffi::OsStr::new("/isolated/config"))));
+            && *value == Some(isolated_config.as_os_str())));
         assert!(
             env.iter()
                 .any(|(key, value)| *key == "CLAUDE_CODE_OAUTH_TOKEN"
