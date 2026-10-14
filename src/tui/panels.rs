@@ -3404,6 +3404,88 @@ mod tests {
         assert_eq!(build.window, None);
     }
 
+    /// The overall meter names its reset the way Grok Bot's does, so the TUI,
+    /// `usage --json` and the Omarchy panel, which all read this footnote, do
+    /// not show a bare percentage.
+    #[test]
+    fn supergrok_weekly_usage_row_carries_the_countdown_and_pace() {
+        use crate::usage::SuperGrokPeriod;
+
+        let sections =
+            sections_with_metadata_for(&ready(supergrok(SuperGrokPeriod::Weekly)), now(), 5);
+        let Section::Metric { footnote, .. } = &only_metric(&sections).section else {
+            unreachable!()
+        };
+        // Two of seven days left is 71% elapsed; 40% used is 31 points under.
+        assert_eq!(footnote, "Resets in 2d 0h · 71% elapsed · 31pts under");
+    }
+
+    /// A month varies and an unknown period says nothing, so neither can be
+    /// paced: the countdown stands alone.
+    #[test]
+    fn supergrok_monthly_and_unknown_usage_rows_carry_the_countdown_alone() {
+        use crate::usage::SuperGrokPeriod;
+
+        for period in [SuperGrokPeriod::Monthly, SuperGrokPeriod::Unknown] {
+            let sections = sections_with_metadata_for(&ready(supergrok(period)), now(), 5);
+            let Section::Metric { footnote, .. } = &only_metric(&sections).section else {
+                unreachable!()
+            };
+            assert_eq!(footnote, "Resets in 2d 0h", "{period:?}");
+        }
+    }
+
+    /// With no reset reported there is nothing to count down to, so the row
+    /// carries no footnote rather than a "Resets in" line with a placeholder.
+    #[test]
+    fn supergrok_usage_row_without_a_reset_has_no_footnote() {
+        let now = now();
+        let snap = crate::usage::SuperGrokSnapshot {
+            plan: "SuperGrok".into(),
+            account: "scope".into(),
+            weekly_pct: 40,
+            period: crate::usage::SuperGrokPeriod::Weekly,
+            reset_at: None,
+            prepaid_balance: None,
+            reset_credits: ResetCredits::default(),
+            products: Vec::new(),
+        };
+        let projected = sections_with_metadata_for(&ready(VendorSnapshot::SuperGrok(snap)), now, 5);
+        let Section::Metric { footnote, .. } = &only_metric(&projected).section else {
+            unreachable!()
+        };
+        assert_eq!(footnote, "");
+    }
+
+    /// Product slices share the overall pool's window, so only the overall
+    /// meter carries the reset line.
+    #[test]
+    fn supergrok_product_slices_keep_an_empty_footnote() {
+        let now = now();
+        let snap = crate::usage::SuperGrokSnapshot {
+            plan: "SuperGrok".into(),
+            account: "scope".into(),
+            weekly_pct: 90,
+            period: crate::usage::SuperGrokPeriod::Weekly,
+            reset_at: Some(now + chrono::Duration::days(3)),
+            prepaid_balance: None,
+            reset_credits: ResetCredits::default(),
+            products: vec![crate::usage::SuperGrokProduct {
+                label: "Grok Build".into(),
+                percent: 87,
+            }],
+        };
+        let projected = sections_with_metadata_for(&ready(VendorSnapshot::SuperGrok(snap)), now, 5);
+        let footnotes: Vec<&str> = projected
+            .iter()
+            .filter_map(|p| match &p.section {
+                Section::Metric { footnote, .. } => Some(footnote.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(footnotes, ["Resets in 3d 0h · 57% elapsed · 33pts ahead", ""]);
+    }
+
     #[test]
     fn kimi_sections_include_weekly_and_window_with_used_over_limit() {
         let now = now();
