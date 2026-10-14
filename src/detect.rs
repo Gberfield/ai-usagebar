@@ -303,7 +303,7 @@ pub struct DetectReport {
 /// The pure decision. Candidates are `all` minus `state.known`, or every
 /// vendor in `all` when `force`. A candidate is enabled when `probe` says it
 /// has credentials and the config doesn't already enable it. A vendor that is
-/// not [`VendorId::auto_detectable`] (Devin) is neither probed nor counted:
+/// not [`VendorId::auto_detectable`] (Devin, Muse Code) is neither probed nor counted:
 /// its credentials are discoverable, but it is opt-in and detection, including
 /// `--all`, must not activate it. `known` becomes the union of the old set and
 /// `all`, in [`VendorId::all`] order, deduped — so a vendor is considered once
