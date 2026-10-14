@@ -49,6 +49,8 @@ pub struct Probes<'a> {
     /// provider the user has connected, and only the `opencode` entry with a
     /// key-bearing type is the account this endpoint accepts.
     pub opencode_go_signed_in: &'a dyn Fn(&[PathBuf]) -> bool,
+    /// Whether one of Cline's auth files holds a live credential.
+    pub cline_signed_in: &'a dyn Fn(&[PathBuf]) -> bool,
 }
 
 /// One provider's row in the catalog.
@@ -94,6 +96,11 @@ pub fn statuses(cfg: &Config) -> Vec<VendorStatus> {
             paths
                 .iter()
                 .any(|path| crate::opencode_go::creds::read_key_from(path).is_some())
+        },
+        cline_signed_in: &|paths| {
+            paths
+                .iter()
+                .any(|path| crate::cline::creds::read_from(path).is_some())
         },
     };
     statuses_with(cfg, &probes)
@@ -186,10 +193,7 @@ fn credential_present(cfg: &Config, id: VendorId, probes: &Probes) -> bool {
                 Some(paths) if !paths.is_empty() => paths.to_vec(),
                 _ => crate::cline::creds::default_paths().unwrap_or_default(),
             };
-            paths
-                .iter()
-                .any(|path| crate::cline::creds::read_from(path).is_some())
-                || cfg.cline.api_key.as_deref().is_some_and(|k| !k.is_empty())
+            (probes.cline_signed_in)(&paths)
         }
         VendorId::OpenCodeGo => {
             match crate::opencode_go::creds::effective_paths(cfg.opencode_go.auth_paths.as_deref())
@@ -367,6 +371,7 @@ mod tests {
             keychain_has_claude_for: &|_| false,
             commandcode_signed_in,
             opencode_go_signed_in,
+            cline_signed_in: &|_| false,
         }
     }
 
@@ -492,6 +497,7 @@ mod tests {
             keychain_has_claude_for: &|_| false,
             commandcode_signed_in: &|_| false,
             opencode_go_signed_in: &|_| false,
+            cline_signed_in: &|_| false,
         };
         assert!(row(&statuses_with(&cfg, &with_keychain), "anthropic").configured);
         assert!(!row(&statuses_with(&cfg, &bare()), "anthropic").configured);
@@ -539,6 +545,7 @@ mod tests {
             keychain_has_claude_for: &|dir| dir == Path::new("/accounts/work"),
             commandcode_signed_in: &|_| false,
             opencode_go_signed_in: &|_| false,
+            cline_signed_in: &|_| false,
         };
         assert!(row(&statuses_with(&cfg, &with_named_keychain), "anthropic").configured);
         assert!(!row(&statuses_with(&cfg, &bare()), "anthropic").configured);
@@ -657,6 +664,27 @@ mod tests {
             &probes(&|_| false, &|_| false, &|paths| paths == [custom.clone()]),
         );
         assert!(row(&rows, "commandcode").configured);
+    }
+
+    /// Cline's credential file path is checked via the injected probe so
+    /// catalog status never hits the disk or $HOME during tests.
+    #[test]
+    fn cline_cli_auth_file_counts_as_configured() {
+        let mut cfg = Config::default();
+        let custom = PathBuf::from("/opt/cline/auth.json");
+        cfg.cline.auth_paths = Some(vec![custom.clone()]);
+
+        let signed_in = Probes {
+            env_set: &|_| false,
+            exists: &|_| false,
+            keychain_has_claude: &|| false,
+            keychain_has_claude_for: &|_| false,
+            commandcode_signed_in: &|_| false,
+            opencode_go_signed_in: &|_| false,
+            cline_signed_in: &|paths| paths == [custom.clone()],
+        };
+        assert!(row(&statuses_with(&cfg, &signed_in), "cline").configured);
+        assert!(!row(&statuses_with(&cfg, &bare()), "cline").configured);
     }
 
     /// Auth metadata has to be usable, not merely present: a key provider that
