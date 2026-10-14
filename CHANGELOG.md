@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+
+- **SuperGrok's usage row names its reset in the TUI and the report.** The
+  overall meter carried no footnote, so the TUI, `usage` and `usage --json`
+  showed a bare percentage where Claude and Grok Bot add `Resets in …`. A
+  weekly period now carries the countdown with its pace, a monthly or unknown
+  period the countdown alone, and a response without a reset still carries
+  nothing (#418).
+
 ## [1.37.0] — 2026-10-14
 
 ### Added
