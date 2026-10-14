@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Cline compact bar icon uses short name.** `VendorId::Cline.bar_icon()`
+  now returns `"cln"` via `short_name()` rather than the full five-letter
+  string `"Cline"`, matching all other providers without distinct Nerd Font marks.
+
 ## [1.36.0] — 2026-10-12
 
 ### Added
