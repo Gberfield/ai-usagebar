@@ -46,6 +46,7 @@ pub mod lyceum;
 pub mod minimax;
 pub mod modelstudio;
 pub mod moonshot;
+pub mod muse;
 pub mod notify;
 pub mod nous;
 pub mod novita;

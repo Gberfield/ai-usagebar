@@ -906,6 +906,12 @@ async fn build_outcome(client: &Client, config: &Config, tab: &TabId) -> Result<
             .await?;
             Ok(outcome.into())
         }
+        VendorId::MuseCode => {
+            let cache = crate::cache::Cache::for_vendor("muse-code")?;
+            Ok(crate::muse::fetch::fetch_snapshot(&config.muse, &cache)
+                .await?
+                .into())
+        }
         VendorId::Devin => {
             let cache = crate::cache::Cache::for_vendor("devin")?;
             let outcome =

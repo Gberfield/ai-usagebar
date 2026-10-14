@@ -452,6 +452,7 @@ pub enum VendorSnapshot {
     ModelStudio(ModelStudioSnapshot),
     Lyceum(LyceumSnapshot),
     Devin(DevinSnapshot),
+    MuseCode(MuseSnapshot),
     /// A `[[custom]]` provider. Which one is not in the snapshot: the caller
     /// that fetched it holds the `CustomProviderConfig`, and the cache
     /// directory is keyed by its `id`.
@@ -1050,6 +1051,14 @@ pub struct ModelStudioSnapshot {
     /// window duration is declared for it (same rule as Ollama's calendar
     /// month) and pacing is omitted wherever it would guess a denominator.
     pub monthly: Option<UsageWindow>,
+}
+
+/// Muse Code subscription windows. Missing observations stay absent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MuseSnapshot {
+    pub plan: String,
+    pub session: Option<UsageWindow>,
+    pub weekly: Option<UsageWindow>,
 }
 
 /// Devin CLI quota snapshot. The CLI reports remaining percentages, while

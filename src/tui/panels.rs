@@ -302,6 +302,16 @@ pub fn compact_cells(snapshot: &VendorSnapshot) -> (String, Vec<(String, PaceSev
             }
             (s.plan.clone(), cells)
         }
+        VendorSnapshot::MuseCode(s) => {
+            let mut cells = Vec::new();
+            if let Some(window) = &s.session {
+                cells.push(pct("S", window.utilization_pct));
+            }
+            if let Some(window) = &s.weekly {
+                cells.push(pct("W", window.utilization_pct));
+            }
+            (s.plan.clone(), cells)
+        }
         VendorSnapshot::Copilot(s) => (
             s.plan.clone(),
             s.quotas()
@@ -535,6 +545,11 @@ pub fn headline_pct(snapshot: &VendorSnapshot) -> Option<i32> {
             (s.five_hour.is_some() || s.weekly.is_some()).then_some(worst)
         }
         VendorSnapshot::Cline(s) => s.worst_pct(),
+        VendorSnapshot::MuseCode(s) => [s.session.as_ref(), s.weekly.as_ref()]
+            .into_iter()
+            .flatten()
+            .map(|window| window.utilization_pct)
+            .max(),
         VendorSnapshot::OpenCodeGo(s) => [
             s.rolling
                 .as_ref()
@@ -655,6 +670,7 @@ pub(crate) fn sections_with_metadata_for(
                 VendorSnapshot::Grokbot(s) => grokbot_sections(s, now, pace_tolerance),
                 VendorSnapshot::ModelStudio(s) => modelstudio_sections(s, now, pace_tolerance),
                 VendorSnapshot::Devin(s) => devin_sections(s, now, pace_tolerance),
+                VendorSnapshot::MuseCode(s) => muse_sections(s, now, pace_tolerance),
                 VendorSnapshot::Antigravity(s) => antigravity_sections(s, now),
                 VendorSnapshot::Cursor(s) => cursor_sections(s, now, pace_tolerance),
                 VendorSnapshot::Minimax(s) => minimax_sections(s, now, pace_tolerance),
@@ -2131,6 +2147,24 @@ fn modelstudio_sections(
         });
     }
     v
+}
+
+fn muse_sections(
+    s: &crate::usage::MuseSnapshot,
+    now: DateTime<Utc>,
+    tolerance: u32,
+) -> SectionBuilder {
+    let mut sections = SectionBuilder::new(vec![Section::Title {
+        left: s.plan.clone(),
+        right: None,
+    }]);
+    if let Some(window) = &s.session {
+        push_window(&mut sections, "Session quota", window, now, tolerance, true);
+    }
+    if let Some(window) = &s.weekly {
+        push_window(&mut sections, "Weekly quota", window, now, tolerance, true);
+    }
+    sections
 }
 
 fn devin_sections(
@@ -4652,6 +4686,43 @@ mod tests {
             }
             _ => unreachable!(),
         }
+    }
+
+    /// Muse's generic report carries both windows' absolute reset metadata.
+    #[test]
+    fn muse_windows_keep_their_reset_and_duration_in_the_report_projection() {
+        let at = now();
+        let snapshot = crate::usage::MuseSnapshot {
+            plan: "Muse Code Power Usage".into(),
+            session: Some(crate::usage::UsageWindow {
+                utilization_pct: 38,
+                resets_at: Some(at + chrono::Duration::hours(3)),
+                window_duration: chrono::Duration::hours(5),
+            }),
+            weekly: Some(crate::usage::UsageWindow {
+                utilization_pct: 34,
+                resets_at: Some(at + chrono::Duration::days(4)),
+                window_duration: chrono::Duration::days(7),
+            }),
+        };
+        let vendor = VendorSnapshot::MuseCode(snapshot.clone());
+        assert_eq!(headline_pct(&vendor), Some(38));
+        let sections = sections_with_metadata_for(&ready(vendor), at, 5);
+        let metrics = sections
+            .iter()
+            .filter(|section| matches!(section.section, Section::Metric { .. }))
+            .collect::<Vec<_>>();
+        assert_eq!(metrics.len(), 2);
+        assert_eq!(
+            metrics[0].reset_at,
+            snapshot.session.as_ref().unwrap().resets_at
+        );
+        assert_eq!(metrics[0].window, Some(chrono::Duration::hours(5)));
+        assert_eq!(
+            metrics[1].reset_at,
+            snapshot.weekly.as_ref().unwrap().resets_at
+        );
+        assert_eq!(metrics[1].window, Some(chrono::Duration::days(7)));
     }
 
     /// Nothing else moved: a quota vendor's metrics stay percentages.

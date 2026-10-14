@@ -35,6 +35,7 @@ defensive and includes opt-in live tests for catching response changes.
 | **OrcaRouter** | `api.orcarouter.ai/v1/dashboard/billing/{usage,subscription}` (one-api compatible; the structs are named verbatim in OrcaRouter's docs) | Credit card — cumulative spend (US cents on the wire), total credit limit, remaining, key expiry; unlimited keys report the `100000000` sentinel and render spend-only | No — widget/TUI only |
 | **Alibaba Cloud Model Studio** | Console gateway `POST https://{host}/cli/api.json?action={action}&product=sfm_bailian&api=zeldaHttp.apikeyMgr.%2Ftokenplan%2Fpersonal%2Fapi%2Fv2%2Fusage` (undocumented console gateway, reconstructed from the official open-source `bl` CLI), with the console session `bl auth login --console` stored in `~/.bailian/config.json`. Host×action by region×site: `bailian-cs.console.aliyun.com`/`bailian-cs.console.alibabacloud.com` + `BroadScopeAspnGateway` (cn-beijing), `modelstudio-cs.console.aliyun.com`/`bailian-singapore-cs.alibabacloud.com` + `IntlBroadScopeAspnGateway` (ap-southeast-1) | Token Plan 5-hour, weekly and monthly percentage windows with epoch-ms resets; an absent window is no-data (possibly unlimited), never 0%, and the monthly one declares no exact cycle length | No — widget/TUI only |
 | **Devin CLI** | `server.codeium.com/exa.seat_management_pb.SeatManagementService/GetUserStatus` (Connect-RPC JSON POST with the official CLI's request metadata; undocumented) | Daily and weekly quota remaining percentages converted to consumed percentages, Unix-second resets, and optional overage balance | No — widget/TUI only |
+| **Muse Code** | `POST api.meta.ai/muse-code/key`, OAuth bearer from the official CLI's existing `providers.meta.access_token`, `x-api-version: 1.0.0`, body `{"onboard":false}` (undocumented; live verified) | Subscription session/weekly used percentages, Unix-second resets, and plan. Meta can omit both windows while the session is idle; absence is unknown, with a previous observation marked stale | Widget/TUI and generic report |
 
 When Antigravity uses the Cloud Code fallback, the TUI labels the source
 `Google API`. The saved session may come from the OS keyring or
@@ -54,7 +55,6 @@ or stored, and no vendor asks the user to paste a session cookie.
 | Provider | Status | Why |
 |---|---|---|
 | **Xiaomi MiMo** (Token Plan) | Not implementable | The quota routes (`platform.xiaomimimo.com/api/v1/tokenPlan/{usage,detail}`) authenticate with a Xiaomi Account **web SSO session**, not the plan's API key. The API key reaches only the inference gateway, which exposes no quota surface and returns no rate-limit headers. The effective session credential is an HttpOnly cookie, so there is no CLI-written file to read — only a browser profile. Waiting on Xiaomi to expose quota to API keys. (#146) |
-| **Meta Muse** (Muse Spark) | Not implementable as a native vendor | `https://api.meta.ai/v1` serves inference only: Meta publishes no usage, quota, or billing endpoint for it. The `dev.meta.ai` dashboard reads team spend through a private GraphQL route on a browser session — a browser credential, which this project never uses. The Muse Code OAuth token (macOS Keychain `ai.meta.dev.credentials`, `~/.config/muse/auth.json`) reaches the same inference gateway, so there is no quota-bearing credential to read. Workaround inside the rules: tally the per-call token usage Muse Code already writes to its local `~/.local/share/muse/sessions` logs (`model_completed` events) and serve it through a `[[custom]]` provider — see the commented `muse` recipe in `config.example.toml`. |
 
 
 ## Stability notes
@@ -127,3 +127,13 @@ cargo test --test live kimi_live -- --ignored --nocapture
 
 The tests validate the fields used by ai-usagebar and report which part of a
 response changed.
+
+## Muse Code subscription quota
+
+The previous inference-only evaluation is superseded by the CLI login response,
+verified with a real existing OAuth login and standing key. The key endpoint
+also supplies an inference key, which this provider discards; it bounds every
+request to once per login per five minutes, rejects redirects, and caches only
+quota fields plus a login fingerprint. File-based logins are supported;
+Keychain-only logins are not read. Missing quota while idle is unknown, not
+zero. See [setup and endpoint research](muse-code.md) and [#413](https://github.com/akitaonrails/ai-usagebar/issues/413).

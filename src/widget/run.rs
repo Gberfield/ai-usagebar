@@ -176,6 +176,7 @@ async fn build_output(cli: &Cli) -> Result<WaybarOutput> {
         Vendor::Lyceum => lyceum_output(cli, &config).await,
         Vendor::ModelStudio => modelstudio_output(cli, &config).await,
         Vendor::Devin => devin_output(cli, &config).await,
+        Vendor::MuseCode => muse_output(cli, &config).await,
         Vendor::Cline => cline_output(cli, &config).await,
     }
 }
@@ -1067,6 +1068,20 @@ async fn modelstudio_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> 
         &theme,
         &opts,
         chrono::Utc::now(),
+    ))
+}
+
+async fn muse_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
+    let cache = vendor_cache(cli, "muse-code")?;
+    let outcome = crate::muse::fetch::fetch_snapshot(&config.muse, &cache).await?;
+    let snap = outcome.snapshot.clone();
+    let outcome: VendorOutcome = outcome.into();
+    Ok(crate::muse::vendor::render(
+        &outcome,
+        &snap,
+        &theme_from_cli(cli),
+        &RenderOpts::from_cli(cli),
+        Utc::now(),
     ))
 }
 

@@ -189,6 +189,8 @@ pub enum VendorId {
     Lyceum,
     Devin,
     Cline,
+    #[serde(rename = "muse-code")]
+    MuseCode,
 }
 
 /// How a provider authenticates. Drives what a frontend offers a provider that
@@ -246,6 +248,7 @@ impl VendorId {
             VendorId::ModelStudio => "modelstudio",
             VendorId::Lyceum => "lyceum",
             VendorId::Devin => "devin",
+            VendorId::MuseCode => "muse-code",
             VendorId::Cline => "cline",
         }
     }
@@ -283,6 +286,7 @@ impl VendorId {
             VendorId::ModelStudio => "Model Studio",
             VendorId::Lyceum => "Lyceum",
             VendorId::Devin => "Devin",
+            VendorId::MuseCode => "Muse Code",
         }
     }
 
@@ -321,6 +325,7 @@ impl VendorId {
             VendorId::ModelStudio => VendorId::ModelStudio.short_name(),
             VendorId::Lyceum => VendorId::Lyceum.short_name(),
             VendorId::Devin => VendorId::Devin.short_name(),
+            VendorId::MuseCode => VendorId::MuseCode.short_name(),
             VendorId::Cline => VendorId::Cline.short_name(),
         }
     }
@@ -358,6 +363,7 @@ impl VendorId {
             VendorId::ModelStudio => "mst",
             VendorId::Lyceum => "lyc",
             VendorId::Devin => "dvn",
+            VendorId::MuseCode => "msc",
             VendorId::Cline => "cln",
         }
     }
@@ -399,6 +405,7 @@ impl VendorId {
             VendorId::ModelStudio => "modelstudio",
             VendorId::Lyceum => "lyceum",
             VendorId::Devin => "devin",
+            VendorId::MuseCode => "muse-code",
         }
     }
 
@@ -444,7 +451,8 @@ impl VendorId {
             | VendorId::Kiro
             | VendorId::Grokbot
             | VendorId::ModelStudio
-            | VendorId::Devin => AuthKind::Local,
+            | VendorId::Devin
+            | VendorId::MuseCode => AuthKind::Local,
         }
     }
 
@@ -484,7 +492,8 @@ impl VendorId {
             | VendorId::Kiro
             | VendorId::NousResearch
             | VendorId::ModelStudio
-            | VendorId::Devin => "",
+            | VendorId::Devin
+            | VendorId::MuseCode => "",
         }
     }
 
@@ -521,6 +530,7 @@ impl VendorId {
                 "Install the official `bl` CLI and run `bl auth login --console`, then Refresh."
             }
             VendorId::Devin => "Sign in with the official Devin CLI, then Refresh.",
+            VendorId::MuseCode => "Run `muse login` in a terminal, then Refresh.",
             // Key-only providers: there is nothing to log into, only a key to
             // put in the config. Ollama Cloud's key is minted at
             // ollama.com/settings/keys; the local `ollama` CLI's Ed25519 key
@@ -553,6 +563,7 @@ impl VendorId {
             // The `bl` CLI's console login is the whole credential.
             VendorId::ModelStudio => "bl auth login --console",
             VendorId::Devin => "",
+            VendorId::MuseCode => "muse login",
             // Kimi takes a key *or* the Kimi Code CLI's own OAuth login, which
             // is what a subscriber already has locally.
             VendorId::Kimi => "kimi",
@@ -578,10 +589,10 @@ impl VendorId {
     }
 
     /// Whether first-run detection may enable this provider from local
-    /// credentials. Devin is opt-in: its CLI credential file is discoverable,
-    /// but finding one must never switch on a provider that sends the key.
+    /// credentials. Devin and Muse Code stay opt-in even when their CLI
+    /// credential files are discoverable.
     pub const fn auto_detectable(self) -> bool {
-        !matches!(self, VendorId::Devin)
+        !matches!(self, VendorId::Devin | VendorId::MuseCode)
     }
 
     pub const fn all() -> &'static [VendorId] {
@@ -614,6 +625,7 @@ impl VendorId {
             VendorId::Lyceum,
             VendorId::Devin,
             VendorId::Cline,
+            VendorId::MuseCode,
         ]
     }
 

@@ -570,6 +570,8 @@ function brandFileFor(provider) {
       return "opencode.svg"
     case "ollama":
       return "ollama.svg"
+    case "muse-code":
+      return "muse-code.svg"
     default:
       return ""
   }

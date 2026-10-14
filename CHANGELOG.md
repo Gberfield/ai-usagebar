@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Added
+
+- **Muse Code subscription quota** (`[muse-code]`, `--vendor muse-code`):
+  session and weekly allowance percentages with resets, obtained through the
+  official CLI's existing file-based OAuth login. Requests are bounded to one
+  attempt per login every five minutes, including forced refreshes and failures;
+  credentials are never refreshed or rewritten and returned inference keys are
+  discarded. Missing/expired quota is unknown, with previous observations
+  marked stale. The Omarchy bar and panel use Meta's infinity mark. Existing
+  `[[custom]] id = "muse"` configurations stay valid.
+
 ### Fixed
 
 - **Cline compact bar icon uses short name.** `VendorId::Cline.bar_icon()`
