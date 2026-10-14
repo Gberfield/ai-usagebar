@@ -11,6 +11,11 @@
   `Probes` instead of directly calling filesystem operations in
   `credential_present`, maintaining hermetic test isolation.
 
+- **macOS menu bar parses Cline rolling quota windows.** The Swift dropdown
+  menu and menubar item now parse Cline's 5-hour, weekly, and monthly rate-limit
+  windows into the primary, weekly, and third quota rows with proper labels,
+  falling back gracefully for older CLI binaries and unquoted plans.
+
 ## [1.36.0] — 2026-10-12
 
 ### Added

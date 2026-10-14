@@ -595,6 +595,46 @@ func testParserBalances() {
     assertEqual(dvnOldBinary?.hasUsageWindows, true, "devin old binary shows windows")
     assertNil(dvnOldBinary?.session, "devin old binary has no daily window")
     assertEqual(dvnOldBinary?.weekly?.pct, 31, "devin old binary still parses weekly window")
+
+    // Cline: 5h quota at 57-58, 7d at 59-60, 30d at 61-62.
+    let cln = snapshot(FORMAT, vendor: "cline",
+                       fields: fields(through: 62, set: [
+                          0: "ClinePass Tier 2", 1: "10", 2: "3h", 3: "40", 4: "4d", 16: "cln",
+                          57: "10", 58: "3h", 59: "40", 60: "4d", 61: "70", 62: "25d"
+                       ]))
+    assertEqual(cln?.hasUsageWindows, true, "cline shows windows")
+    assertNil(cln?.creditBalance, "cline has no balance-only creditBalance")
+    assertEqual(cln?.session?.pct, 10, "cline 5h pct")
+    assertEqual(cln?.session?.reset, "3h", "cline 5h reset")
+    assertEqual(cln?.sessionLabel, "5 hours", "cline session label is 5 hours")
+    assertEqual(cln?.sessionTag, "5h", "cline session tag is 5h")
+    assertEqual(cln?.weekly?.pct, 40, "cline 7d pct")
+    assertEqual(cln?.weekly?.reset, "4d", "cline 7d reset")
+    assertEqual(cln?.weeklyLabel, "Weekly", "cline weekly label is Weekly")
+    assertEqual(cln?.weeklyTag, "7d", "cline weekly tag is 7d")
+    assertEqual(cln?.sonnet?.pct, 70, "cline 30d pct mapped to third window")
+    assertEqual(cln?.sonnet?.reset, "25d", "cline 30d reset")
+    assertEqual(cln?.sonnetLabel, "Monthly", "cline sonnet label is Monthly")
+
+    let clnOldBinary = snapshot(FORMAT, vendor: "cline",
+                                fields: fields(through: 16, set: [
+                                   0: "ClinePass", 1: "15", 2: "2h", 3: "35", 4: "5d", 16: "cln"
+                                ]))
+    assertEqual(clnOldBinary?.hasUsageWindows, true, "cline old binary shows windows")
+    assertEqual(clnOldBinary?.session?.pct, 15, "cline old binary falls back to session slot")
+    assertEqual(clnOldBinary?.sessionLabel, "5 hours", "cline old binary keeps 5 hours label")
+    assertEqual(clnOldBinary?.weekly?.pct, 35, "cline old binary falls back to weekly slot")
+    assertEqual(clnOldBinary?.weeklyLabel, "Weekly", "cline old binary keeps Weekly label")
+    assertNil(clnOldBinary?.sonnet, "cline old binary has no monthly window")
+
+    let clnNoQuota = snapshot(FORMAT, vendor: "cline",
+                              fields: fields(through: 62, set: [
+                                 0: "Free", 16: "cln",
+                                 57: "—", 58: "—", 59: "—", 60: "—", 61: "—", 62: "—"
+                              ]))
+    assertNil(clnNoQuota?.session, "cline unquoted session is nil")
+    assertNil(clnNoQuota?.weekly, "cline unquoted weekly is nil")
+    assertNil(clnNoQuota?.sonnet, "cline unquoted monthly is nil")
 }
 
 // ─── Run ─────────────────────────────────────────────────────────────────

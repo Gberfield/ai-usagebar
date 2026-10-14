@@ -94,6 +94,9 @@ let POINT_CRITICAL_MIN = 10
 // USD balance. `{devin_daily_pct}` / `{devin_daily_reset}` /
 // `{devin_daily_elapsed}` (54-56) carry Devin's daily quota pool (empty when
 // not selected); Devin's weekly pool uses the shared `{weekly_*}` placeholders.
+// `{cline_5h_pct}` / `{cline_5h_reset}` (57-58), `{cline_7d_pct}` /
+// `{cline_7d_reset}` (59-60), and `{cline_30d_pct}` / `{cline_30d_reset}` (61-62)
+// carry Cline's 5-hour, 7-day, and 30-day quota pools (empty when not selected).
 // A final literal
 // sentinel absorbs the widget's stale suffix, preserving these fields.
 let FORMAT = "{plan};;{session_pct};;{session_reset};;{weekly_pct};;{weekly_reset};;" +
@@ -592,6 +595,11 @@ func parse(_ text: String, vendor: String) -> Snapshot? {
             sonnet = w
             sonnetLabel = "Video 5h"
         }
+    } else if vendor == "cline" {
+        if isReported(t(62)), let w = quotaWindow(61, 62, -1) {
+            sonnet = w
+            sonnetLabel = "Monthly"
+        }
     }
     let spent = t(8)
     let limit = t(9)
@@ -729,6 +737,13 @@ func parse(_ text: String, vendor: String) -> Snapshot? {
         sessionTag = "1d"
         weeklyTag = "7d"
         sessionLabel = "Daily"
+        weeklyLabel = "Weekly"
+    case "cline":
+        sessionWindow = quotaWindow(57, 58, -1) ?? sessionWindow
+        weeklyWindow = quotaWindow(59, 60, -1) ?? quotaWindow(3, 4, 14)
+        sessionTag = "5h"
+        weeklyTag = "7d"
+        sessionLabel = "5 hours"
         weeklyLabel = "Weekly"
     default:
         weeklyWindow = quotaWindow(3, 4, 14)
