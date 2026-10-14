@@ -3483,7 +3483,10 @@ mod tests {
                 _ => None,
             })
             .collect();
-        assert_eq!(footnotes, ["Resets in 3d 0h · 57% elapsed · 33pts ahead", ""]);
+        assert_eq!(
+            footnotes,
+            ["Resets in 3d 0h · 57% elapsed · 33pts ahead", ""]
+        );
     }
 
     #[test]
