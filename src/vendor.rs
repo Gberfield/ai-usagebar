@@ -733,6 +733,7 @@ mod tests {
         assert_eq!(VendorId::Openai.bar_icon(), "󱢆");
         assert_eq!(VendorId::Supergrok.bar_icon(), VendorId::Grok.bar_icon());
         assert_eq!(VendorId::CommandCode.bar_icon(), "cmc");
+        assert_eq!(VendorId::Cline.bar_icon(), "cln");
     }
 
     #[test]
@@ -749,6 +750,10 @@ mod tests {
         assert_eq!(VendorId::Devin.display_name(), "Devin");
         assert_eq!(VendorId::Devin.short_name(), "dvn");
         assert_eq!(VendorId::Devin.auth_kind(), AuthKind::Local);
+        assert_eq!(VendorId::Cline.slug(), "cline");
+        assert_eq!(VendorId::Cline.display_name(), "Cline");
+        assert_eq!(VendorId::Cline.short_name(), "cln");
+        assert_eq!(VendorId::Cline.auth_kind(), AuthKind::Oauth);
     }
 
     #[test]
