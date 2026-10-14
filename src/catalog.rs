@@ -666,6 +666,27 @@ mod tests {
         assert!(row(&rows, "commandcode").configured);
     }
 
+    /// Cline's credential file path is checked via the injected probe so
+    /// catalog status never hits the disk or $HOME during tests.
+    #[test]
+    fn cline_cli_auth_file_counts_as_configured() {
+        let mut cfg = Config::default();
+        let custom = PathBuf::from("/opt/cline/auth.json");
+        cfg.cline.auth_paths = Some(vec![custom.clone()]);
+
+        let signed_in = Probes {
+            env_set: &|_| false,
+            exists: &|_| false,
+            keychain_has_claude: &|| false,
+            keychain_has_claude_for: &|_| false,
+            commandcode_signed_in: &|_| false,
+            opencode_go_signed_in: &|_| false,
+            cline_signed_in: &|paths| paths == [custom.clone()],
+        };
+        assert!(row(&statuses_with(&cfg, &signed_in), "cline").configured);
+        assert!(!row(&statuses_with(&cfg, &bare()), "cline").configured);
+    }
+
     /// Auth metadata has to be usable, not merely present: a key provider that
     /// names no variable leaves a frontend with nothing to tell the user.
     #[test]
