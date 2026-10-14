@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+### Added
+
+- **GNOME: several providers in the top bar.** The extension adds one
+  indicator per provider switched on under **Top bar vendors** (one switch per
+  provider, replacing the single-choice dropdown), side by side and each led by
+  the provider's brand icon. The `vendor` setting now holds a comma-separated
+  list; an existing single id keeps working unchanged.
+- **GNOME: pace arrows.** A new **Pace arrows** option (`show-pace`, off by
+  default) applies when bars are off: each value is colored by usage minus
+  elapsed, on the same point-delta bands as the bar's pace marker, and followed
+  by `↓` (more than 10 points under), `→` (within 10 under) or `↑` (ahead).
+  With it off, bars-off still shows plain percentages.
+
 ## [1.37.0] — 2026-10-14
 
 ### Added
