@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Cline catalog status probes credentials hermetically.** The vendor
+  catalog check for Cline CLI credentials now uses an injected probe on
+  `Probes` instead of directly calling filesystem operations in
+  `credential_present`, maintaining hermetic test isolation.
+
 ## [1.36.0] — 2026-10-12
 
 ### Added
