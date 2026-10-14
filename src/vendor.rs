@@ -321,7 +321,7 @@ impl VendorId {
             VendorId::ModelStudio => VendorId::ModelStudio.short_name(),
             VendorId::Lyceum => VendorId::Lyceum.short_name(),
             VendorId::Devin => VendorId::Devin.short_name(),
-            VendorId::Cline => "Cline",
+            VendorId::Cline => VendorId::Cline.short_name(),
         }
     }
 
