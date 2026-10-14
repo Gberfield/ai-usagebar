@@ -666,7 +666,7 @@ pub(crate) fn sections_with_metadata_for(
                 VendorSnapshot::Lyceum(s) => lyceum_sections(s),
                 VendorSnapshot::Moonshot(s) => moonshot_sections(s, prefs),
                 VendorSnapshot::Grok(s) => grok_sections(s, prefs),
-                VendorSnapshot::SuperGrok(s) => supergrok_sections(s, now),
+                VendorSnapshot::SuperGrok(s) => supergrok_sections(s, now, pace_tolerance),
                 VendorSnapshot::Grokbot(s) => grokbot_sections(s, now, pace_tolerance),
                 VendorSnapshot::ModelStudio(s) => modelstudio_sections(s, now, pace_tolerance),
                 VendorSnapshot::Devin(s) => devin_sections(s, now, pace_tolerance),
@@ -1763,7 +1763,11 @@ fn custom_sections(s: &crate::custom::types::CustomSnapshot) -> SectionBuilder {
     v
 }
 
-fn supergrok_sections(s: &crate::usage::SuperGrokSnapshot, now: DateTime<Utc>) -> SectionBuilder {
+fn supergrok_sections(
+    s: &crate::usage::SuperGrokSnapshot,
+    now: DateTime<Utc>,
+    tol: u32,
+) -> SectionBuilder {
     let pct = s.weekly_pct;
     let mut v = SectionBuilder::new(vec![
         Section::Title {
@@ -1772,12 +1776,28 @@ fn supergrok_sections(s: &crate::usage::SuperGrokSnapshot, now: DateTime<Utc>) -
         },
         Section::Spacer,
     ]);
+    // The reset line `push_window` and Grok Bot print under their meters. Pace
+    // needs the exact window length, which only the weekly period has (see
+    // below).
+    let footnote = match (s.period, s.reset_at) {
+        (crate::usage::SuperGrokPeriod::Weekly, Some(_)) => {
+            let pace = pacing::calc(pct, s.reset_at, now, chrono::Duration::days(7), tol);
+            format!(
+                "Resets in {} · {}% elapsed · {}",
+                countdown::format(s.reset_at, now),
+                pace.elapsed_pct,
+                pace.point_label
+            )
+        }
+        (_, Some(_)) => format!("Resets in {}", countdown::format(s.reset_at, now)),
+        (_, None) => String::new(),
+    };
     let metric = Section::Metric {
         label: format!("{} usage", s.period.label()),
         pct: pct.clamp(0, 100) as u16,
         severity: severity_for(pct),
         value_label: format!("{pct}%"),
-        footnote: String::new(),
+        footnote,
     };
     // Only the weekly period has an exact length; a month varies and an
     // unknown period says nothing, so neither can be paced.
