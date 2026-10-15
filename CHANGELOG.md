@@ -9,6 +9,13 @@
   period the countdown alone, and a response without a reset still carries
   nothing (#418).
 
+- **Antigravity reads its saved session from KDE's keyring.** go-keyring
+  stores the session with content type `text/plain; charset=utf8`, and
+  `secret-tool lookup` prints only an exact `text/plain` value, so on KDE's
+  ksecretd the lookup exited 1 and the closed-app fallback reported no
+  session. When `lookup` fails, the value is now read from `secret-tool
+  search`, which prints it whatever its content type.
+
 ## [1.37.0] — 2026-10-14
 
 ### Added
