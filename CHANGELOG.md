@@ -27,8 +27,7 @@
   `secret-tool lookup` prints only an exact `text/plain` value, so on KDE's
   ksecretd the lookup exited 1 and the closed-app fallback reported no
   session. When `lookup` fails, the value is now read from `secret-tool
-  search`, which prints it whatever its content type.
-
+  search`, which prints it whatever its content type (#419).
 
 - **GNOME preferences: the first tab is titled again, and the Pools subtitle no
   longer shows a literal `&amp;`.** The first preferences page was constructed
@@ -39,6 +38,7 @@
   used to fall back to Anthropic when the vendor list was empty, so prefs said
   all off while the bar still showed it. And with no windows to draw, the empty
   bar no longer shows the brand mark twice.
+
 ## [1.37.0] — 2026-10-14
 
 ### Added
