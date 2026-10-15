@@ -656,17 +656,17 @@ class AiUsageBarIndicator extends PanelMenu.Button {
     }
 
     // Every top-bar write goes through here. Empty markup, e.g. both windows
-    // switched off, swaps the label for the top-bar vendor's mark.
+    // switched off, hides the label; what stays visible is decided below.
     _setPanelMarkup(markup) {
         const empty = !markup;
-        if (empty) {
-            const mark = this._markIcon(this._vendor);
-            if (mark)
-                this._icon.gicon = mark;
-            else
-                this._icon.icon_name = 'application-x-executable-symbolic';
-        }
-        this._icon.visible = empty;
+        // The brand mark is already prepended in _init, so assigning it to
+        // _icon as well would draw the same mark twice. The icon slot is the
+        // stand-in — keeping the indicator from collapsing — only when the
+        // vendor has no mark file, falling back to the generic icon.
+        const standIn = empty && !this._markIcon(this._vendor);
+        if (standIn)
+            this._icon.icon_name = 'application-x-executable-symbolic';
+        this._icon.visible = standIn;
         this._label.visible = !empty;
         this._label.clutter_text.set_markup(markup);
     }
@@ -755,11 +755,13 @@ export default class AiUsageBarExtension extends Extension {
     }
 
     // `vendor` takes a comma-separated list ("anthropic,openai"): one
-    // indicator per provider, side by side in the order given.
+    // indicator per provider, side by side in the order given. An empty list
+    // (every vendor switch off in prefs) means NO indicator — the panel must
+    // agree with prefs rather than silently defaulting to one provider.
     _vendors() {
         const list = this._settings.get_string('vendor').split(',')
             .map(v => v.trim()).filter(Boolean);
-        return list.length ? [...new Set(list)] : ['anthropic'];
+        return [...new Set(list)];
     }
 
     _place() {

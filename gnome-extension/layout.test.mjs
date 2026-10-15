@@ -30,4 +30,28 @@ const panelWrites = source.match(/\b_label\.clutter_text\.set_markup\(/g) ?? [];
 assert.equal(panelWrites.length, 1, 'top-bar markup must go through _setPanelMarkup');
 assert.match(source, /\n {4}_setPanelMarkup\(markup\) \{\n[\s\S]*?this\._label\.clutter_text\.set_markup\(markup\);/);
 
+// Every vendor switch off in prefs stores vendor='', and the panel must agree:
+// no indicators at all, not a silent Anthropic fallback. The gschema default
+// stays 'anthropic', so only an explicit choice produces the empty list.
+const vendorsSrc = source.match(/\n {4}_vendors\(\) \{\n[\s\S]*?\n {4}\}/);
+assert.ok(vendorsSrc, 'extension.js must keep a _vendors()');
+assert.doesNotMatch(vendorsSrc[0], /'anthropic'/, 'an empty vendor list must not fall back to anthropic');
+const Extension = runInNewContext(`(class { ${vendorsSrc[0]} })`, {});
+const ext = new Extension();
+// Cross-realm arrays fail deepStrictEqual prototype checks; re-home them.
+const vendorsOf = s => {
+    ext._settings = {get_string: () => s};
+    return [...ext._vendors()];
+};
+assert.deepEqual(vendorsOf(''), []);
+assert.deepEqual(vendorsOf('anthropic, openai ,anthropic'), ['anthropic', 'openai']);
+
+// The brand mark is prepended in _init, so the empty-markup state must not
+// assign the same gicon to _icon too — that drew two identical marks side by
+// side. The icon slot is the generic stand-in for vendors with no mark file.
+assert.doesNotMatch(source, /this\._icon\.gicon\s*=/,
+    'the empty-bar state must not re-assign the prepended brand mark to _icon');
+assert.match(source, /this\._icon\.icon_name = 'application-x-executable-symbolic'/,
+    'the no-mark fallback icon stays');
+
 console.log('GNOME layout compatibility tests passed');

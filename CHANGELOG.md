@@ -29,6 +29,16 @@
   session. When `lookup` fails, the value is now read from `secret-tool
   search`, which prints it whatever its content type.
 
+
+- **GNOME preferences: the first tab is titled again, and the Pools subtitle no
+  longer shows a literal `&amp;`.** The first preferences page was constructed
+  without a title (it renders as an unlabeled tab beside "Vendors"), and a
+  subtitle wrapped in `GLib.markup_escape_text` showed the entity raw — markup
+  is off on those rows (#422).
+- **GNOME: switching every top-bar vendor off now hides them all.** The panel
+  used to fall back to Anthropic when the vendor list was empty, so prefs said
+  all off while the bar still showed it. And with no windows to draw, the empty
+  bar no longer shows the brand mark twice.
 ## [1.37.0] — 2026-10-14
 
 ### Added
