@@ -65,6 +65,7 @@ visible.
 | Click `52% left` under a bar | Flip Used ⟷ Left everywhere (hover shows the other reading) |
 | Click `Resets in …` | Timeline popover with the exact reset time and countdown (Settings → Reset Times switches the row text itself) |
 | Options → Customize (or Return) | Provider list: toggle, drag the grip to reorder, open a provider |
+| All providers (Customize, or Settings → Providers in Native) | Every provider, enabled or not: the switch writes `enabled` to config.toml; Sign in / Open app / Add key for one with no credential; Add Claude Code / Desktop / Codex account (macOS) |
 | Provider Customize | Always Visible vs On Demand rows (toggle + drag across the divider); Reset in the top bar |
 | Options → Settings | Launch at Login, Refresh Every (1/5/10/15/30/60 min), Global Shortcut, Theme, Time Format, Show Usage As, Reset Times, Always Show Pacing, Updates |
 | Provider header icon (right) | Customize that provider's rows (Reset to the defaults is in that screen's top bar) |
