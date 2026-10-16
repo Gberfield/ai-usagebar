@@ -561,7 +561,7 @@ mod tests {
             assert!(plan.known.contains(&VendorId::Devin));
         }
         assert!(VendorId::all().iter().all(|vendor| vendor.auto_detectable()
-            == !matches!(vendor, VendorId::Devin | VendorId::MuseCode)));
+            != matches!(vendor, VendorId::Devin | VendorId::MuseCode)));
     }
 
     #[test]
