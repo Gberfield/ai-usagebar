@@ -298,6 +298,8 @@ pub enum Vendor {
     NousResearch,
     #[value(name = "opencode-go")]
     OpenCodeGo,
+    #[value(name = "synthetic")]
+    Synthetic,
 }
 
 impl Vendor {
@@ -321,6 +323,7 @@ impl Vendor {
             Vendor::Kiro => crate::vendor::VendorId::Kiro,
             Vendor::NousResearch => crate::vendor::VendorId::NousResearch,
             Vendor::OpenCodeGo => crate::vendor::VendorId::OpenCodeGo,
+            Vendor::Synthetic => crate::vendor::VendorId::Synthetic,
         }
     }
 }
@@ -411,6 +414,7 @@ fn id_to_vendor(id: crate::vendor::VendorId) -> Vendor {
         crate::vendor::VendorId::Kiro => Vendor::Kiro,
         crate::vendor::VendorId::NousResearch => Vendor::NousResearch,
         crate::vendor::VendorId::OpenCodeGo => Vendor::OpenCodeGo,
+        crate::vendor::VendorId::Synthetic => Vendor::Synthetic,
     }
 }
 

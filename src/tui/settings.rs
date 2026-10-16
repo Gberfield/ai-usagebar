@@ -119,6 +119,13 @@ pub const KEY_VENDORS: &[KeyVendor] = &[
         section: "opencode-go",
         note: "usage quota",
     },
+    KeyVendor {
+        id: VendorId::Synthetic,
+        label: "Synthetic",
+        env: "SYNTHETIC_API_KEY",
+        section: "synthetic",
+        note: "subscription quotas",
+    },
 ];
 
 /// Read the inline `api_key` currently in config for a given section, so the
@@ -136,6 +143,7 @@ fn config_inline_key<'a>(cfg: &'a Config, section: &str) -> Option<&'a str> {
         "grok" => cfg.grok.api_key.as_deref(),
         "minimax" => cfg.minimax.api_key.as_deref(),
         "opencode-go" => cfg.opencode_go.api_key.as_deref(),
+        "synthetic" => cfg.synthetic.api_key.as_deref(),
         _ => None,
     }
 }
@@ -631,6 +639,7 @@ fn configured_key_env<'a>(cfg: &'a Config, section: &str, fallback: &'a str) -> 
         "grok" => &cfg.grok.api_key_env,
         "minimax" => &cfg.minimax.api_key_env,
         "opencode-go" => &cfg.opencode_go.api_key_env,
+        "synthetic" => &cfg.synthetic.api_key_env,
         _ => fallback,
     }
 }

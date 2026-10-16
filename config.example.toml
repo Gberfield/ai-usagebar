@@ -10,7 +10,7 @@
 # is selected when the TUI opens. Comment out to default to Anthropic.
 # Valid: anthropic | anthropic_api | openai | zai | openrouter | deepseek
 #        | kimi | kilo | novita | moonshot | grok | supergrok | antigravity
-#        | cursor | minimax | kiro | nous | opencode-go
+#        | cursor | minimax | kiro | nous | opencode-go | synthetic
 # When unset, the TUI opens on the Overview (all vendors at once); set this to
 # open directly on a vendor's tab instead.
 # primary = "anthropic"
@@ -295,4 +295,12 @@ enabled = false
 [opencode-go]
 enabled = false
 api_key_env = "OPENCODE_GO_API_KEY"
+# api_key = "[REDACTED]"  # optional inline fallback; prefer the environment
+
+# Synthetic — subscription quotas from api.synthetic.new/v2/quotas. Opt in
+# only after exporting the API key under this variable; the key itself is
+# never written to this example.
+[synthetic]
+enabled = false
+api_key_env = "SYNTHETIC_API_KEY"
 # api_key = "[REDACTED]"  # optional inline fallback; prefer the environment

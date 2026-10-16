@@ -57,6 +57,7 @@ pub struct Config {
     pub nous: NousConfig,
     #[serde(rename = "opencode-go")]
     pub opencode_go: OpenCodeGoConfig,
+    pub synthetic: SyntheticConfig,
 }
 
 /// UI / dispatch preferences. Currently just `primary` — which vendor the
@@ -492,6 +493,26 @@ impl Default for OpenCodeGoConfig {
         Self {
             enabled: false,
             api_key_env: "OPENCODE_GO_API_KEY".to_string(),
+            api_key: None,
+        }
+    }
+}
+
+/// Synthetic (`api.synthetic.new`) — subscription quotas over an API key.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct SyntheticConfig {
+    pub enabled: bool,
+    pub api_key_env: String,
+    pub api_key: Option<String>,
+}
+
+impl Default for SyntheticConfig {
+    fn default() -> Self {
+        // Opt-in like the other API-key vendors: needs an explicit key.
+        Self {
+            enabled: false,
+            api_key_env: "SYNTHETIC_API_KEY".to_string(),
             api_key: None,
         }
     }
@@ -983,6 +1004,7 @@ impl Config {
             self.grok.api_key.as_deref(),
             self.anthropic_api.api_key.as_deref(),
             self.opencode_go.api_key.as_deref(),
+            self.synthetic.api_key.as_deref(),
         ]
         .into_iter()
         .chain(
@@ -1037,6 +1059,7 @@ impl Config {
             VendorId::Kiro => self.kiro.enabled,
             VendorId::NousResearch => self.nous.enabled,
             VendorId::OpenCodeGo => self.opencode_go.enabled,
+            VendorId::Synthetic => self.synthetic.enabled,
         }
     }
 

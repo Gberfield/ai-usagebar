@@ -356,6 +356,7 @@ pub enum VendorSnapshot {
     Kiro(KiroSnapshot),
     NousResearch(crate::nous::types::AccountSnapshot),
     OpenCodeGo(crate::opencode_go::types::Usage),
+    Synthetic(SyntheticSnapshot),
 }
 
 /// Google Antigravity 2.0 / CLI snapshot. The API groups models into Gemini
@@ -398,6 +399,46 @@ pub struct MinimaxSnapshot {
     /// `video` bucket, `None` on plans that carry no video quota.
     pub video_session: Option<UsageWindow>,
     pub video_weekly: Option<UsageWindow>,
+}
+
+/// Synthetic (`api.synthetic.new/v2/quotas`) — a subscription here is a set of
+/// **regenerating allowances** rather than windows that empty and refill on a
+/// timer: the 5h request allowance regains a slice of its maximum on every tick
+/// and the weekly credit allowance regains roughly 2% every ~202 minutes.
+///
+/// Each budget therefore carries the instant of its **next top-up** in
+/// `resets_at`, which is the actionable figure ("capacity comes back in three
+/// minutes"), rather than an end-of-window reset — Synthetic's own docs frame
+/// the worst case as a 15-minute wait, not a locked-out window. Pacing is
+/// deliberately not applied to these windows for the same reason: there is no
+/// "you are burning faster than the window refills" cliff to pace against, you
+/// are simply throttled until the next tick.
+///
+/// `subscription`/`freeToolCalls` from the payload are not modelled:
+/// `subscription` duplicates the rolling limit's maximum behind an ambiguous
+/// `renewsAt`, and `freeToolCalls` is zero on every plan observed so far.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyntheticSnapshot {
+    pub plan: String,
+    /// Rolling 5h request allowance (`rollingFiveHourLimit`), `None` on
+    /// accounts that are not on a subscription.
+    pub session: Option<UsageWindow>,
+    /// Weekly credit allowance (`weeklyTokenLimit`) as consumed-%.
+    pub weekly: Option<UsageWindow>,
+    /// Remaining/maximum weekly credits, kept exactly as the API formats them
+    /// (`"$46.45"`, `"$48.00"`): the wire owns the currency symbol, so no local
+    /// money formatter is applied to a value it did not produce.
+    pub credits: Option<SyntheticCredits>,
+    /// Hourly web-search allowance (`search.hourly`). This one *is* a real
+    /// window that resets, so it keeps reset semantics.
+    pub search: Option<UsageWindow>,
+}
+
+/// Weekly credit figures as the API spells them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SyntheticCredits {
+    pub remaining: String,
+    pub max: String,
 }
 
 /// Anthropic Admin API — month-to-date spend (USD) from the cost report. The

@@ -203,6 +203,22 @@ pub fn compact_cells(snapshot: &VendorSnapshot) -> (String, Vec<(String, PaceSev
             .collect();
             ("OpenCode Go".into(), cells)
         }
+        VendorSnapshot::Synthetic(s) => {
+            let mut cells = Vec::new();
+            if let Some(w) = &s.session {
+                cells.push(pct("5h", w.utilization_pct));
+            }
+            if let Some(w) = &s.weekly {
+                cells.push(pct("W", w.utilization_pct));
+            }
+            if let Some(w) = &s.search {
+                cells.push(pct("srch", w.utilization_pct));
+            }
+            if let Some(c) = &s.credits {
+                cells.push((c.remaining.clone(), PaceSeverity::Low));
+            }
+            (s.plan.clone(), cells)
+        }
     };
 
     for (text, _) in &mut cells {
@@ -260,6 +276,14 @@ pub fn headline_pct(snapshot: &VendorSnapshot) -> Option<i32> {
             s.monthly
                 .as_ref()
                 .map(|window| window.percent.round() as i32),
+        ]
+        .into_iter()
+        .flatten()
+        .max(),
+        VendorSnapshot::Synthetic(s) => [
+            s.session.as_ref().map(|w| w.utilization_pct),
+            s.weekly.as_ref().map(|w| w.utilization_pct),
+            s.search.as_ref().map(|w| w.utilization_pct),
         ]
         .into_iter()
         .flatten()
@@ -331,6 +355,7 @@ pub(crate) fn sections_with_metadata_for(
                 VendorSnapshot::Kiro(s) => kiro_sections(s, now),
                 VendorSnapshot::NousResearch(s) => nous_sections(s, now),
                 VendorSnapshot::OpenCodeGo(s) => opencode_go_sections(s, now),
+                VendorSnapshot::Synthetic(s) => synthetic_sections(s, now),
             };
             // Inject the (already-absolute) fetched-at instant into the title
             // row, right-aligned. Pre-snapshotted in app::refresh_one so it
@@ -799,6 +824,54 @@ fn opencode_go_sections(
                 value: countdown::format(Some(window.resets_at), now),
             });
         }
+    }
+    sections
+}
+
+/// Synthetic's two subscription lanes regenerate rather than reset, so their
+/// rows say "Top-up" and carry no pacing footnote (there is no cliff to pace
+/// against — see `SyntheticSnapshot`); the hourly search lane is a real
+/// window and keeps the "Resets" wording.
+fn synthetic_sections(s: &crate::usage::SyntheticSnapshot, now: DateTime<Utc>) -> SectionBuilder {
+    let mut sections = SectionBuilder::new(vec![Section::Title {
+        left: s.plan.clone(),
+        right: None,
+    }]);
+    for (label, window, verb) in [
+        ("5h requests", s.session.as_ref(), "Top-up"),
+        ("Weekly credits", s.weekly.as_ref(), "Top-up"),
+        ("Web search (hourly)", s.search.as_ref(), "Resets"),
+    ] {
+        if let Some(w) = window {
+            let pct = w.utilization_pct.clamp(0, 100);
+            sections.push_metric(
+                Section::Metric {
+                    label: label.into(),
+                    pct: pct as u16,
+                    severity: severity_for(pct),
+                    value_label: format!("{pct}%"),
+                    footnote: String::new(),
+                },
+                w.resets_at,
+            );
+            sections.push(Section::Text {
+                label: verb.into(),
+                value: countdown::format(w.resets_at, now),
+            });
+        }
+    }
+    if let Some(c) = &s.credits {
+        sections.push(Section::Text {
+            label: "Credits left".into(),
+            value: format!("{} of {}", c.remaining, c.max),
+        });
+    }
+    if s.session.is_none() && s.weekly.is_none() && s.search.is_none() {
+        sections.push(Section::Spacer);
+        sections.push(Section::Text {
+            label: "".into(),
+            value: "  no usage windows reported".into(),
+        });
     }
     sections
 }

@@ -144,6 +144,7 @@ come from environment variables or `config.toml`.
 | Kiro CLI | Existing kiro-cli login | Opt in and run `kiro-cli login` once. ai-usagebar refreshes the session when needed. |
 | Nous Research | OAuth device flow | Enable `[nous]`, click **Log in with Nous Research** in the Omarchy settings panel, or run `ai-usagebar auth nous login`. Credentials are kept in ai-usagebar's separate platform config directory (`~/.config/ai-usagebar/credentials.json` on Linux). |
 | OpenCode Go | API key (`OPENCODE_GO_API_KEY` env or `[opencode-go] api_key` in config) | Enable `[opencode-go]`, then enter the key in the Omarchy settings panel or set the environment variable. |
+| Synthetic | API key (`SYNTHETIC_API_KEY` env or `[synthetic] api_key` in config) | Enable `[synthetic]`, then enter the key in the Omarchy settings panel or set the environment variable. |
 
 ### Nous credits and OpenCode Go
 

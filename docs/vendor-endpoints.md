@@ -24,6 +24,7 @@ defensive and includes opt-in live tests for catching response changes.
 | **Kiro CLI** | `codewhisperer.<region>.amazonaws.com` `GetUsageLimits` (undocumented; the same call kiro-cli's own `/usage` slash command makes) | Single credit pool this cycle — used/limit/%, plan, reset | No — widget/TUI only |
 | **Nous Research** | `portal.nousresearch.com/api/oauth/account` (OAuth-authenticated Portal account response) | Subscription usage %, subscription credits, top-up/purchased credits, total usable credits, renewal | Yes |
 | **OpenCode Go** | `opencode.ai/zen/go/v1/usage` | Rolling, weekly, and monthly `percent` windows with absolute reset timestamps | Yes |
+| **Synthetic** | `api.synthetic.new/v2/quotas` (documented endpoint; lane fields reverse-engineered) | Regenerating 5h-request and weekly-credit allowances carrying next-top-up timestamps, plus an hourly web-search window and wire-formatted weekly credits | Yes |
 
 
 ## Stability notes

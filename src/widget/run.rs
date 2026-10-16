@@ -160,6 +160,7 @@ async fn build_output(cli: &Cli) -> Result<WaybarOutput> {
         Vendor::Kiro => kiro_output(cli, &config).await,
         Vendor::NousResearch => nous_output(cli).await,
         Vendor::OpenCodeGo => opencode_go_output(cli, &config).await,
+        Vendor::Synthetic => synthetic_output(cli, &config).await,
     }
 }
 
@@ -236,6 +237,41 @@ async fn opencode_go_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> 
     let snapshot = outcome.snapshot.clone();
     let vendor_outcome: VendorOutcome = outcome.into();
     Ok(crate::opencode_go::vendor::render(
+        &vendor_outcome,
+        &snapshot,
+        &theme_from_cli(cli),
+        &RenderOpts::from_cli(cli),
+        Utc::now(),
+    ))
+}
+
+async fn synthetic_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
+    let api_key = crate::config::resolve_api_key(
+        "Synthetic",
+        &config.synthetic.api_key_env,
+        config.synthetic.api_key.as_deref(),
+    )?;
+    let client = http_client()?;
+    let cache = vendor_cache(cli, "synthetic")?;
+    let endpoints = crate::synthetic::fetch::Endpoints::default();
+    let outcome = match crate::synthetic::fetch::fetch_snapshot(
+        &client,
+        &api_key,
+        &cache,
+        &endpoints,
+        DEFAULT_TTL,
+    )
+    .await
+    {
+        Ok(outcome) => outcome,
+        Err(error) if error.is_transient() => {
+            return Ok(WaybarOutput::loading(cli.icon.as_deref()));
+        }
+        Err(error) => return Err(error),
+    };
+    let snapshot = outcome.snapshot.clone();
+    let vendor_outcome: VendorOutcome = outcome.into();
+    Ok(crate::synthetic::vendor::render(
         &vendor_outcome,
         &snapshot,
         &theme_from_cli(cli),
