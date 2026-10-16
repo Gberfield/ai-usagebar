@@ -5874,6 +5874,23 @@ url = "https://example.test/u"
         );
     }
 
+    /// `[cline] api_key_env` is read by the fetch, so the shared resolver has
+    /// to answer the same name: the catalog reports and probes it, and the
+    /// scrub list is built from it. Cline's arm sat with the fixed-name
+    /// providers, so a renamed variable configured the fetch alone.
+    #[test]
+    fn loading_a_config_resolves_and_scrubs_a_renamed_cline_env_var() {
+        let renamed = "AI_USAGEBAR_CLINE_RENAMED_SCRUB_TEST_2F8A";
+        assert!(!crate::vendor::vendor_secret_env_vars_to_remove(&[]).contains(&renamed));
+        let file = write_toml(&format!("[cline]\napi_key_env = \"{renamed}\"\n"));
+        let config = Config::load_from(file.path()).unwrap();
+        assert_eq!(config.api_key_env_for(VendorId::Cline), renamed);
+        assert!(
+            crate::vendor::vendor_secret_env_vars_to_remove(&[]).contains(&renamed),
+            "a renamed Cline key variable must be scrubbed from subprocesses"
+        );
+    }
+
     /// `VendorId::config_section` is what every by-name config writer uses;
     /// this proves each section name is one the parser actually recognizes
     /// (the `deny_unknown_fields` on `Config` makes a misspelling fail loudly)
