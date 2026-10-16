@@ -7,9 +7,23 @@ pub fn open() {
     spawn_console(&[&sibling("ai-usagebar-tui")]);
 }
 
-/// Run one command line in a new console that stays open afterwards.
+/// Run one command line in a new console that stays open afterwards. The line
+/// goes through `raw_arg`: Rust's argv escaping turns its quotes into `\"`,
+/// which `cmd /k` does not understand.
 pub fn run_in_terminal(line: &str) {
-    spawn_console(&["cmd.exe", "/k", line]);
+    use std::os::windows::process::CommandExt;
+    if Command::new("wt.exe")
+        .args(["new-tab", "--", "cmd.exe", "/k"])
+        .raw_arg(line)
+        .spawn()
+        .is_ok()
+    {
+        return;
+    }
+    let _ = Command::new("conhost.exe")
+        .args(["cmd.exe", "/k"])
+        .raw_arg(line)
+        .spawn();
 }
 
 fn spawn_console(args: &[&str]) {
