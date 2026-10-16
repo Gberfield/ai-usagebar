@@ -2,6 +2,13 @@
 
 ### Fixed
 
+- **macOS menu bar parses Model Studio monthly Token Plan quota.** The Swift
+  dropdown menu and menubar item now parse Model Studio's monthly rate-limit
+  window into the third quota row alongside session and weekly windows, and
+  route it to the primary bar when an individual Token Plan account reports
+  only monthly quota, falling back gracefully for older binaries and unquoted
+  plans.
+
 - **A renamed Cline key variable reaches the provider catalog and the
   subprocess scrub.** `[cline] api_key_env` was honored by the fetch alone: the
   shared variable resolver answered the fixed `CLINE_API_KEY`, so the catalog

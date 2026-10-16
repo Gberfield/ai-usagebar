@@ -343,7 +343,6 @@ mod tests {
             VendorId::Openai => MacosMirror::Generic(CORE),
             VendorId::Kimi => MacosMirror::Generic(CORE),
             VendorId::Kiro => MacosMirror::Generic(CORE),
-            VendorId::ModelStudio => MacosMirror::Generic(CORE),
             VendorId::NousResearch => MacosMirror::Generic(CORE),
             VendorId::OrcaRouter => MacosMirror::Generic(CORE),
             // Weekly-only: no 5h window, so it renders through the weekly half.
@@ -351,6 +350,7 @@ mod tests {
             // Three independent windows (5 h, weekly, monthly); the macOS bar
             // reads its fields by index, so each gets its own appended slot.
             VendorId::Cline => MacosMirror::Slot("cline_5h_pct"),
+            VendorId::ModelStudio => MacosMirror::Slot("mst_monthly_pct"),
         }
     }
 
