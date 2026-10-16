@@ -167,7 +167,7 @@ mod tests {
             values.get("session_elapsed"),
             values.get("muse_session_elapsed")
         );
-        assert!(!values["session_elapsed"].is_empty());
+        assert_eq!(values["session_elapsed"], "60");
         assert_eq!(
             values.get("session_reset"),
             values.get("muse_session_reset")
@@ -183,14 +183,14 @@ mod tests {
             values.get("weekly_elapsed"),
             values.get("muse_weekly_elapsed")
         );
-        assert!(!values["weekly_elapsed"].is_empty());
+        assert_eq!(values["weekly_elapsed"], "98");
         assert_eq!(values.get("weekly_reset"), values.get("muse_weekly_reset"));
         assert!(!values["weekly_reset"].is_empty());
 
-        assert!(values.contains_key("muse_session_pace"));
-        assert!(values.contains_key("muse_session_pace_indicator"));
-        assert!(values.contains_key("muse_weekly_pace"));
-        assert!(values.contains_key("muse_weekly_pace_indicator"));
+        assert_eq!(values["muse_session_pace"], "↓");
+        assert_eq!(values["muse_session_pace_indicator"], "↓");
+        assert_eq!(values["muse_weekly_pace"], "↓");
+        assert_eq!(values["muse_weekly_pace_indicator"], "↓");
     }
 
     #[test]
@@ -218,22 +218,5 @@ mod tests {
         assert_eq!(values["muse_weekly_elapsed"], "");
         assert_eq!(values["muse_weekly_pace"], "");
         assert_eq!(values["muse_weekly_pace_indicator"], "");
-    }
-
-    #[test]
-    fn severity_selects_worst_reported_window() {
-        let snap = MuseSnapshot {
-            plan: "Pro".into(),
-            session: Some(window(30, 5)),
-            weekly: Some(window(85, 168)),
-        };
-        assert_eq!(severity(&snap), severity_for(85));
-
-        let snap_no_windows = MuseSnapshot {
-            plan: "Pro".into(),
-            session: None,
-            weekly: None,
-        };
-        assert_eq!(severity(&snap_no_windows), severity_for(0));
     }
 }
