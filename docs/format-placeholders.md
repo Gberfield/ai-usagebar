@@ -4,9 +4,12 @@ Use placeholders with `--format` and `--tooltip-format`. Unsupported or absent
 metrics expand to an empty string unless noted otherwise.
 
 Muse Code (`--vendor muse-code`, short name `msc`) supplies `{muse_plan}`,
-`{muse_session_pct}`, `{muse_session_reset}`, `{muse_weekly_pct}`, and
-`{muse_weekly_reset}`, plus the generic `{plan}`, `{vendor_short}`,
-`{session_pct}`, `{session_reset}`, `{weekly_pct}`, and `{weekly_reset}`.
+`{muse_session_pct}`, `{muse_session_reset}`, `{muse_session_elapsed}`,
+`{muse_session_pace}`, `{muse_session_pace_indicator}`, `{muse_weekly_pct}`,
+`{muse_weekly_reset}`, `{muse_weekly_elapsed}`, `{muse_weekly_pace}`, and
+`{muse_weekly_pace_indicator}`, plus the generic `{icon}`, `{plan}`,
+`{vendor_short}`, `{session_pct}`, `{session_reset}`, `{session_elapsed}`,
+`{weekly_pct}`, `{weekly_reset}`, and `{weekly_elapsed}`.
 Percentages are used allowance; an omitted window expands to an empty string.
 
 ## Cross-provider formats
