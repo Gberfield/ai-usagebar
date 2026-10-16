@@ -97,6 +97,8 @@ let POINT_CRITICAL_MIN = 10
 // `{cline_5h_pct}` / `{cline_5h_reset}` (57-58), `{cline_7d_pct}` /
 // `{cline_7d_reset}` (59-60), and `{cline_30d_pct}` / `{cline_30d_reset}` (61-62)
 // carry Cline's 5-hour, 7-day, and 30-day quota pools (empty when not selected).
+// `{mst_monthly_pct}` / `{mst_monthly_reset}` (63-64) carry Model Studio's
+// monthly Token Plan pool (empty when not selected or not reported).
 // A final literal
 // sentinel absorbs the widget's stale suffix, preserving these fields.
 let FORMAT = "{plan};;{session_pct};;{session_reset};;{weekly_pct};;{weekly_reset};;" +
@@ -116,7 +118,8 @@ let FORMAT = "{plan};;{session_pct};;{session_reset};;{weekly_pct};;{weekly_rese
              "{oll_monthly_pct};;{oll_monthly_reset};;{lyceum_balance};;{dif_balance};;" +
              "{devin_daily_pct};;{devin_daily_reset};;{devin_daily_elapsed};;" +
              "{cline_5h_pct};;{cline_5h_reset};;{cline_7d_pct};;{cline_7d_reset};;" +
-             "{cline_30d_pct};;{cline_30d_reset}"
+             "{cline_30d_pct};;{cline_30d_reset};;" +
+             "{mst_monthly_pct};;{mst_monthly_reset}"
 
 let FORMAT_WITH_SENTINEL = FORMAT + ";;__aiub_end__"
 
@@ -600,6 +603,12 @@ func parse(_ text: String, vendor: String) -> Snapshot? {
             sonnet = w
             sonnetLabel = "Monthly"
         }
+    } else if vendor == "modelstudio" {
+        if (quotaWindow(1, 2, 13) != nil || quotaWindow(3, 4, 14) != nil),
+           let w = quotaWindow(63, 64, -1) {
+            sonnet = w
+            sonnetLabel = "Monthly"
+        }
     }
     let spent = t(8)
     let limit = t(9)
@@ -745,6 +754,22 @@ func parse(_ text: String, vendor: String) -> Snapshot? {
         weeklyTag = "7d"
         sessionLabel = "5 hours"
         weeklyLabel = "Weekly"
+    case "modelstudio":
+        if sessionWindow == nil, quotaWindow(3, 4, 14) == nil,
+           let monthly = quotaWindow(63, 64, -1) {
+            sessionWindow = monthly
+            weeklyWindow = nil
+            sessionTag = "mo"
+            weeklyTag = "7d"
+            sessionLabel = "Monthly"
+            weeklyLabel = ""
+        } else {
+            weeklyWindow = quotaWindow(3, 4, 14)
+            sessionTag = "5h"
+            weeklyTag = "7d"
+            sessionLabel = "Session"
+            weeklyLabel = "Weekly"
+        }
     default:
         weeklyWindow = quotaWindow(3, 4, 14)
         sessionTag = "5h"
