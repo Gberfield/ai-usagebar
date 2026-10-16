@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import MdiInformationOutline from "~icons/mdi/information-outline";
 import MdiTune from "~icons/mdi/tune-variant";
 import { ScreenCrossLinkRow } from "@/components/Chrome";
+import { ProviderCatalog } from "@/components/ProviderCatalog";
 import { ShortcutRecorder } from "@/components/ShortcutRecorder";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -145,6 +146,7 @@ export function Settings({
               <button type="button" className="text-[var(--accent)]" onClick={() => sendCommand("detect")}>{m.detect_providers()}</button>
             </div>
           )}
+          <ProviderCatalog error={payload.providersError} providers={payload.providers} />
         </div>
       ) : null}
       {!native || tab === "general" ? (

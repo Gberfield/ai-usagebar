@@ -13,6 +13,8 @@
 /** @typedef {{}} Alert_ThresholdInputs */
 /** @typedef {{}} Alert_Threshold_HintInputs */
 /** @typedef {{}} AlertsInputs */
+/** @typedef {{}} All_ProvidersInputs */
+/** @typedef {{}} All_Providers_HintInputs */
 /** @typedef {{}} Always_ShowInputs */
 /** @typedef {{}} Always_Show_PacingInputs */
 /** @typedef {{}} Always_Show_Pacing_HintInputs */
@@ -164,7 +166,14 @@
 /** @typedef {{}} Press_KeysInputs */
 /** @typedef {{}} Press_Keys_EllipsisInputs */
 /** @typedef {{}} ProviderInputs */
+/** @typedef {{}} Provider_Add_KeyInputs */
+/** @typedef {{}} Provider_EnableInputs */
 /** @typedef {{}} Provider_Is_UnavailableInputs */
+/** @typedef {{}} Provider_OffInputs */
+/** @typedef {{}} Provider_Off_ReadyInputs */
+/** @typedef {{}} Provider_Open_AppInputs */
+/** @typedef {{}} Provider_ReadyInputs */
+/** @typedef {{}} Provider_Sign_InInputs */
 /** @typedef {{}} ProvidersInputs */
 /** @typedef {{}} QuattroInputs */
 /** @typedef {{}} QuitInputs */
@@ -315,6 +324,14 @@ export const alert_threshold_hint = /** @type {(inputs: Alert_Threshold_HintInpu
 
 export const alerts = /** @type {(inputs: AlertsInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`Alerts`)
+};
+
+export const all_providers = /** @type {(inputs: All_ProvidersInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`All providers`)
+};
+
+export const all_providers_hint = /** @type {(inputs: All_Providers_HintInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Turn a provider on to fetch it. Changes are saved to config.toml.`)
 };
 
 export const always_show = /** @type {(inputs: Always_ShowInputs) => LocalizedString} */ () => {
@@ -921,8 +938,36 @@ export const provider = /** @type {(inputs: ProviderInputs) => LocalizedString} 
 	return /** @type {LocalizedString} */ (`Provider`)
 };
 
+export const provider_add_key = /** @type {(inputs: Provider_Add_KeyInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Add key`)
+};
+
+export const provider_enable = /** @type {(inputs: Provider_EnableInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Enable`)
+};
+
 export const provider_is_unavailable = /** @type {(inputs: Provider_Is_UnavailableInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`Provider is unavailable`)
+};
+
+export const provider_off = /** @type {(inputs: Provider_OffInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Off`)
+};
+
+export const provider_off_ready = /** @type {(inputs: Provider_Off_ReadyInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Off — credential found`)
+};
+
+export const provider_open_app = /** @type {(inputs: Provider_Open_AppInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Open app`)
+};
+
+export const provider_ready = /** @type {(inputs: Provider_ReadyInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Signed in`)
+};
+
+export const provider_sign_in = /** @type {(inputs: Provider_Sign_InInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Sign in`)
 };
 
 export const providers = /** @type {(inputs: ProvidersInputs) => LocalizedString} */ () => {

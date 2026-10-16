@@ -505,6 +505,8 @@ async fn push_report(proxy: &EventLoopProxy<UserEvent>, facts: &SharedFacts) {
     let mut snapshot = facts_snapshot(facts);
     snapshot.accent = super::accent::read_accent();
     snapshot.startup_enabled = startup::is_enabled();
+    snapshot.providers = super::providers::current();
+    with_facts(facts, |f| f.providers.clone_from(&snapshot.providers));
     let now = now_ms();
     let payload = match crate::report::collect_json().await {
         Ok(json) => wrap_report(&json, &snapshot, now, None),
@@ -776,6 +778,15 @@ fn handle_ipc(state: &mut TrayState, body: &str, control_flow: &mut ControlFlow)
         "refresh" => {
             let _ = state.worker.send(WorkerCmd::Refresh);
         }
+        "set-provider-enabled" => {
+            let error = super::providers::set_enabled(&value)
+                .err()
+                .unwrap_or_default();
+            with_facts(&state.facts, |f| f.providers_error = error);
+            apply_facts(state);
+            let _ = state.worker.send(WorkerCmd::Refresh);
+        }
+        "sign-in-provider" => super::providers::sign_in(&value),
         "open-tui" => tui_launch::open(),
         "close" => {
             trace("ipc close → hide");

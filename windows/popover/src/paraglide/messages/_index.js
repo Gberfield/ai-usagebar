@@ -15,6 +15,8 @@ import { getLocale, experimentalStaticLocale } from "../runtime.js"
 /** @typedef {{}} Alert_ThresholdInputs */
 /** @typedef {{}} Alert_Threshold_HintInputs */
 /** @typedef {{}} AlertsInputs */
+/** @typedef {{}} All_ProvidersInputs */
+/** @typedef {{}} All_Providers_HintInputs */
 /** @typedef {{}} Always_ShowInputs */
 /** @typedef {{}} Always_Show_PacingInputs */
 /** @typedef {{}} Always_Show_Pacing_HintInputs */
@@ -166,7 +168,14 @@ import { getLocale, experimentalStaticLocale } from "../runtime.js"
 /** @typedef {{}} Press_KeysInputs */
 /** @typedef {{}} Press_Keys_EllipsisInputs */
 /** @typedef {{}} ProviderInputs */
+/** @typedef {{}} Provider_Add_KeyInputs */
+/** @typedef {{}} Provider_EnableInputs */
 /** @typedef {{}} Provider_Is_UnavailableInputs */
+/** @typedef {{}} Provider_OffInputs */
+/** @typedef {{}} Provider_Off_ReadyInputs */
+/** @typedef {{}} Provider_Open_AppInputs */
+/** @typedef {{}} Provider_ReadyInputs */
+/** @typedef {{}} Provider_Sign_InInputs */
 /** @typedef {{}} ProvidersInputs */
 /** @typedef {{}} QuattroInputs */
 /** @typedef {{}} QuitInputs */
@@ -482,6 +491,38 @@ export const alerts = /** @type {((inputs?: AlertsInputs, options?: { locale?: "
 	if (locale === "ko") return __ko.alerts(inputs)
 	if (locale === "es") return __es.alerts(inputs)
 	return __en.alerts(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "All providers" |
+*
+* @param {All_ProvidersInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const all_providers = /** @type {((inputs?: All_ProvidersInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<All_ProvidersInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.all_providers(inputs)
+	if (locale === "ko") return __ko.all_providers(inputs)
+	if (locale === "es") return __es.all_providers(inputs)
+	return __en.all_providers(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Turn a provider on to fetch it. Changes are saved to config.toml." |
+*
+* @param {All_Providers_HintInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const all_providers_hint = /** @type {((inputs?: All_Providers_HintInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<All_Providers_HintInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.all_providers_hint(inputs)
+	if (locale === "ko") return __ko.all_providers_hint(inputs)
+	if (locale === "es") return __es.all_providers_hint(inputs)
+	return __en.all_providers_hint(inputs)
 });
 /**
 * | output |
@@ -2902,6 +2943,38 @@ export const provider = /** @type {((inputs?: ProviderInputs, options?: { locale
 /**
 * | output |
 * | --- |
+* | "Add key" |
+*
+* @param {Provider_Add_KeyInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_add_key = /** @type {((inputs?: Provider_Add_KeyInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_Add_KeyInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_add_key(inputs)
+	if (locale === "ko") return __ko.provider_add_key(inputs)
+	if (locale === "es") return __es.provider_add_key(inputs)
+	return __en.provider_add_key(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Enable" |
+*
+* @param {Provider_EnableInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_enable = /** @type {((inputs?: Provider_EnableInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_EnableInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_enable(inputs)
+	if (locale === "ko") return __ko.provider_enable(inputs)
+	if (locale === "es") return __es.provider_enable(inputs)
+	return __en.provider_enable(inputs)
+});
+/**
+* | output |
+* | --- |
 * | "Provider is unavailable" |
 *
 * @param {Provider_Is_UnavailableInputs} inputs
@@ -2914,6 +2987,86 @@ export const provider_is_unavailable = /** @type {((inputs?: Provider_Is_Unavail
 	if (locale === "ko") return __ko.provider_is_unavailable(inputs)
 	if (locale === "es") return __es.provider_is_unavailable(inputs)
 	return __en.provider_is_unavailable(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Off" |
+*
+* @param {Provider_OffInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_off = /** @type {((inputs?: Provider_OffInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_OffInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_off(inputs)
+	if (locale === "ko") return __ko.provider_off(inputs)
+	if (locale === "es") return __es.provider_off(inputs)
+	return __en.provider_off(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Off — credential found" |
+*
+* @param {Provider_Off_ReadyInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_off_ready = /** @type {((inputs?: Provider_Off_ReadyInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_Off_ReadyInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_off_ready(inputs)
+	if (locale === "ko") return __ko.provider_off_ready(inputs)
+	if (locale === "es") return __es.provider_off_ready(inputs)
+	return __en.provider_off_ready(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Open app" |
+*
+* @param {Provider_Open_AppInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_open_app = /** @type {((inputs?: Provider_Open_AppInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_Open_AppInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_open_app(inputs)
+	if (locale === "ko") return __ko.provider_open_app(inputs)
+	if (locale === "es") return __es.provider_open_app(inputs)
+	return __en.provider_open_app(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Signed in" |
+*
+* @param {Provider_ReadyInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_ready = /** @type {((inputs?: Provider_ReadyInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_ReadyInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_ready(inputs)
+	if (locale === "ko") return __ko.provider_ready(inputs)
+	if (locale === "es") return __es.provider_ready(inputs)
+	return __en.provider_ready(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Sign in" |
+*
+* @param {Provider_Sign_InInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const provider_sign_in = /** @type {((inputs?: Provider_Sign_InInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Provider_Sign_InInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.provider_sign_in(inputs)
+	if (locale === "ko") return __ko.provider_sign_in(inputs)
+	if (locale === "es") return __es.provider_sign_in(inputs)
+	return __en.provider_sign_in(inputs)
 });
 /**
 * | output |

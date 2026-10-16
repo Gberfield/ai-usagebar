@@ -139,6 +139,8 @@ export interface Card {
   errorDetail: string;
   errorHint: string;
   errorTitle: string;
+  /** Mark slug: the entry's `brand` when it declares one, else its vendor. */
+  icon: string;
   id: string;
   plan: string;
   resetCredits: ResetCredits | null;
@@ -178,6 +180,7 @@ export interface BlockSection {
 export type Section = BlockSection | MetricSection | TextSection;
 
 export interface Entry {
+  brand: string;
   displayName: string;
   error: string;
   id: string;
@@ -252,6 +255,18 @@ export interface Accent {
   light: string;
 }
 
+/** One built-in provider from the host catalog, enabled or not. */
+export interface ProviderInfo {
+  /** "terminal" | "app" | "settings" | "": what Sign in does on this host. */
+  action: "" | "app" | "settings" | "terminal";
+  configured: boolean;
+  enabled: boolean;
+  env: string;
+  id: string;
+  name: string;
+  signIn: string;
+}
+
 export interface Payload {
   /** Switchable logins keyed by vendor slug ("anthropic", "openai", "claude-desktop"); empty off macOS. */
   accounts: Record<string, AccountSwitchInfo>;
@@ -269,6 +284,10 @@ export interface Payload {
   os: string;
   nextRefreshAt: number;
   primary: string;
+  /** Every built-in provider, for Settings → Providers. */
+  providers: ProviderInfo[];
+  /** Why the last enable/disable failed, or "". */
+  providersError: string;
   /** Host refresh interval; one of 1, 5 or 10. */
   refreshMinutes: number;
   shortcut: string;

@@ -37,6 +37,10 @@ pub struct HostFacts {
     /// Vendors whose active login the popover can switch. Only the macOS host
     /// fills this; an empty list hides the control everywhere else.
     pub accounts: Vec<AccountSwitchFact>,
+    /// Every built-in provider, enabled or not, for Settings → Providers.
+    pub providers: Vec<crate::catalog::VendorStatus>,
+    /// Why the last enable/disable from the popover failed, or empty.
+    pub providers_error: String,
 }
 
 /// One vendor's switchable logins, as the popover renders them beside each
@@ -122,6 +126,8 @@ impl Default for HostFacts {
             updates: String::new(),
             version: String::new(),
             accounts: Vec::new(),
+            providers: Vec::new(),
+            providers_error: String::new(),
         }
     }
 }
@@ -214,6 +220,8 @@ pub fn wrap_report(
         "update_checked_at": facts.update_checked_at,
         "repository": repository_page(),
         "accounts": accounts,
+        "providers": super::providers::rows_json(&facts.providers, host_os() == "macos"),
+        "providers_error": sanitize_untrusted_field(&facts.providers_error),
         "accent": accent,
         "host_error": host_error.map(sanitize_untrusted_field),
         "primary": Value::Null,

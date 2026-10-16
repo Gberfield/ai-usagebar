@@ -261,5 +261,14 @@
   "welcome_to_ai_usage": "Welcome to AI Usage",
   "what_changed_each_version": "What changed in each version",
   "you_have_no_rate_limit_resets": "You have no rate limit resets",
-  "youre_up_to_date": "You're Up to Date"
+  "youre_up_to_date": "You're Up to Date",
+  "all_providers": "All providers",
+  "all_providers_hint": "Turn a provider on to fetch it. Changes are saved to config.toml.",
+  "provider_off": "Off",
+  "provider_off_ready": "Off — credential found",
+  "provider_ready": "Signed in",
+  "provider_sign_in": "Sign in",
+  "provider_open_app": "Open app",
+  "provider_add_key": "Add key",
+  "provider_enable": "Enable"
 }

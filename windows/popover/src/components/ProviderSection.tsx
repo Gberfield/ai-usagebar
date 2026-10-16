@@ -52,7 +52,6 @@ import {
   paceWarmupHint,
   paceWarmupText,
   prefsForCard,
-  providerIconId,
   resetAlternate,
   resetCreditDetails,
   resetText,
@@ -261,7 +260,7 @@ export function ProviderSectionHeader({
       {...handle?.attributes}
       {...handle?.listeners}
     >
-      <ProviderIcon className="text-label-2" size="var(--sz-icon)" slug={providerIconId(card.id)} title={card.title} />
+      <ProviderIcon className="text-label-2" size="var(--sz-icon)" slug={card.icon} title={card.title} />
       <div className="flex min-w-0 items-baseline gap-[var(--gap-inline)]">
         <TruncatedText className="min-w-0 text-[length:var(--sz-header)] font-semibold">{card.title}</TruncatedText>
         {plan ? <span className="shrink-0 text-[length:var(--sz-badge)] text-label-2">{plan}</span> : null}

@@ -6,6 +6,7 @@ import {
   formatDuration,
   nextUpdateLabel,
   parseHostPayload,
+  providerState,
   projectCards,
   resetLabel,
   friendlyError,
@@ -1973,4 +1974,27 @@ console.log('ok');
   assert.equal(accountSwitchFor('anthropic@two', payload.accounts).preparing, true);
   assert.equal(accountSwitchFor('anthropic@one', payload.accounts).busy, true);
   assert.equal(accountSwitchFor('anthropic@one', payload.accounts).active, true);
+}
+
+// --- provider catalog (Settings → Providers) ---------------------------------
+{
+  const payload = parseHostPayload(JSON.stringify({
+    entries: [{ id: 'custom:mine', brand: 'opencode-go', display_name: 'Mine', sections: [] }],
+    providers_error: 'Could not write',
+    providers: [
+      { id: 'cursor', name: 'Cursor', enabled: false, configured: true, env: '', sign_in: 'Sign in to the Cursor app, then Refresh.', action: 'app' },
+      { id: 'zai', name: 'Z.AI', enabled: true, configured: false, env: 'ZAI_API_KEY', sign_in: 'Add an API key', action: 'settings' },
+      { id: 'kiro', name: 'Kiro', enabled: true, configured: true, action: 'rm -rf' },
+      { id: '', name: 'nameless' },
+      'junk',
+    ],
+  }));
+  assert.deepEqual(payload.providers.map((p) => p.id), ['cursor', 'zai', 'kiro']);
+  assert.equal(payload.providers[2].action, '', 'unknown actions are dropped');
+  assert.equal(payload.providersError, 'Could not write');
+  assert.deepEqual(payload.providers.map(providerState), ['off-ready', 'needs', 'ready']);
+  assert.equal(providerState({ enabled: false, configured: false }), 'off');
+  assert.deepEqual(parseHostPayload('{}').providers, []);
+  // A custom provider that declares a brand draws that brand's mark.
+  assert.equal(projectCards(payload, 0, 'en')[0].icon, 'opencode-go');
 }
