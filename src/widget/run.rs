@@ -1073,7 +1073,13 @@ async fn modelstudio_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> 
 
 async fn muse_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
     let cache = vendor_cache(cli, "muse-code")?;
-    let outcome = crate::muse::fetch::fetch_snapshot(&config.muse, &cache).await?;
+    let outcome = match crate::muse::fetch::fetch_snapshot(&config.muse, &cache).await {
+        Ok(outcome) => outcome,
+        Err(error) if error.is_transient() => {
+            return Ok(WaybarOutput::loading(cli.icon.as_deref()));
+        }
+        Err(error) => return Err(error),
+    };
     let snap = outcome.snapshot.clone();
     let outcome: VendorOutcome = outcome.into();
     Ok(crate::muse::vendor::render(

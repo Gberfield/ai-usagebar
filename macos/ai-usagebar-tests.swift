@@ -635,6 +635,71 @@ func testParserBalances() {
     assertNil(clnNoQuota?.session, "cline unquoted session is nil")
     assertNil(clnNoQuota?.weekly, "cline unquoted weekly is nil")
     assertNil(clnNoQuota?.sonnet, "cline unquoted monthly is nil")
+
+    // Model Studio: monthly quota at 63-64.
+    // Three-window account: session at 1-2, weekly at 3-4, monthly at 63-64.
+    let mst = snapshot(FORMAT, vendor: "modelstudio",
+                       fields: fields(through: 64, set: [
+                          0: "Token Plan", 1: "15", 2: "3h 12m", 3: "45", 4: "4d 2h", 16: "mst",
+                          63: "75", 64: "18d 0h"
+                       ]))
+    assertEqual(mst?.hasUsageWindows, true, "modelstudio shows windows")
+    assertNil(mst?.creditBalance, "modelstudio has no balance-only creditBalance")
+    assertEqual(mst?.session?.pct, 15, "modelstudio 5h pct")
+    assertEqual(mst?.session?.reset, "3h 12m", "modelstudio 5h reset")
+    assertEqual(mst?.sessionLabel, "Session", "modelstudio session label is Session")
+    assertEqual(mst?.sessionTag, "5h", "modelstudio session tag is 5h")
+    assertEqual(mst?.weekly?.pct, 45, "modelstudio 7d pct")
+    assertEqual(mst?.weekly?.reset, "4d 2h", "modelstudio 7d reset")
+    assertEqual(mst?.weeklyLabel, "Weekly", "modelstudio weekly label is Weekly")
+    assertEqual(mst?.weeklyTag, "7d", "modelstudio weekly tag is 7d")
+    assertEqual(mst?.sonnet?.pct, 75, "modelstudio 30d pct mapped to third window")
+    assertEqual(mst?.sonnet?.reset, "18d 0h", "modelstudio 30d reset")
+    assertEqual(mst?.sonnetLabel, "Monthly", "modelstudio sonnet label is Monthly")
+
+    // Monthly-only account (Token Plan individual): session and weekly absent.
+    let mstMonthlyOnly = snapshot(FORMAT, vendor: "modelstudio",
+                                  fields: fields(through: 64, set: [
+                                     0: "Token Plan", 16: "mst",
+                                     63: "60", 64: "22d 8h"
+                                  ]))
+    assertEqual(mstMonthlyOnly?.hasUsageWindows, true, "modelstudio monthly-only shows windows")
+    assertEqual(mstMonthlyOnly?.session?.pct, 60, "modelstudio monthly routes to primary sessionWindow")
+    assertEqual(mstMonthlyOnly?.session?.reset, "22d 8h", "modelstudio monthly reset on sessionWindow")
+    assertEqual(mstMonthlyOnly?.sessionLabel, "Monthly", "modelstudio monthly-only session label is Monthly")
+    assertEqual(mstMonthlyOnly?.sessionTag, "mo", "modelstudio monthly-only session tag is mo")
+    assertNil(mstMonthlyOnly?.weekly, "modelstudio monthly-only has no weekly window")
+    assertNil(mstMonthlyOnly?.sonnet, "modelstudio monthly-only does not duplicate monthly into sonnet")
+
+    // A percentage is usable even when the API omits the reset timestamp.
+    let mstMonthlyUnknownReset = snapshot(FORMAT, vendor: "modelstudio",
+                                          fields: fields(through: 64, set: [
+                                             0: "Token Plan", 16: "mst",
+                                             63: "35", 64: "—"
+                                          ]))
+    assertEqual(mstMonthlyUnknownReset?.session?.pct, 35, "modelstudio monthly parses without a reset")
+    assertEqual(mstMonthlyUnknownReset?.session?.reset, "—", "modelstudio preserves an unknown reset")
+    assertEqual(mstMonthlyUnknownReset?.sessionLabel, "Monthly", "modelstudio unknown-reset row stays monthly")
+
+    // Old binary fallback: slots 63-64 absent or empty.
+    let mstOldBinary = snapshot(FORMAT, vendor: "modelstudio",
+                                fields: fields(through: 16, set: [
+                                   0: "Token Plan", 1: "20", 2: "4h", 3: "50", 4: "6d", 16: "mst"
+                                ]))
+    assertEqual(mstOldBinary?.hasUsageWindows, true, "modelstudio old binary shows windows")
+    assertEqual(mstOldBinary?.session?.pct, 20, "modelstudio old binary parses session window")
+    assertEqual(mstOldBinary?.weekly?.pct, 50, "modelstudio old binary parses weekly window")
+    assertNil(mstOldBinary?.sonnet, "modelstudio old binary has no monthly window")
+
+    // No-quota / unquoted state: all windows empty or "—".
+    let mstNoQuota = snapshot(FORMAT, vendor: "modelstudio",
+                              fields: fields(through: 64, set: [
+                                 0: "Token Plan", 16: "mst",
+                                 1: "—", 2: "—", 3: "—", 4: "—", 63: "—", 64: "—"
+                              ]))
+    assertNil(mstNoQuota?.session, "modelstudio unquoted session is nil")
+    assertNil(mstNoQuota?.weekly, "modelstudio unquoted weekly is nil")
+    assertNil(mstNoQuota?.sonnet, "modelstudio unquoted monthly is nil")
 }
 
 // ─── Run ─────────────────────────────────────────────────────────────────

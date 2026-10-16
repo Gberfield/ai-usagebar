@@ -2534,6 +2534,7 @@ impl Config {
             VendorId::Ollama => &self.ollama.api_key_env,
             VendorId::OrcaRouter => &self.orcarouter.api_key_env,
             VendorId::Lyceum => &self.lyceum.api_key_env,
+            VendorId::Cline => &self.cline.api_key_env,
             // Fixed names: OAuth-first providers whose environment override is
             // not user-renameable, and the providers with no key at all.
             VendorId::Anthropic
@@ -2546,7 +2547,6 @@ impl Config {
             | VendorId::Kiro
             | VendorId::NousResearch
             | VendorId::CommandCode
-            | VendorId::Cline
             | VendorId::ModelStudio
             | VendorId::Devin
             | VendorId::MuseCode => id.api_key_env(),
@@ -5871,6 +5871,23 @@ url = "https://example.test/u"
         assert!(
             after.contains(&account),
             "an account's management_api_key_env"
+        );
+    }
+
+    /// `[cline] api_key_env` is read by the fetch, so the shared resolver has
+    /// to answer the same name: the catalog reports and probes it, and the
+    /// scrub list is built from it. Cline's arm sat with the fixed-name
+    /// providers, so a renamed variable configured the fetch alone.
+    #[test]
+    fn loading_a_config_resolves_and_scrubs_a_renamed_cline_env_var() {
+        let renamed = "AI_USAGEBAR_CLINE_RENAMED_SCRUB_TEST_2F8A";
+        assert!(!crate::vendor::vendor_secret_env_vars_to_remove(&[]).contains(&renamed));
+        let file = write_toml(&format!("[cline]\napi_key_env = \"{renamed}\"\n"));
+        let config = Config::load_from(file.path()).unwrap();
+        assert_eq!(config.api_key_env_for(VendorId::Cline), renamed);
+        assert!(
+            crate::vendor::vendor_secret_env_vars_to_remove(&[]).contains(&renamed),
+            "a renamed Cline key variable must be scrubbed from subprocesses"
         );
     }
 
