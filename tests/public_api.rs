@@ -119,10 +119,7 @@ fn the_modelstudio_monthly_placeholders_the_macos_menu_bar_reads_keep_their_name
     };
     let v = ai_usagebar::modelstudio::vendor::build_placeholders(&unknown_reset, &opts, now);
     assert_eq!(v.get("mst_monthly_pct").map(String::as_str), Some("35"));
-    assert_eq!(
-        v.get("mst_monthly_reset").map(String::as_str),
-        Some("—")
-    );
+    assert_eq!(v.get("mst_monthly_reset").map(String::as_str), Some("—"));
 
     let without_monthly = ai_usagebar::usage::ModelStudioSnapshot {
         session: None,
