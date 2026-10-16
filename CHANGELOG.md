@@ -2,6 +2,11 @@
 
 ### Fixed
 
+- **Muse Code widget shows loading state on transient transport errors.** When
+  network transport fails on cold cache, such as waking up before network
+  reconnects, the Waybar widget returns the standard loading state instead of
+  bailing with a warning indicator.
+
 - **macOS menu bar parses Model Studio monthly Token Plan quota.** The Swift
   dropdown menu and menubar item now parse Model Studio's monthly rate-limit
   window into the third quota row alongside session and weekly windows, and
