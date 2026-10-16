@@ -2,6 +2,11 @@
 
 ### Added
 
+- **Windows shows starred usage when the tray icon is hovered.** The native
+  tooltip follows the popover's provider order, starred metrics, and Used/Left
+  preference, and updates when either the report or those preferences change
+  (#434).
+
 - **The tray lists every provider in Settings, enabled or not.** Settings →
   Providers (and Classic's Customize screen) used to show only the providers
   `usage --json` reported, so one switched off in `config.toml` had no row and

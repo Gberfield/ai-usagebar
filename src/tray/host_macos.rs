@@ -43,7 +43,7 @@ use super::browse;
 use super::hotkey::{self, HotkeyBinding};
 use super::icon::{Severity, tray_icon_rgba};
 use super::marks;
-use super::menu_bar::{self, LogoSegment, MenuBarLook, StatusItemContent, UsageReading};
+use super::menu_bar::{self, LogoSegment, MenuBarLook, StatusItemContent};
 use super::options_menu::{self, OptionsAction, OptionsLabels};
 use super::panel::{
     CLICK_LOCK_MS, CORNER_RADIUS, CocoaRect, FALLBACK_WORK_AREA_HEIGHT, PopoverPlacement,
@@ -54,8 +54,8 @@ use super::payload::{
     wrap_report,
 };
 use super::strip::{
-    BARS_PIXEL_SIDE, BARS_POINT_SIDE, HiddenRows, Stars, bar_fill, bars_layout, bars_rgba,
-    content_from_payload, parse_hidden_rows, parse_strip_ipc,
+    BARS_PIXEL_SIDE, BARS_POINT_SIDE, HiddenRows, Stars, UsageReading, bar_fill, bars_layout,
+    bars_rgba, content_from_payload, parse_hidden_rows, parse_strip_ipc,
 };
 use super::style::PopoverStyle;
 use super::updates::Updates;

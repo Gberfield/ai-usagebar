@@ -42,6 +42,9 @@ use super::payload::{
     HostFacts, SharedFacts, facts_snapshot, host_payload, with_facts, worst_severity, wrap_report,
 };
 use super::placement::{self, Area, Insets};
+use super::strip::{
+    Stars, UsageReading, content_from_payload, parse_strip_ipc, tooltip, truncate_utf16,
+};
 use super::style::PopoverStyle;
 use super::updates::Updates;
 use super::{RELAUNCH_ENV, now_ms, profile, startup, taskbar_theme, tui_launch, update_flow};
@@ -85,6 +88,8 @@ const RELAUNCH_WAIT: Duration = Duration::from_secs(10);
 /// Shown on the NotifyIcon when WebView2 is missing (older Windows 10).
 /// The popover cannot open; the icon and right-click menu still work.
 const WEBVIEW2_MISSING: &str = "Install the WebView2 Evergreen Runtime to open the popover.";
+/// `NOTIFYICONDATAW::szTip` holds 128 UTF-16 units including its terminator.
+const TOOLTIP_MAX_UTF16: usize = 127;
 
 enum UserEvent {
     Tray(TrayIconEvent),
@@ -170,6 +175,9 @@ struct TrayState {
     worker: mpsc::Sender<WorkerCmd>,
     proxy: EventLoopProxy<UserEvent>,
     payload: Value,
+    stars: Stars,
+    strip_order: Vec<String>,
+    usage_reading: UsageReading,
     js_ready: bool,
     popover_open: bool,
     /// Blurs before this instant are the ones our own show/focus calls
@@ -317,6 +325,9 @@ fn run_loop() -> Result<(), String> {
         worker: cmd_tx,
         proxy: proxy.clone(),
         payload: empty,
+        stars: Stars::new(),
+        strip_order: Vec::new(),
+        usage_reading: UsageReading::Used,
         js_ready: false,
         popover_open: false,
         blur_guard_until: None,
@@ -535,15 +546,21 @@ fn apply_payload(state: &mut TrayState, payload: Value) {
     ));
     state.payload = payload;
     refresh_icon(state);
-    // No hover tip: the popover is the readout. The one exception names the
-    // missing WebView2 runtime, because without it there is no popover.
-    if state.webview.is_none() {
-        let _ = state.tray.set_tooltip(Some(WEBVIEW2_MISSING));
-    }
+    refresh_tooltip(state);
     stamp_facts(state);
     if state.js_ready {
         push_to_webview(state);
     }
+}
+
+fn refresh_tooltip(state: &mut TrayState) {
+    if state.webview.is_none() {
+        let _ = state.tray.set_tooltip(Some(WEBVIEW2_MISSING));
+        return;
+    }
+    let content = content_from_payload(&state.payload, &state.stars, &state.strip_order);
+    let text = truncate_utf16(&tooltip(&content, state.usage_reading), TOOLTIP_MAX_UTF16);
+    let _ = state.tray.set_tooltip(Some(&text));
 }
 
 /// Copy the shared facts onto the payload in place, so a shortcut or update
@@ -830,7 +847,13 @@ fn handle_ipc(state: &mut TrayState, body: &str, control_flow: &mut ControlFlow)
                 set_refresh(state, minutes);
             }
         }
-        "strip" => {}
+        "strip" => {
+            let (_, stars, order) = parse_strip_ipc(&value);
+            state.stars = stars;
+            state.strip_order = order;
+            state.usage_reading = UsageReading::from_strip_ipc(&value);
+            refresh_tooltip(state);
+        }
         "open-url" => {
             if let Some(url) = value.get("url").and_then(Value::as_str) {
                 super::browse::open(url);

@@ -6,7 +6,10 @@
 
 use serde_json::Value;
 
-use super::strip::{HiddenRows, StripContent, StripMetric, quota_group};
+use super::strip::{
+    HiddenRows, StripContent, StripMetric, UsageReading, metric_text, quota_group, safe_text,
+    tooltip,
+};
 
 /// Artwork needed for the current status-item content.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,35 +83,6 @@ pub(super) fn status_item_content(look: MenuBarLook, has_content: bool) -> Statu
         StatusItemContent::Chart
     } else {
         StatusItemContent::Logos
-    }
-}
-
-/// How the popover reads a quota (Preferences → Show Usage As). The menu
-/// bar's percentages follow it, so the chip says `82%` left when the tab
-/// that selects it does, not the `18%` used behind it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum UsageReading {
-    Used,
-    Left,
-}
-
-impl UsageReading {
-    /// Read the `strip` IPC's `show_as`. Anything else keeps used, the
-    /// reading the menu bar had before the popover reports one.
-    pub(super) fn from_strip_ipc(value: &Value) -> Self {
-        match value.get("show_as").and_then(Value::as_str) {
-            Some("left") => Self::Left,
-            _ => Self::Used,
-        }
-    }
-}
-
-/// A metric's text in `reading`: its remaining share in Left when it has a
-/// percent, its report value otherwise.
-fn metric_text(metric: &StripMetric, reading: UsageReading) -> &str {
-    match (reading, metric.left_value.as_deref()) {
-        (UsageReading::Left, Some(left)) => left,
-        _ => metric.value.trim(),
     }
 }
 
@@ -305,31 +279,6 @@ fn segment(
     })
 }
 
-/// Build tooltip lines for the starred groups in `reading`, or the app name
-/// when none have values.
-pub(super) fn tooltip(content: &StripContent, reading: UsageReading) -> String {
-    let lines: Vec<String> = content
-        .groups
-        .iter()
-        .filter_map(|(_, name, metrics)| {
-            let values: Vec<&str> = metrics
-                .iter()
-                .map(|metric| metric_text(metric, reading))
-                .filter(|value| !value.is_empty())
-                .collect();
-            if values.is_empty() {
-                return None;
-            }
-            Some(format!("{} · {}", safe_text(name), values.join(" ")))
-        })
-        .collect();
-    if lines.is_empty() {
-        "AI Usage".into()
-    } else {
-        lines.join("\n")
-    }
-}
-
 fn short_name_for(report: &Value, id: &str) -> Option<String> {
     report
         .get("entries")?
@@ -341,15 +290,6 @@ fn short_name_for(report: &Value, id: &str) -> Option<String> {
         .map(str::trim)
         .filter(|name| !name.is_empty())
         .map(safe_text)
-}
-
-fn safe_text(value: &str) -> String {
-    value
-        .chars()
-        .filter(|c| !c.is_control())
-        .collect::<String>()
-        .trim()
-        .to_owned()
 }
 
 #[cfg(test)]
