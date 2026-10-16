@@ -849,6 +849,7 @@ assert.equal(resetAlternate(badStampRow, 'exact', resetNow, utc), '');
   assert.equal(parseHostPayload({ refresh_minutes: 10 }).refreshMinutes, 10);
   assert.equal(parseHostPayload({ refresh_minutes: 1 }).refreshMinutes, 1);
   assert.equal(parseHostPayload({ refresh_minutes: 7 }).refreshMinutes, 5);
+  assert.equal(parseHostPayload({ refresh_minutes: 60 }).refreshMinutes, 60);
   assert.equal(parseHostPayload({ refresh_minutes: '10' }).refreshMinutes, 10);
   assert.equal(parseHostPayload({ refresh_minutes: 'often' }).refreshMinutes, 5);
   assert.equal(parseHostPayload({}).refreshMinutes, 5);
@@ -1982,7 +1983,7 @@ console.log('ok');
     entries: [{ id: 'custom:mine', brand: 'opencode-go', display_name: 'Mine', sections: [] }],
     providers_error: 'Could not write',
     providers: [
-      { id: 'cursor', name: 'Cursor', enabled: false, configured: true, env: '', sign_in: 'Sign in to the Cursor app, then Refresh.', action: 'app' },
+      { id: 'cursor', name: 'Cursor', enabled: false, configured: true, env: '', sign_in: 'Sign in to the Cursor app, then Refresh.', action: 'app', add_accounts: ['codex', 'bogus'] },
       { id: 'zai', name: 'Z.AI', enabled: true, configured: false, env: 'ZAI_API_KEY', sign_in: 'Add an API key', action: 'settings' },
       { id: 'kiro', name: 'Kiro', enabled: true, configured: true, action: 'rm -rf' },
       { id: '', name: 'nameless' },
@@ -1991,10 +1992,35 @@ console.log('ok');
   }));
   assert.deepEqual(payload.providers.map((p) => p.id), ['cursor', 'zai', 'kiro']);
   assert.equal(payload.providers[2].action, '', 'unknown actions are dropped');
+  assert.deepEqual(payload.providers[0].addAccounts, ['codex']);
+  assert.deepEqual(payload.providers[1].addAccounts, []);
   assert.equal(payload.providersError, 'Could not write');
   assert.deepEqual(payload.providers.map(providerState), ['off-ready', 'needs', 'ready']);
   assert.equal(providerState({ enabled: false, configured: false }), 'off');
   assert.deepEqual(parseHostPayload('{}').providers, []);
   // A custom provider that declares a brand draws that brand's mark.
   assert.equal(projectCards(payload, 0, 'en')[0].icon, 'opencode-go');
+}
+
+// --- capped text rows become meters --------------------------------------------
+{
+  const payload = parseHostPayload(JSON.stringify({ entries: [{ id: 'cursor', sections: [
+    { type: 'text', label: 'On-Demand', value: '$12.00 / $10.00', used_cents: 1200, limit_cents: 1000, percent: 120, severity: 'critical' },
+    { type: 'text', label: 'Plan', value: 'Pro' },
+  ] }] }));
+  const [meter, plain] = payload.entries[0].sections;
+  assert.equal(meter.type, 'metric');
+  assert.equal(meter.percent, 100);
+  assert.equal(meter.headline, 'value');
+  assert.equal(meter.value, '$12.00 / $10.00');
+  assert.equal(meter.severity, 'critical');
+  assert.equal(plain.type, 'text');
+}
+
+// --- stale cards know how old their payload is -------------------------------------
+{
+  const payload = parseHostPayload(JSON.stringify({ entries: [{ id: 'zai', stale: true, fetched_at: '2026-10-16T12:00:00Z', sections: [] }, { id: 'kiro', fetched_at: null, sections: [] }] }));
+  const [stale, fresh] = projectCards(payload, 0, 'en');
+  assert.equal(stale.fetchedAt, Date.parse('2026-10-16T12:00:00Z'));
+  assert.equal(fresh.fetchedAt, 0);
 }

@@ -1051,6 +1051,7 @@ fn handle_ipc(state: &mut TrayState, body: &str, control_flow: &mut ControlFlow)
             let _ = state.worker.send(WorkerCmd::Refresh);
         }
         "sign-in-provider" => super::providers::sign_in(&value),
+        "add-account" => super::providers::add_account(&value),
         "open-tui" => tui_launch::open(),
         "close" => hide_popover(state),
         "quit" => *control_flow = ControlFlow::Exit,

@@ -270,5 +270,11 @@
   "provider_sign_in": "로그인",
   "provider_open_app": "앱 열기",
   "provider_add_key": "키 추가",
-  "provider_enable": "사용"
+  "provider_enable": "사용",
+  "15_minutes": "15분",
+  "30_minutes": "30분",
+  "1_hour": "1시간",
+  "add_claude_code_account": "Claude Code 계정 추가",
+  "add_claude_desktop_account": "Claude Desktop 계정 추가",
+  "add_codex_account": "Codex 계정 추가"
 }

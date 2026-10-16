@@ -2,14 +2,20 @@
 /** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
 /** @typedef {{}} _10_MinutesInputs */
 /** @typedef {{}} _12_HourInputs */
+/** @typedef {{}} _15_MinutesInputs */
+/** @typedef {{}} _1_HourInputs */
 /** @typedef {{}} _1_MinuteInputs */
 /** @typedef {{}} _24_HourInputs */
+/** @typedef {{}} _30_MinutesInputs */
 /** @typedef {{}} _5_HourInputs */
 /** @typedef {{}} _5_MinutesInputs */
 /** @typedef {{}} AboutInputs */
 /** @typedef {{}} About_Summary_Menu_BarInputs */
 /** @typedef {{}} About_Summary_TrayInputs */
 /** @typedef {{}} ActivityInputs */
+/** @typedef {{}} Add_Claude_Code_AccountInputs */
+/** @typedef {{}} Add_Claude_Desktop_AccountInputs */
+/** @typedef {{}} Add_Codex_AccountInputs */
 /** @typedef {{}} Alert_ThresholdInputs */
 /** @typedef {{}} Alert_Threshold_HintInputs */
 /** @typedef {{}} AlertsInputs */
@@ -282,12 +288,24 @@ export const _12_hour = /** @type {(inputs: _12_HourInputs) => LocalizedString} 
 	return /** @type {LocalizedString} */ (`12-hour`)
 };
 
+export const _15_minutes = /** @type {(inputs: _15_MinutesInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`15 minutes`)
+};
+
+export const _1_hour = /** @type {(inputs: _1_HourInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`1 hour`)
+};
+
 export const _1_minute = /** @type {(inputs: _1_MinuteInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`1 minute`)
 };
 
 export const _24_hour = /** @type {(inputs: _24_HourInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`24-hour`)
+};
+
+export const _30_minutes = /** @type {(inputs: _30_MinutesInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`30 minutes`)
 };
 
 export const _5_hour = /** @type {(inputs: _5_HourInputs) => LocalizedString} */ () => {
@@ -312,6 +330,18 @@ export const about_summary_tray = /** @type {(inputs: About_Summary_TrayInputs) 
 
 export const activity = /** @type {(inputs: ActivityInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`Activity`)
+};
+
+export const add_claude_code_account = /** @type {(inputs: Add_Claude_Code_AccountInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Add Claude Code account`)
+};
+
+export const add_claude_desktop_account = /** @type {(inputs: Add_Claude_Desktop_AccountInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Add Claude Desktop account`)
+};
+
+export const add_codex_account = /** @type {(inputs: Add_Codex_AccountInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Add Codex account`)
 };
 
 export const alert_threshold = /** @type {(inputs: Alert_ThresholdInputs) => LocalizedString} */ () => {

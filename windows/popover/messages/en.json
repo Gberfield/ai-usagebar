@@ -270,5 +270,11 @@
   "provider_sign_in": "Sign in",
   "provider_open_app": "Open app",
   "provider_add_key": "Add key",
-  "provider_enable": "Enable"
+  "provider_enable": "Enable",
+  "15_minutes": "15 minutes",
+  "30_minutes": "30 minutes",
+  "1_hour": "1 hour",
+  "add_claude_code_account": "Add Claude Code account",
+  "add_claude_desktop_account": "Add Claude Desktop account",
+  "add_codex_account": "Add Codex account"
 }

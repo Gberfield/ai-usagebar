@@ -60,6 +60,7 @@ pub(crate) fn rows_json(rows: &[VendorStatus], macos: bool) -> Value {
                     "env": row.env,
                     "sign_in": vendor.sign_in_hint(),
                     "action": sign_in_for(vendor, macos).kind(),
+                    "add_accounts": add_account_kinds(vendor, macos),
                 }))
             })
             .collect(),
@@ -108,6 +109,44 @@ pub(crate) fn sign_in(value: &Value) {
     }
     #[cfg(not(any(windows, target_os = "macos")))]
     let _ = vendor;
+}
+
+/// `{"cmd":"add-account","kind":"code"|"desktop"|"codex"}`: register a new
+/// Claude Code, Claude Desktop or Codex account in Terminal, which asks for
+/// the label and runs the interactive sign-in `account add` starts.
+#[cfg(target_os = "macos")]
+pub(crate) fn add_account(value: &Value) {
+    let Some(flag) = value
+        .get("kind")
+        .and_then(Value::as_str)
+        .and_then(add_account_flag)
+    else {
+        return;
+    };
+    let bin = super::tui_launch::sibling("ai-usagebar");
+    super::tui_launch::run_in_terminal(&format!(
+        "read -r -p 'New account label: ' label && \"{bin}\" account add \"$label\"{flag}"
+    ));
+}
+
+/// Which `add-account` kinds a provider's row offers. Account capture runs
+/// through the macOS host only, like the account switch.
+fn add_account_kinds(vendor: VendorId, macos: bool) -> &'static [&'static str] {
+    match vendor {
+        VendorId::Anthropic if macos => &["code", "desktop"],
+        VendorId::Openai if macos => &["codex"],
+        _ => &[],
+    }
+}
+
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+fn add_account_flag(kind: &str) -> Option<&'static str> {
+    match kind {
+        "code" => Some(""),
+        "desktop" => Some(" --desktop"),
+        "codex" => Some(" --codex"),
+        _ => None,
+    }
 }
 
 /// `ai-usagebar auth …` names this project's own CLI, which a tray-only
@@ -181,6 +220,20 @@ mod tests {
         assert_eq!(cursor["configured"], false);
         assert_eq!(cursor["action"], "app");
         assert_eq!(cursor["sign_in"], VendorId::Cursor.sign_in_hint());
+    }
+
+    #[test]
+    fn add_account_accepts_only_the_three_known_kinds() {
+        assert_eq!(add_account_flag("code"), Some(""));
+        assert_eq!(add_account_flag("desktop"), Some(" --desktop"));
+        assert_eq!(add_account_flag("codex"), Some(" --codex"));
+        assert_eq!(add_account_flag("; rm -rf ~"), None);
+        for &vendor in VendorId::all() {
+            assert!(add_account_kinds(vendor, false).is_empty());
+            for kind in add_account_kinds(vendor, true) {
+                assert!(add_account_flag(kind).is_some(), "{kind}");
+            }
+        }
     }
 
     #[test]

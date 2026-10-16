@@ -165,6 +165,9 @@ export function Settings({
               ["1", m["1_minute"]()],
               ["5", m["5_minutes"]()],
               ["10", m["10_minutes"]()],
+              ["15", m["15_minutes"]()],
+              ["30", m["30_minutes"]()],
+              ["60", m["1_hour"]()],
             ]}
             value={String(payload.refreshMinutes)}
             onChange={(minutes) => sendCommand("set-refresh", { minutes: Number(minutes) })}

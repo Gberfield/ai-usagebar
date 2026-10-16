@@ -46,8 +46,10 @@ function ProviderCatalogRow({ provider }: { provider: ProviderInfo }) {
       : provider.action === "app" ? m.provider_open_app()
         : provider.action === "settings" ? m.provider_add_key()
           : "";
+  const addLabels = { code: m.add_claude_code_account, desktop: m.add_claude_desktop_account, codex: m.add_codex_account };
   return (
-    <div data-provider-id={provider.id} className={cn("flex items-center gap-[var(--row-gap)] px-[var(--card-pad)] py-[var(--pad-control)]", !provider.enabled && "opacity-55")}>
+    <div data-provider-id={provider.id}>
+    <div className={cn("flex items-center gap-[var(--row-gap)] px-[var(--card-pad)] py-[var(--pad-control)]", !provider.enabled && "opacity-55")}>
       <ProviderIcon className="text-label-2" size="var(--row-icon-box)" slug={providerIconId(provider.id)} title={provider.name} />
       <span className="flex min-w-0 flex-1 flex-col">
         <TruncatedText className="text-[length:var(--sz-header)] font-semibold">{provider.name}</TruncatedText>
@@ -63,6 +65,16 @@ function ProviderCatalogRow({ provider }: { provider: ProviderInfo }) {
         aria-label={`${m.provider_enable()} ${provider.name}`}
         onCheckedChange={(on) => sendCommand("set-provider-enabled", { id: provider.id, value: on === true })}
       />
+    </div>
+    {provider.enabled && provider.addAccounts.length > 0 ? (
+      <div className="flex flex-wrap gap-x-[var(--row-gap)] px-[var(--card-pad)] pb-[var(--pad-control)] pl-[calc(var(--card-pad)+var(--row-icon-box)+var(--row-gap))]">
+        {provider.addAccounts.map((kind) => (
+          <button key={kind} type="button" className="text-[length:var(--sz-badge)] text-[var(--accent)]" onClick={() => sendCommand("add-account", { kind })}>
+            {addLabels[kind]()}
+          </button>
+        ))}
+      </div>
+    ) : null}
     </div>
   );
 }

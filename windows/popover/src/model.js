@@ -122,6 +122,7 @@ function normalizeAccent(value) {
 }
 
 const SIGN_IN_ACTIONS = ["terminal", "app", "settings"];
+const ADD_ACCOUNT_KINDS = ["code", "desktop", "codex"];
 
 // Every built-in provider from the host's catalog (Settings → Providers).
 // The host owns names, hints and actions; this only bounds and types them.
@@ -140,6 +141,7 @@ function normalizeProviders(value) {
       env: clean(raw.env, 120),
       signIn: clean(raw.sign_in, 200),
       action: SIGN_IN_ACTIONS.includes(raw.action) ? raw.action : "",
+      addAccounts: Array.isArray(raw.add_accounts) ? ADD_ACCOUNT_KINDS.filter((kind) => raw.add_accounts.includes(kind)) : [],
     });
   }
   return out;
@@ -259,7 +261,7 @@ function windowSeconds(value) {
   return secs > 0 ? secs : 0;
 }
 
-const REFRESH_MINUTES = [1, 5, 10];
+const REFRESH_MINUTES = [1, 5, 10, 15, 30, 60];
 
 function normalizeOs(value) {
   const os = String(value || "").toLowerCase();
@@ -328,6 +330,8 @@ function normalizeEntry(raw) {
     signIn: clean(raw.sign_in, 200),
     // A `[[custom]]` provider can name the built-in it mirrors; its mark follows.
     brand: clean(raw.brand, 64),
+    // Wall-clock ms of the payload on screen; 0 when the report has none.
+    fetchedAt: Date.parse(clean(raw.fetched_at, 64)) || 0,
     sections,
   };
 }
@@ -381,6 +385,11 @@ function normalizeSection(raw) {
       // Claude CLI "Sessions"); "" when it stands on its own.
       group: clean(raw.group, 80),
     };
+  }
+  // A text row that meters a cap (Cursor's On-Demand spend) carries `percent`
+  // and `severity`: draw it as a bar headed by its amount.
+  if (type === "text" && Number.isFinite(Number(raw.percent)) && raw.percent !== null && raw.severity) {
+    return normalizeSection({ ...raw, type: "metric", headline: "value", detail: "" });
   }
   if (type === "text") {
     return { type: "text", label: clean(raw.label, 160), value: clean(raw.value, 1000) };
@@ -898,6 +907,7 @@ export function projectCards(payload, nowMs, locale) {
     cards.push({
       id: entry.id,
       icon: providerIconId(entry.brand || entry.id),
+      fetchedAt: entry.fetchedAt,
       title: entry.displayName || entry.shortName || entry.id,
       plan: entry.plan,
       stale: entry.stale,

@@ -4,14 +4,20 @@ import { getLocale, experimentalStaticLocale } from "../runtime.js"
 /** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
 /** @typedef {{}} _10_MinutesInputs */
 /** @typedef {{}} _12_HourInputs */
+/** @typedef {{}} _15_MinutesInputs */
+/** @typedef {{}} _1_HourInputs */
 /** @typedef {{}} _1_MinuteInputs */
 /** @typedef {{}} _24_HourInputs */
+/** @typedef {{}} _30_MinutesInputs */
 /** @typedef {{}} _5_HourInputs */
 /** @typedef {{}} _5_MinutesInputs */
 /** @typedef {{}} AboutInputs */
 /** @typedef {{}} About_Summary_Menu_BarInputs */
 /** @typedef {{}} About_Summary_TrayInputs */
 /** @typedef {{}} ActivityInputs */
+/** @typedef {{}} Add_Claude_Code_AccountInputs */
+/** @typedef {{}} Add_Claude_Desktop_AccountInputs */
+/** @typedef {{}} Add_Codex_AccountInputs */
 /** @typedef {{}} Alert_ThresholdInputs */
 /** @typedef {{}} Alert_Threshold_HintInputs */
 /** @typedef {{}} AlertsInputs */
@@ -315,6 +321,40 @@ export { _12_hour as "12_hour" }
 /**
 * | output |
 * | --- |
+* | "15 minutes" |
+*
+* @param {_15_MinutesInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+const _15_minutes = /** @type {((inputs?: _15_MinutesInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<_15_MinutesInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2._15_minutes(inputs)
+	if (locale === "ko") return __ko._15_minutes(inputs)
+	if (locale === "es") return __es._15_minutes(inputs)
+	return __en._15_minutes(inputs)
+});
+export { _15_minutes as "15_minutes" }
+/**
+* | output |
+* | --- |
+* | "1 hour" |
+*
+* @param {_1_HourInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+const _1_hour = /** @type {((inputs?: _1_HourInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<_1_HourInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2._1_hour(inputs)
+	if (locale === "ko") return __ko._1_hour(inputs)
+	if (locale === "es") return __es._1_hour(inputs)
+	return __en._1_hour(inputs)
+});
+export { _1_hour as "1_hour" }
+/**
+* | output |
+* | --- |
 * | "1 minute" |
 *
 * @param {_1_MinuteInputs} inputs
@@ -346,6 +386,23 @@ const _24_hour = /** @type {((inputs?: _24_HourInputs, options?: { locale?: "en"
 	return __en._24_hour(inputs)
 });
 export { _24_hour as "24_hour" }
+/**
+* | output |
+* | --- |
+* | "30 minutes" |
+*
+* @param {_30_MinutesInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+const _30_minutes = /** @type {((inputs?: _30_MinutesInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<_30_MinutesInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2._30_minutes(inputs)
+	if (locale === "ko") return __ko._30_minutes(inputs)
+	if (locale === "es") return __es._30_minutes(inputs)
+	return __en._30_minutes(inputs)
+});
+export { _30_minutes as "30_minutes" }
 /**
 * | output |
 * | --- |
@@ -443,6 +500,54 @@ export const activity = /** @type {((inputs?: ActivityInputs, options?: { locale
 	if (locale === "ko") return __ko.activity(inputs)
 	if (locale === "es") return __es.activity(inputs)
 	return __en.activity(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Add Claude Code account" |
+*
+* @param {Add_Claude_Code_AccountInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const add_claude_code_account = /** @type {((inputs?: Add_Claude_Code_AccountInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Add_Claude_Code_AccountInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.add_claude_code_account(inputs)
+	if (locale === "ko") return __ko.add_claude_code_account(inputs)
+	if (locale === "es") return __es.add_claude_code_account(inputs)
+	return __en.add_claude_code_account(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Add Claude Desktop account" |
+*
+* @param {Add_Claude_Desktop_AccountInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const add_claude_desktop_account = /** @type {((inputs?: Add_Claude_Desktop_AccountInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Add_Claude_Desktop_AccountInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.add_claude_desktop_account(inputs)
+	if (locale === "ko") return __ko.add_claude_desktop_account(inputs)
+	if (locale === "es") return __es.add_claude_desktop_account(inputs)
+	return __en.add_claude_desktop_account(inputs)
+});
+/**
+* | output |
+* | --- |
+* | "Add Codex account" |
+*
+* @param {Add_Codex_AccountInputs} inputs
+* @param {{ locale?: "en" | "pt-BR" | "ko" | "es" }} options
+* @returns {LocalizedString}
+*/
+export const add_codex_account = /** @type {((inputs?: Add_Codex_AccountInputs, options?: { locale?: "en" | "pt-BR" | "ko" | "es" }) => LocalizedString) & import('../runtime.js').MessageMetadata<Add_Codex_AccountInputs, { locale?: "en" | "pt-BR" | "ko" | "es" }, {}>} */ ((inputs = {}, options = {}) => {
+	const locale = experimentalStaticLocale ?? options.locale ?? getLocale()
+	if (locale === "pt-BR") return __pt_br2.add_codex_account(inputs)
+	if (locale === "ko") return __ko.add_codex_account(inputs)
+	if (locale === "es") return __es.add_codex_account(inputs)
+	return __en.add_codex_account(inputs)
 });
 /**
 * | output |
