@@ -159,15 +159,30 @@ mod tests {
         assert_eq!(values.get("icon").map(String::as_str), Some("msc"));
 
         assert_eq!(values.get("session_pct").map(String::as_str), Some("40"));
-        assert_eq!(values.get("muse_session_pct").map(String::as_str), Some("40"));
-        assert_eq!(values.get("session_elapsed"), values.get("muse_session_elapsed"));
+        assert_eq!(
+            values.get("muse_session_pct").map(String::as_str),
+            Some("40")
+        );
+        assert_eq!(
+            values.get("session_elapsed"),
+            values.get("muse_session_elapsed")
+        );
         assert!(!values["session_elapsed"].is_empty());
-        assert_eq!(values.get("session_reset"), values.get("muse_session_reset"));
+        assert_eq!(
+            values.get("session_reset"),
+            values.get("muse_session_reset")
+        );
         assert!(!values["session_reset"].is_empty());
 
         assert_eq!(values.get("weekly_pct").map(String::as_str), Some("70"));
-        assert_eq!(values.get("muse_weekly_pct").map(String::as_str), Some("70"));
-        assert_eq!(values.get("weekly_elapsed"), values.get("muse_weekly_elapsed"));
+        assert_eq!(
+            values.get("muse_weekly_pct").map(String::as_str),
+            Some("70")
+        );
+        assert_eq!(
+            values.get("weekly_elapsed"),
+            values.get("muse_weekly_elapsed")
+        );
         assert!(!values["weekly_elapsed"].is_empty());
         assert_eq!(values.get("weekly_reset"), values.get("muse_weekly_reset"));
         assert!(!values["weekly_reset"].is_empty());
@@ -222,4 +237,3 @@ mod tests {
         assert_eq!(severity(&snap_no_windows), severity_for(0));
     }
 }
-
