@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [1.38.1] — 2026-10-16
+
 ### Fixed
 
 - **Muse Code exports window elapsed and pace placeholders.** Custom format
@@ -4416,7 +4418,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.0...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.1...HEAD
+[1.38.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.0...v1.38.1
 [1.38.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.37.0...v1.38.0
 [1.37.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.36.0...v1.37.0
 [1.36.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.35.0...v1.36.0
