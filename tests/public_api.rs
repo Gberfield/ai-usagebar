@@ -93,10 +93,20 @@ fn the_modelstudio_monthly_placeholders_the_macos_menu_bar_reads_keep_their_name
         weekly: None,
         monthly: Some(monthly),
     };
-    let opts = ai_usagebar::vendor::RenderOpts::default();
+    let opts = ai_usagebar::vendor::RenderOpts {
+        format: None,
+        tooltip_format: None,
+        icon: None,
+        pace_tolerance: 5,
+        format_pace_color: false,
+        tooltip_pace_pts: false,
+    };
     let v = ai_usagebar::modelstudio::vendor::build_placeholders(&with_monthly, &opts, now);
     assert_eq!(v.get("mst_monthly_pct").map(String::as_str), Some("42"));
-    assert_eq!(v.get("mst_monthly_reset").map(String::as_str), Some("18d 0h"));
+    assert_eq!(
+        v.get("mst_monthly_reset").map(String::as_str),
+        Some("18d 0h")
+    );
 
     let without_monthly = ai_usagebar::usage::ModelStudioSnapshot {
         session: None,
