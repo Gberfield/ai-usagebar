@@ -12,6 +12,12 @@ Muse Code (`--vendor muse-code`, short name `msc`) supplies `{muse_plan}`,
 `{weekly_pct}`, `{weekly_reset}`, and `{weekly_elapsed}`.
 Percentages are used allowance; an omitted window expands to an empty string.
 
+Synthetic (`--vendor synthetic`, short name `syn`) supplies
+`{synthetic_pct}`, `{synthetic_reset}`, `{synthetic_requests}`, and
+`{synthetic_limit}`, plus the generic `{icon}`, `{plan}`, `{vendor_short}`,
+`{session_pct}`, and `{session_reset}`. The percentage is requests divided by
+the documented subscription limit; the reset is the API's `renewsAt` value.
+
 ## Cross-provider formats
 
 `{vendor_short}` identifies the active provider:
@@ -31,7 +37,7 @@ Percentages are used allowance; an omitted window expands to an empty string.
 | OpenCode Go | `ocg` | Command Code | `cmc` |
 | Ollama Cloud | `oll` | SuperGrok | `sgk` |
 | Devin | `dvn` | Cline | `cln` |
-| Muse Code | `msc` | | |
+| Muse Code | `msc` | Synthetic | `syn` |
 
 The same codes ride the `ai-usagebar usage --json` report as each entry's
 `short_name`, so a native frontend can draw a Waybar-style provider tag without
