@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Muse Code widget shows loading state on transient transport errors.** When
+  network transport fails on cold cache, such as waking up before network
+  reconnects, the Waybar widget returns the standard loading state instead of
+  bailing with a warning indicator.
+
 ## [1.38.0] — 2026-10-15
 
 ### Added
