@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Antigravity's remote fallback reads quota from prod before the daily
+  channel.** The daily `retrieveUserQuotaSummary` answers 200 with only the
+  Claude/GPT group — no Gemini buckets — and the lenient parser accepts any
+  recognised window, so a machine with Antigravity closed showed the
+  third-party pool's zeros while the real Gemini windows went unreported (a
+  weekly window at 95% read as nothing at all). Quota now leads with the prod
+  channel, which serves both groups; daily stays as failover, the role it
+  already played, and the plan lookup keeps its original order.
+
 ## [1.38.1] — 2026-10-16
 
 ### Fixed
