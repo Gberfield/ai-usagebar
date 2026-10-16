@@ -74,7 +74,7 @@
 # Command and Option keys are accepted as Cmd/Command and Option, and shown as
 # Cmd/Option.
 # shortcut = "Ctrl+Shift+U"
-# How often the tray re-reads every provider: 1, 5 or 10 minutes; the panel's
+# How often the tray re-reads every provider: 1, 5, 10, 15, 30 or 60 minutes; the panel's
 # Refresh button is always immediate.
 # refresh_minutes = 5
 # New releases: auto (download, verify and restart unattended) | notify

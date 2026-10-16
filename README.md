@@ -266,7 +266,7 @@ adds a global shortcut that toggles the popover from anywhere, the poll interval
 and an update mode
 (Automatic / Notify me / Off) that installs new releases from GitHub after
 verifying their `.sha256`; all three live in the `[tray]` section of
-`config.toml` (`shortcut`, `refresh_minutes` = 1, 5 or 10; default 5;
+`config.toml` (`shortcut`, `refresh_minutes` = 1, 5, 10, 15, 30 or 60; default 5;
 `updates`). See [windows/README.md](windows/README.md).
 
 ![Windows tray icon in the notification area — a bar-chart-in-circle mark beside the overflow chevron](screenshots/windows-tray-icon.png)
