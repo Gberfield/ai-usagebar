@@ -8,7 +8,6 @@ use serde_json::Value;
 
 use super::strip::{
     HiddenRows, StripContent, StripMetric, UsageReading, metric_text, quota_group, safe_text,
-    tooltip,
 };
 
 /// Artwork needed for the current status-item content.
@@ -294,6 +293,7 @@ fn short_name_for(report: &Value, id: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use super::super::strip::tooltip;
     use super::*;
     use serde_json::json;
 

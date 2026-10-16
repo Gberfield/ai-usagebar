@@ -172,6 +172,7 @@ pub fn tooltip(content: &StripContent, reading: UsageReading) -> String {
 /// Truncate without splitting a Unicode scalar value. Windows' NotifyIcon
 /// stores its tooltip in a fixed UTF-16 buffer, so the limit is measured in
 /// code units rather than UTF-8 bytes or Rust chars.
+#[cfg(any(windows, test))]
 pub fn truncate_utf16(value: &str, max_units: usize) -> String {
     let mut units = 0;
     value
