@@ -397,6 +397,13 @@ api_key_env = "NOVITA_API_KEY"     # checked first; if set + non-empty, used
 # display_limit = 200              # tank size in USD; see the group note above
 # headline = "amount"              # "amount" | "percent"
 
+[synthetic]
+# Disabled by default. Reads the documented subscription request quota from
+# https://api.synthetic.new/v2/quotas.
+enabled = false
+api_key_env = "SYNTHETIC_API_KEY"
+# api_key = "..."                  # fallback; chmod 600 the file if used
+
 [lyceum]
 # Disabled by default; this reads only the credits endpoint, not inference.
 enabled = false

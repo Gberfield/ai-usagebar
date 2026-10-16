@@ -356,6 +356,10 @@ pub fn compact_cells(snapshot: &VendorSnapshot) -> (String, Vec<(String, PaceSev
         }
         VendorSnapshot::Kilo(s) => (String::new(), vec![usd_cell(s.balance)]),
         VendorSnapshot::Novita(s) => (String::new(), vec![usd_cell(s.available)]),
+        VendorSnapshot::Synthetic(s) => (
+            String::new(),
+            vec![pct("subscription", s.subscription.utilization_pct)],
+        ),
         VendorSnapshot::Lyceum(s) => (
             String::new(),
             vec![(usd(s.available_credits), PaceSeverity::Low)],
@@ -550,6 +554,7 @@ pub fn headline_pct(snapshot: &VendorSnapshot) -> Option<i32> {
             .flatten()
             .map(|window| window.utilization_pct)
             .max(),
+        VendorSnapshot::Synthetic(s) => Some(s.subscription.utilization_pct),
         VendorSnapshot::OpenCodeGo(s) => [
             s.rolling
                 .as_ref()
@@ -663,6 +668,7 @@ pub(crate) fn sections_with_metadata_for(
                 VendorSnapshot::Kimi(s) => kimi_sections(s, now, pace_tolerance),
                 VendorSnapshot::Kilo(s) => kilo_sections(s, prefs),
                 VendorSnapshot::Novita(s) => novita_sections(s, prefs),
+                VendorSnapshot::Synthetic(s) => synthetic_sections(s, now, pace_tolerance),
                 VendorSnapshot::Lyceum(s) => lyceum_sections(s),
                 VendorSnapshot::Moonshot(s) => moonshot_sections(s, prefs),
                 VendorSnapshot::Grok(s) => grok_sections(s, prefs),
@@ -1654,6 +1660,30 @@ fn novita_sections(s: &crate::usage::NovitaSnapshot, prefs: DisplayPrefs) -> Sec
         });
     }
     v
+}
+
+fn synthetic_sections(
+    s: &crate::usage::SyntheticSnapshot,
+    now: DateTime<Utc>,
+    tolerance: u32,
+) -> SectionBuilder {
+    let mut sections = SectionBuilder::new(vec![Section::Title {
+        left: "Synthetic".into(),
+        right: None,
+    }]);
+    push_window(
+        &mut sections,
+        "Subscription quota",
+        &s.subscription,
+        now,
+        tolerance,
+        false,
+    );
+    sections.push(Section::Text {
+        label: "Requests".into(),
+        value: format!("{} / {}", s.requests, s.limit),
+    });
+    sections
 }
 
 fn lyceum_sections(s: &crate::usage::LyceumSnapshot) -> SectionBuilder {

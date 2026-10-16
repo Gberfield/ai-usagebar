@@ -435,6 +435,7 @@ pub enum VendorSnapshot {
     Kimi(KimiSnapshot),
     Kilo(KiloSnapshot),
     Novita(NovitaSnapshot),
+    Synthetic(SyntheticSnapshot),
     Moonshot(MoonshotSnapshot),
     Grok(GrokSnapshot),
     SuperGrok(SuperGrokSnapshot),
@@ -607,6 +608,17 @@ pub struct NovitaSnapshot {
 }
 
 impl Eq for NovitaSnapshot {}
+
+/// Synthetic subscription quota from the documented `/v2/quotas`
+/// `subscription` object.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SyntheticSnapshot {
+    pub subscription: UsageWindow,
+    pub requests: f64,
+    pub limit: f64,
+}
+
+impl Eq for SyntheticSnapshot {}
 
 /// Lyceum's platform credit balance is denominated in USD, not a percentage quota.
 #[derive(Debug, Clone, PartialEq, Serialize)]

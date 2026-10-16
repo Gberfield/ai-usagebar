@@ -122,6 +122,14 @@ pub const KEY_VENDORS: &[KeyVendor] = &[
         note: "",
     },
     KeyVendor {
+        id: VendorId::Synthetic,
+        label: "Synthetic",
+        section: VendorId::Synthetic.config_section(),
+        config_key: "api_key",
+        secret_label: "API key",
+        note: "subscription request quota",
+    },
+    KeyVendor {
         id: VendorId::Moonshot,
         label: "Moonshot",
         section: VendorId::Moonshot.config_section(),
@@ -2026,6 +2034,7 @@ mod tests {
             VendorId::Deepinfra,
             VendorId::Kilo,
             VendorId::Novita,
+            VendorId::Synthetic,
             VendorId::Moonshot,
             VendorId::Grok,
         ] {

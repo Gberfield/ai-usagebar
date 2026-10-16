@@ -34,6 +34,7 @@ use crate::openrouter;
 use crate::orcarouter;
 use crate::pango::escape;
 use crate::supergrok;
+use crate::synthetic;
 use crate::theme::Theme;
 use crate::vendor::{HTTP_CLIENT_TIMEOUT, RenderOpts, VendorId, VendorOutcome};
 use crate::waybar::WaybarOutput;
@@ -160,6 +161,7 @@ async fn build_output(cli: &Cli) -> Result<WaybarOutput> {
         Vendor::Kimi => kimi_output(cli, &config).await,
         Vendor::Kilo => kilo_output(cli, &config).await,
         Vendor::Novita => novita_output(cli, &config).await,
+        Vendor::Synthetic => synthetic_output(cli, &config).await,
         Vendor::Moonshot => moonshot_output(cli, &config).await,
         Vendor::Grok => grok_output(cli, &config).await,
         Vendor::Supergrok => supergrok_output(cli, &config).await,
@@ -664,6 +666,29 @@ async fn novita_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
         &theme,
         &opts,
         chrono::Utc::now(),
+    ))
+}
+
+async fn synthetic_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
+    let (api_key, cache) = api_key_target(cli, config, VendorId::Synthetic)?;
+    let client = http_client()?;
+    let endpoints = synthetic::fetch::Endpoints::default();
+    let outcome =
+        match synthetic::fetch_snapshot(&client, &api_key, &cache, &endpoints, DEFAULT_TTL).await {
+            Ok(outcome) => outcome,
+            Err(error) if error.is_transient() => {
+                return Ok(WaybarOutput::loading(cli.icon.as_deref()));
+            }
+            Err(error) => return Err(error),
+        };
+    let snapshot = outcome.snapshot.clone();
+    let vendor_outcome: VendorOutcome = outcome.into();
+    Ok(synthetic::vendor::render(
+        &vendor_outcome,
+        &snapshot,
+        &theme_from_cli(cli),
+        &RenderOpts::from_cli(cli),
+        Utc::now(),
     ))
 }
 

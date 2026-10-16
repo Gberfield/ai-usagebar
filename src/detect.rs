@@ -59,6 +59,7 @@ pub fn has_local_credentials(vendor: VendorId, config: &Config) -> bool {
         VendorId::Kimi => crate::kimi::resolve_auth(&config.kimi).is_ok(),
         VendorId::Kilo => key_present(config, vendor),
         VendorId::Novita => key_present(config, vendor),
+        VendorId::Synthetic => key_present(config, vendor),
         VendorId::Moonshot => key_present(config, vendor),
         VendorId::Grok => key_present(config, vendor),
         VendorId::Supergrok => crate::supergrok::scope::ScopePaths::with_overrides(

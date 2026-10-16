@@ -33,6 +33,7 @@ pub(crate) const VENDOR_SECRET_ENV_VARS: &[&str] = &[
     "KIMI_API_KEY",
     "KILO_API_KEY",
     "NOVITA_API_KEY",
+    "SYNTHETIC_API_KEY",
     "MINIMAX_API_KEY",
     "MOONSHOT_API_KEY",
     "XAI_MANAGEMENT_KEY",
@@ -169,6 +170,7 @@ pub enum VendorId {
     Kimi,
     Kilo,
     Novita,
+    Synthetic,
     Moonshot,
     Grok,
     Supergrok,
@@ -232,6 +234,7 @@ impl VendorId {
             VendorId::Kimi => "kimi",
             VendorId::Kilo => "kilo",
             VendorId::Novita => "novita",
+            VendorId::Synthetic => "synthetic",
             VendorId::Moonshot => "moonshot",
             VendorId::Grok => "grok",
             VendorId::Supergrok => "supergrok",
@@ -270,6 +273,7 @@ impl VendorId {
             VendorId::Kimi => "Kimi",
             VendorId::Kilo => "Kilo",
             VendorId::Novita => "Novita",
+            VendorId::Synthetic => "Synthetic",
             VendorId::Moonshot => "Moonshot",
             VendorId::Grok => "Grok",
             VendorId::Supergrok => "SuperGrok",
@@ -306,6 +310,7 @@ impl VendorId {
             VendorId::Kimi => VendorId::Kimi.short_name(),
             VendorId::Kilo => "󰭟",
             VendorId::Novita => "󰄔",
+            VendorId::Synthetic => VendorId::Synthetic.short_name(),
             VendorId::Moonshot => VendorId::Moonshot.short_name(),
             VendorId::Grok | VendorId::Supergrok => "󰇷",
             VendorId::Grokbot => VendorId::Grokbot.short_name(),
@@ -347,6 +352,7 @@ impl VendorId {
             VendorId::Kimi => "kmi",
             VendorId::Kilo => "klo",
             VendorId::Novita => "nvt",
+            VendorId::Synthetic => "syn",
             VendorId::Moonshot => "msh",
             VendorId::Grok => "grk",
             VendorId::Supergrok => "sgk",
@@ -388,6 +394,7 @@ impl VendorId {
             VendorId::Kimi => "kimi",
             VendorId::Kilo => "kilo",
             VendorId::Novita => "novita",
+            VendorId::Synthetic => "synthetic",
             VendorId::Moonshot => "moonshot",
             VendorId::Grok => "grok",
             VendorId::Supergrok => "supergrok",
@@ -430,6 +437,7 @@ impl VendorId {
             | VendorId::Kimi
             | VendorId::Kilo
             | VendorId::Novita
+            | VendorId::Synthetic
             | VendorId::Moonshot
             | VendorId::Grok
             | VendorId::Minimax
@@ -470,6 +478,7 @@ impl VendorId {
             VendorId::Kimi => "KIMI_API_KEY",
             VendorId::Kilo => "KILO_API_KEY",
             VendorId::Novita => "NOVITA_API_KEY",
+            VendorId::Synthetic => "SYNTHETIC_API_KEY",
             VendorId::Moonshot => "MOONSHOT_API_KEY",
             VendorId::Grok => "XAI_MANAGEMENT_KEY",
             VendorId::Minimax => "MINIMAX_API_KEY",
@@ -542,6 +551,7 @@ impl VendorId {
             | VendorId::Deepinfra
             | VendorId::Kilo
             | VendorId::Novita
+            | VendorId::Synthetic
             | VendorId::Moonshot
             | VendorId::Minimax
             | VendorId::OpenCodeGo
@@ -574,6 +584,7 @@ impl VendorId {
             | VendorId::Deepinfra
             | VendorId::Kilo
             | VendorId::Novita
+            | VendorId::Synthetic
             | VendorId::Moonshot
             | VendorId::Grok
             | VendorId::Supergrok
@@ -608,6 +619,7 @@ impl VendorId {
             VendorId::Kimi,
             VendorId::Kilo,
             VendorId::Novita,
+            VendorId::Synthetic,
             VendorId::Moonshot,
             VendorId::Grok,
             VendorId::Supergrok,
@@ -779,6 +791,7 @@ mod tests {
             "KIMI_API_KEY",
             "KILO_API_KEY",
             "NOVITA_API_KEY",
+            "SYNTHETIC_API_KEY",
             "MINIMAX_API_KEY",
             "MOONSHOT_API_KEY",
             "XAI_MANAGEMENT_KEY",

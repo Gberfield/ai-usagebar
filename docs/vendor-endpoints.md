@@ -20,6 +20,7 @@ defensive and includes opt-in live tests for catching response changes.
 | **Kilo** | `api.kilo.ai/api/profile/balance` (undocumented; extension-internal) | Remaining credit balance ($) | No — widget/TUI only |
 | **Lyceum** | `api.lyceum.technology/api/v2/external/billing/credits` (documented) | Available USD balance and amount used; no percentage quota or reset window | No — widget/TUI only |
 | **Novita** | `api.novita.ai/openapi/v1/billing/balance/detail` (documented) | Remaining credit balance ($) | No — widget/TUI only |
+| **Synthetic** | `api.synthetic.new/v2/quotas` (documented) | Subscription requests used / limit and renewal | No — widget/TUI only |
 | **Moonshot** | `api.moonshot.ai\|.cn/v1/users/me/balance` (documented) | Account balance ($ on `.ai`, ¥ on `.cn`) | No — widget/TUI only |
 | **Grok (xAI)** | `management-api.x.ai/v1/billing/teams/{team}/prepaid/balance` (Management API; documented) | Prepaid credit balance ($) | No — widget/TUI only |
 | **SuperGrok** | `cli-chat-proxy.grok.com/v1/billing` with the Grok Build login's key, falling back to its `x.ai/billing` ACP extension; `grok.com` `ConsumerUiSvc/GetRemainingResets` for banked resets | Current weekly/monthly included-credit %, per-product slices (`GrokBuild` / `GrokChat` / `GrokImagine` / …), prepaid API balance, reset, banked resets + expiry | No — widget/TUI only |

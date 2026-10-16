@@ -2,6 +2,12 @@
 
 ### Added
 
+- **Synthetic subscription quota.** Enable `[synthetic]` and provide
+  `SYNTHETIC_API_KEY` (or an inline `api_key`) to read the documented
+  `api.synthetic.new/v2/quotas` subscription request count, limit, percentage,
+  and renewal. The provider is available in the widget, TUI, reports, and
+  native tray settings (#440).
+
 - **Windows shows starred usage when the tray icon is hovered.** The native
   tooltip follows the popover's provider order, starred metrics, and Used/Left
   preference, and updates when either the report or those preferences change
