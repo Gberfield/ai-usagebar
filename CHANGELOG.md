@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Fixed
+
+- **A renamed Cline key variable reaches the provider catalog and the
+  subprocess scrub.** `[cline] api_key_env` was honored by the fetch alone: the
+  shared variable resolver answered the fixed `CLINE_API_KEY`, so the catalog
+  named that variable and reported a key held under another name as missing,
+  and the renamed variable was never added to the list scrubbed from
+  subprocesses.
+
 ## [1.38.0] — 2026-10-15
 
 ### Added

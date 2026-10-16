@@ -427,6 +427,27 @@ mod tests {
         assert!(!row(&rows, "zai").configured);
     }
 
+    /// Cline's section carries the same `api_key_env` field, but the shared
+    /// resolver answered its fixed default, so a key held under another name
+    /// configured the fetch while this row kept asking for `CLINE_API_KEY`.
+    #[test]
+    fn a_cline_api_key_env_override_is_the_variable_both_reported_and_read() {
+        let mut cfg = Config::default();
+        cfg.cline.api_key_env = "WORK_CLINE_KEY".to_string();
+        let set = |name: &str| name == "WORK_CLINE_KEY";
+        let rows = statuses_with(&cfg, &probes(&set, &|_| false, &|_| false));
+        let cline = row(&rows, "cline");
+        assert_eq!(
+            cline.env, "WORK_CLINE_KEY",
+            "the row names the effective variable"
+        );
+        assert!(cline.configured, "and is satisfied by it, not the CLI");
+
+        let stale = |name: &str| name == "CLINE_API_KEY";
+        let rows = statuses_with(&cfg, &probes(&stale, &|_| false, &|_| false));
+        assert!(!row(&rows, "cline").configured);
+    }
+
     #[test]
     fn an_inline_key_configures_without_the_environment() {
         let mut cfg = Config::default();
