@@ -549,8 +549,10 @@ async fn push_report(proxy: &EventLoopProxy<UserEvent>, facts: &SharedFacts) {
     refresh_account_facts(facts);
     let mut snapshot = facts_snapshot(facts);
     snapshot.startup_enabled = startup::is_enabled();
-    snapshot.providers = super::providers::current();
-    with_facts(facts, |f| f.providers.clone_from(&snapshot.providers));
+    if let Some(providers) = super::providers::take_due() {
+        with_facts(facts, |f| f.providers.clone_from(&providers));
+        snapshot.providers = providers;
+    }
     let now = now_ms();
     let payload = match crate::report::collect_json().await {
         Ok(json) => wrap_report(&json, &snapshot, now, None),
@@ -853,6 +855,7 @@ fn handle_menu(state: &mut TrayState, event: &MenuEvent, control_flow: &mut Cont
             let _ = state.worker.send(WorkerCmd::Refresh);
         }
         OptionsAction::Detect => {
+            super::providers::request();
             let _ = state.worker.send(WorkerCmd::Detect);
         }
         OptionsAction::OpenTui => tui_launch::open(),
@@ -1037,7 +1040,12 @@ fn handle_ipc(state: &mut TrayState, body: &str, control_flow: &mut ControlFlow)
             }
         }
         "detect" => {
+            super::providers::request();
             let _ = state.worker.send(WorkerCmd::Detect);
+        }
+        "providers" => {
+            super::providers::request();
+            let _ = state.worker.send(WorkerCmd::Refresh);
         }
         "refresh" => {
             let _ = state.worker.send(WorkerCmd::Refresh);
@@ -1046,6 +1054,7 @@ fn handle_ipc(state: &mut TrayState, body: &str, control_flow: &mut ControlFlow)
             let error = super::providers::set_enabled(&value)
                 .err()
                 .unwrap_or_default();
+            super::providers::request();
             with_facts(&state.facts, |f| f.providers_error = error);
             apply_facts(state);
             let _ = state.worker.send(WorkerCmd::Refresh);

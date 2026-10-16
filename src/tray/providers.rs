@@ -5,6 +5,8 @@
 //! cards cannot show — or enable — the ones that are off. This is the row
 //! source for those, kept in Rust so the popover holds no provider table.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use serde_json::{Value, json};
 
 use crate::catalog::VendorStatus;
@@ -67,11 +69,21 @@ pub(crate) fn rows_json(rows: &[VendorStatus], macos: bool) -> Value {
     )
 }
 
-/// Fresh catalog for the current config; an unreadable config lists every
-/// provider against the defaults rather than none.
+static DUE: AtomicBool = AtomicBool::new(true);
+
+/// Ask the next report to re-read the catalog. It is not read on every poll:
+/// on macOS it consults the Keychain once per Claude account.
 #[cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
-pub(crate) fn current() -> Vec<VendorStatus> {
-    crate::catalog::statuses(&crate::config::Config::load().unwrap_or_default())
+pub(crate) fn request() {
+    DUE.store(true, Ordering::Relaxed);
+}
+
+/// The fresh catalog when one was requested (and at startup), else `None`.
+/// An unreadable config lists every provider against the defaults.
+#[cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
+pub(crate) fn take_due() -> Option<Vec<VendorStatus>> {
+    DUE.swap(false, Ordering::Relaxed)
+        .then(|| crate::catalog::statuses(&crate::config::Config::load().unwrap_or_default()))
 }
 
 /// `{"cmd":"set-provider-enabled","id":"cursor","value":true}`: flip the

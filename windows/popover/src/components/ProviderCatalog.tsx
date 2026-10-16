@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ProviderIcon } from "@/components/ProviderIcon";
 import { TruncatedText } from "@/components/TruncatedText";
 import { Switch } from "@/components/ui/switch";
@@ -13,6 +14,10 @@ interface ProviderCatalogProps {
 
 /** Every built-in provider from the host catalog: on/off in config.toml, and how to sign in. */
 export function ProviderCatalog({ error, providers }: ProviderCatalogProps) {
+  // The host re-reads credentials only when asked, so ask whenever the list opens.
+  useEffect(() => {
+    sendCommand("providers");
+  }, []);
   if (providers.length === 0) return null;
   return (
     <div className="flex flex-col gap-[var(--header-card-gap)]">
