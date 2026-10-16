@@ -5,7 +5,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
 pub fn open() {
-    run_in_terminal(&format!("\"{}\"", sibling("ai-usagebar-tui")));
+    run_in_terminal(&quote(&sibling("ai-usagebar-tui")));
 }
 
 /// Run one shell line in a new Terminal window, which stays open afterwards.
@@ -30,6 +30,11 @@ pub fn run_in_terminal(line: &str) {
     let _ = Command::new("osascript").args(["-e", &osa]).spawn();
 }
 
+/// `path` as one single-quoted bash word, whatever characters it holds.
+pub fn quote(path: &str) -> String {
+    format!("'{}'", path.replace('\'', "'\\''"))
+}
+
 /// This project's binary `name`: beside the tray, then `~/.cargo/bin`, then `PATH`.
 pub fn sibling(name: &str) -> String {
     if let Ok(exe) = std::env::current_exe()
@@ -47,4 +52,13 @@ pub fn sibling(name: &str) -> String {
         }
     }
     name.into()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn quote_keeps_shell_metacharacters_literal() {
+        assert_eq!(super::quote("/A b/x"), "'/A b/x'");
+        assert_eq!(super::quote("/it's $(x)"), "'/it'\\''s $(x)'");
+    }
 }

@@ -135,9 +135,9 @@ pub(crate) fn add_account(value: &Value) {
     else {
         return;
     };
-    let bin = super::tui_launch::sibling("ai-usagebar");
+    let bin = super::tui_launch::quote(&super::tui_launch::sibling("ai-usagebar"));
     super::tui_launch::run_in_terminal(&format!(
-        "read -r -p 'New account label: ' label && \"{bin}\" account add \"$label\"{flag}"
+        "read -r -p 'New account label: ' label && {bin} account add \"$label\"{flag}"
     ));
 }
 
@@ -166,7 +166,10 @@ fn add_account_flag(kind: &str) -> Option<&'static str> {
 #[cfg(any(windows, target_os = "macos"))]
 fn login_line(command: &str) -> String {
     match command.strip_prefix("ai-usagebar ") {
-        Some(rest) => format!("\"{}\" {rest}", super::tui_launch::sibling("ai-usagebar")),
+        Some(rest) => format!(
+            "{} {rest}",
+            super::tui_launch::quote(&super::tui_launch::sibling("ai-usagebar"))
+        ),
         None => command.to_string(),
     }
 }

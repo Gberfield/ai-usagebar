@@ -388,7 +388,7 @@ function normalizeSection(raw) {
   }
   // A text row that meters a cap (Cursor's On-Demand spend) carries `percent`
   // and `severity`: draw it as a bar headed by its amount.
-  if (type === "text" && Number.isFinite(Number(raw.percent)) && raw.percent !== null && raw.severity) {
+  if (type === "text" && typeof raw.percent === "number" && Number.isFinite(raw.percent) && raw.severity) {
     return normalizeSection({ ...raw, type: "metric", headline: "value", detail: "" });
   }
   if (type === "text") {

@@ -111,8 +111,12 @@ enum UserEvent {
 
 enum WorkerCmd {
     Refresh,
+    /// Re-read the provider catalog alone, without a report.
+    Providers,
     Detect,
-    CheckUpdate { manual: bool },
+    CheckUpdate {
+        manual: bool,
+    },
     InstallUpdate,
     SnoozeUpdate,
     SetUpdates(UpdateMode),
@@ -459,6 +463,12 @@ fn spawn_worker(
                     let wait = deadline.saturating_duration_since(Instant::now());
                     match rx.recv_timeout(wait) {
                         Ok(WorkerCmd::Refresh) | Err(mpsc::RecvTimeoutError::Timeout) => break,
+                        Ok(WorkerCmd::Providers) => {
+                            if let Some(providers) = super::providers::take_due() {
+                                with_facts(&facts, |f| f.providers = providers);
+                                let _ = proxy.send_event(UserEvent::Facts);
+                            }
+                        }
                         Ok(WorkerCmd::Detect) => {
                             run_detection(true);
                             break;
@@ -550,6 +560,8 @@ fn stamp_facts(state: &mut TrayState) {
         "updates",
         "update",
         "update_checked_at",
+        "providers",
+        "providers_error",
         "refresh_minutes",
         "repository",
         "version",
@@ -781,7 +793,7 @@ fn handle_ipc(state: &mut TrayState, body: &str, control_flow: &mut ControlFlow)
         }
         "providers" => {
             super::providers::request();
-            let _ = state.worker.send(WorkerCmd::Refresh);
+            let _ = state.worker.send(WorkerCmd::Providers);
         }
         "refresh" => {
             let _ = state.worker.send(WorkerCmd::Refresh);

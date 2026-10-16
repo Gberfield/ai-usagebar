@@ -41,6 +41,11 @@ fn spawn_console(args: &[&str]) {
     let _ = Command::new("conhost.exe").args(args).spawn();
 }
 
+/// `path` as one `cmd` argument. Windows paths cannot contain `"`.
+pub fn quote(path: &str) -> String {
+    format!("\"{path}\"")
+}
+
 /// This project's binary `name`: beside the tray, then `~/.cargo/bin`, then `PATH`.
 pub fn sibling(name: &str) -> String {
     let exe = format!("{name}.exe");
