@@ -386,4 +386,18 @@ mod tests {
         }
         redirected.assert_async().await;
     }
+
+    #[tokio::test]
+    async fn network_transport_failure_is_transient_on_cold_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let cache = Cache::at(dir.path().join("cache"));
+        let endpoint = Endpoints {
+            base: "http://127.0.0.1:1".into(),
+        };
+        let creds = credential("dca:test");
+        let err = fetch_snapshot_at(&creds, &cache, &endpoint, now())
+            .await
+            .unwrap_err();
+        assert!(err.is_transient(), "expected transient error, got {err:?}");
+    }
 }
