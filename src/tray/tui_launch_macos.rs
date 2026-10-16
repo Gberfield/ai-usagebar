@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::path::PathBuf;
 use std::process::Command;
 
 pub fn open() {
@@ -10,24 +11,41 @@ pub fn open() {
 
 /// Run one shell line in a new Terminal window, which stays open afterwards.
 pub fn run_in_terminal(line: &str) {
-    let tmp = std::env::temp_dir().join(format!(
-        "ai-usagebar-{}-{}.sh",
-        std::process::id(),
-        crate::tray::now_ms()
-    ));
-    let script = format!(
-        "#!/bin/bash\n{line}\necho\nread -p 'Enter to close...'\nrm -f '{}'\n",
-        tmp.display()
-    );
-    if fs::write(&tmp, script).is_err() {
+    let Ok(tmp) = write_terminal_script(line) else {
         return;
-    }
-    let _ = fs::set_permissions(&tmp, fs::Permissions::from_mode(0o755));
-    let osa = format!(
-        "tell application \"Terminal\" to do script \"bash '{}'; true\"\ntell application \"Terminal\" to activate",
-        tmp.display()
+    };
+    let command = format!("bash {}; true", quote(&tmp.to_string_lossy()));
+    let script = format!(
+        "tell application \"Terminal\" to do script \"{}\"\ntell application \"Terminal\" to activate",
+        apple_script_string(&command)
     );
-    let _ = Command::new("osascript").args(["-e", &osa]).spawn();
+    if Command::new("osascript")
+        .args(["-e", &script])
+        .spawn()
+        .is_err()
+        && let Some(dir) = tmp.parent()
+    {
+        let _ = fs::remove_dir_all(dir);
+    }
+}
+
+/// Create the launcher below an atomically-created mode-0700 directory. A
+/// predictable file directly in `/tmp` can be pre-planted as a symlink.
+fn write_terminal_script(line: &str) -> std::io::Result<PathBuf> {
+    let dir = tempfile::Builder::new().prefix("ai-usagebar-").tempdir()?;
+    let path = dir.path().join("launch.sh");
+    let cleanup = quote(&dir.path().to_string_lossy());
+    fs::write(
+        &path,
+        format!("#!/bin/bash\n{line}\necho\nread -p 'Enter to close...'\nrm -rf -- {cleanup}\n"),
+    )?;
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
+    let _ = dir.keep();
+    Ok(path)
+}
+
+fn apple_script_string(value: &str) -> String {
+    value.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 /// `path` as one single-quoted bash word, whatever characters it holds.
@@ -56,9 +74,43 @@ pub fn sibling(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::os::unix::fs::PermissionsExt;
+
     #[test]
     fn quote_keeps_shell_metacharacters_literal() {
         assert_eq!(super::quote("/A b/x"), "'/A b/x'");
         assert_eq!(super::quote("/it's $(x)"), "'/it'\\''s $(x)'");
+    }
+
+    #[test]
+    fn terminal_scripts_live_in_distinct_private_directories() {
+        let first = super::write_terminal_script("echo first").unwrap();
+        let second = super::write_terminal_script("echo second").unwrap();
+        assert_ne!(first.parent(), second.parent());
+        assert_eq!(
+            std::fs::metadata(first.parent().unwrap())
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o700
+        );
+        assert_eq!(
+            std::fs::metadata(&first).unwrap().permissions().mode() & 0o777,
+            0o700
+        );
+        let body = std::fs::read_to_string(&first).unwrap();
+        assert!(body.contains("echo first"));
+        assert!(body.contains("rm -rf -- '"));
+        std::fs::remove_dir_all(first.parent().unwrap()).unwrap();
+        std::fs::remove_dir_all(second.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn apple_script_strings_escape_code_delimiters() {
+        assert_eq!(
+            super::apple_script_string(r#"bash '/tmp/a'; echo "x\\y""#),
+            r#"bash '/tmp/a'; echo \"x\\\\y\""#
+        );
     }
 }

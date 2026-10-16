@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [1.39.0] — 2026-10-16
+
 ### Added
 
 - **Synthetic subscription quota.** Enable `[synthetic]` and provide
@@ -59,6 +61,19 @@
   Devin and Muse Code get theirs instead of initials. The mark tables keyed
   OpenCode Go as `opencode_go` while entries use the `opencode-go` slug. A
   `[[custom]]` provider that declares a `brand` now draws that brand's mark.
+
+### Security
+
+- **The macOS tray creates terminal launchers inside private temporary
+  directories.** The previous predictable file directly under the system temp
+  directory could follow a symlink planted by another local user. Launchers
+  now use atomically created mode-0700 directories and files, escape the
+  AppleScript string boundary, and remove their directory when finished.
+
+- **The Rust network stack includes the latest advisory fixes.** The lockfile
+  now uses `quinn-proto` 0.11.18 and `rustls` 0.23.46, resolving the current
+  RustSec advisories for remote denial of service, TLS debug disclosure, ECH
+  rejection handling, certificate decompression, and key-exchange downgrade.
 
 ## [1.38.1] — 2026-10-16
 
@@ -4478,7 +4493,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.1...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.0...HEAD
+[1.39.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.1...v1.39.0
 [1.38.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.0...v1.38.1
 [1.38.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.37.0...v1.38.0
 [1.37.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.36.0...v1.37.0
