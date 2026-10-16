@@ -2534,6 +2534,7 @@ impl Config {
             VendorId::Ollama => &self.ollama.api_key_env,
             VendorId::OrcaRouter => &self.orcarouter.api_key_env,
             VendorId::Lyceum => &self.lyceum.api_key_env,
+            VendorId::Cline => &self.cline.api_key_env,
             // Fixed names: OAuth-first providers whose environment override is
             // not user-renameable, and the providers with no key at all.
             VendorId::Anthropic
@@ -2546,7 +2547,6 @@ impl Config {
             | VendorId::Kiro
             | VendorId::NousResearch
             | VendorId::CommandCode
-            | VendorId::Cline
             | VendorId::ModelStudio
             | VendorId::Devin
             | VendorId::MuseCode => id.api_key_env(),
