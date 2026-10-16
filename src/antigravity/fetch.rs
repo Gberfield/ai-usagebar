@@ -38,7 +38,7 @@ use super::cloud;
 use super::credential::{self, StoredToken};
 use crate::cache::{Cache, acquire_lock_async};
 use crate::error::{AppError, Result};
-use crate::usage::{AntigravitySnapshot, AntigravitySource, UsageWindow};
+use crate::usage::{AntigravitySnapshot, AntigravitySource, ModelPoolWindow, UsageWindow};
 
 const HTTP_TIMEOUT: Duration = Duration::from_secs(5);
 const LOCK_TIMEOUT: Duration = Duration::from_secs(15);
@@ -806,7 +806,8 @@ pub fn plan_from_status(v: &serde_json::Value) -> String {
 ///
 /// Buckets are keyed by `bucketId` (`gemini-5h`, `gemini-weekly`, `3p-5h`,
 /// `3p-weekly`), falling back to the group display name plus the `window`
-/// discriminator so a renamed bucket id still lands in the right slot.
+/// discriminator so a renamed bucket id still lands in the right slot. The
+/// fallback only runs when no canonical id arrived at all.
 /// One bucket, named the way the response named it.
 fn describe_bucket(group_name: &str, id: &str, window: Option<&str>) -> String {
     let id = if id.is_empty() { "<unnamed>" } else { id };
@@ -847,10 +848,35 @@ pub fn parse_quota_summary(v: &serde_json::Value, plan: String) -> Result<Antigr
         .or_else(|| v["groups"].as_array())
         .ok_or_else(|| AppError::Other("antigravity: quota summary has no groups".into()))?;
 
-    let mut gemini_5h = None;
-    let mut gemini_weekly = None;
-    let mut tp_5h = None;
-    let mut tp_weekly = None;
+    // Slot order: Gemini 5h, Gemini weekly, Claude/GPT 5h, Claude/GPT weekly.
+    const SLOT_NAMES: [&str; 4] = [
+        "Gemini 5h",
+        "Gemini weekly",
+        "Claude/GPT 5h",
+        "Claude/GPT weekly",
+    ];
+    const CANONICAL_IDS: [&str; 4] = ["gemini-5h", "gemini-weekly", "3p-5h", "3p-weekly"];
+    let is_canonical = |bucket: &serde_json::Value| {
+        CANONICAL_IDS.contains(&bucket["bucketId"].as_str().unwrap_or_default())
+    };
+    let shares_a_slot = |group: &serde_json::Value| {
+        group["buckets"]
+            .as_array()
+            .is_some_and(|buckets| buckets.iter().any(is_canonical))
+    };
+    // Besides the two shared groups, the summary carries pools of their own,
+    // such as "Gemini 4 Argon" (`gemini-argon-wtu-weekly`), whose ids look like
+    // a shared bucket to the prefix/suffix heuristic. While any canonical id is
+    // present, a group holding none of them is such a pool and is shown under
+    // its own name. Only when no canonical id arrived at all — the ids were
+    // renamed — are slots inferred from id prefixes and group names.
+    let renamed = !groups.iter().any(shares_a_slot);
+
+    // Per slot, the buckets whose id is the canonical one and the buckets that
+    // only look like it. A canonical id always wins.
+    let mut exact: [Vec<&serde_json::Value>; 4] = Default::default();
+    let mut inferred: [Vec<&serde_json::Value>; 4] = Default::default();
+    let mut pools: Vec<(&str, &serde_json::Value, bool)> = Vec::new();
     // What the response actually offered, so a summary we cannot use says so
     // instead of only naming what it wanted. Bucket ids and group names are
     // quota vocabulary, not account data.
@@ -861,9 +887,14 @@ pub fn parse_quota_summary(v: &serde_json::Value, plan: String) -> Result<Antigr
         let Some(buckets) = group["buckets"].as_array() else {
             continue;
         };
+        let own_pool = !renamed && !shares_a_slot(group);
         for bucket in buckets {
             let id = bucket["bucketId"].as_str().unwrap_or_default();
             seen.push(describe_bucket(group_name, id, bucket["window"].as_str()));
+            if let Some(slot) = CANONICAL_IDS.iter().position(|c| *c == id) {
+                exact[slot].push(bucket);
+                continue;
+            }
             let window = bucket["window"].as_str().unwrap_or_default();
             let is_weekly = if id.ends_with("weekly") || window == "weekly" {
                 true
@@ -874,6 +905,15 @@ pub fn parse_quota_summary(v: &serde_json::Value, plan: String) -> Result<Antigr
                 // so it cannot overwrite a known slot.
                 continue;
             };
+            if own_pool {
+                pools.push((group_name, bucket, is_weekly));
+                continue;
+            }
+            // A noncanonical bucket inside a shared group cannot supply a
+            // missing shared window, even when its prefix and cadence match.
+            if !renamed {
+                continue;
+            }
             let is_gemini = if id.starts_with("gemini") {
                 true
             } else if id.starts_with("3p") {
@@ -883,30 +923,63 @@ pub fn parse_quota_summary(v: &serde_json::Value, plan: String) -> Result<Antigr
             } else if group_name.contains("Claude") || group_name.contains("GPT") {
                 false
             } else {
-                // Likewise, an unrelated future group is not implicitly the
-                // third-party pool.
+                // An unrelated group is not implicitly the third-party pool;
+                // it is one of its own.
+                pools.push((group_name, bucket, is_weekly));
                 continue;
             };
 
-            let (slot, slot_name) = match (is_gemini, is_weekly) {
-                (true, false) => (&mut gemini_5h, "Gemini 5h"),
-                (true, true) => (&mut gemini_weekly, "Gemini weekly"),
-                (false, false) => (&mut tp_5h, "Claude/GPT 5h"),
-                (false, true) => (&mut tp_weekly, "Claude/GPT weekly"),
-            };
-            let parsed = usage_window(bucket, is_weekly)?;
-            if slot.replace(parsed).is_some() {
+            let slot = usize::from(!is_gemini) * 2 + usize::from(is_weekly);
+            inferred[slot].push(bucket);
+        }
+    }
+
+    // Infer slots only when the whole response has no canonical ids. Two
+    // candidates at the same rank cannot be told apart, so that is an error
+    // rather than a guess.
+    let mut slots: [Option<UsageWindow>; 4] = Default::default();
+    for slot in 0..4 {
+        let candidates = if renamed {
+            &inferred[slot]
+        } else {
+            &exact[slot]
+        };
+        match candidates.as_slice() {
+            [] => {}
+            [bucket] => slots[slot] = Some(usage_window(bucket, slot % 2 == 1)?),
+            _ => {
                 return Err(AppError::Schema(format!(
-                    "antigravity: duplicate {slot_name} bucket"
+                    "antigravity: duplicate {} bucket",
+                    SLOT_NAMES[slot]
                 )));
             }
         }
     }
+    let [gemini_5h, gemini_weekly, tp_5h, tp_weekly] = slots;
+
+    // A pool that will not parse is left out rather than failing the parse:
+    // it must not take the shared windows down with it, and showing nothing
+    // for it is not showing a figure that did not arrive.
+    let model_pools: Vec<ModelPoolWindow> = pools
+        .into_iter()
+        .filter_map(|(group_name, bucket, is_weekly)| {
+            let window = usage_window(bucket, is_weekly).ok()?;
+            Some(ModelPoolWindow {
+                name: pool_name(group_name, bucket),
+                window,
+            })
+        })
+        .collect();
 
     // Not every product offers every window: Antigravity CLI 1.1.22 returns
     // weekly buckets only. One recognised window is enough to render — what
     // must never happen is showing a figure for a window that did not arrive.
-    if gemini_5h.is_none() && gemini_weekly.is_none() && tp_5h.is_none() && tp_weekly.is_none() {
+    if gemini_5h.is_none()
+        && gemini_weekly.is_none()
+        && tp_5h.is_none()
+        && tp_weekly.is_none()
+        && model_pools.is_empty()
+    {
         return Err(no_usable_bucket(&seen));
     }
 
@@ -920,7 +993,23 @@ pub fn parse_quota_summary(v: &serde_json::Value, plan: String) -> Result<Antigr
         weekly: gemini_weekly,
         third_party_session: tp_5h,
         third_party_weekly: tp_weekly,
+        model_pools,
     })
+}
+
+/// A pool's label: the group's display name, as Antigravity's own Model Quota
+/// screen shows it, else the bucket's, else its id. It is API text bound for
+/// every frontend, so control and bidi characters are stripped here.
+fn pool_name(group_name: &str, bucket: &serde_json::Value) -> String {
+    [
+        group_name,
+        bucket["displayName"].as_str().unwrap_or_default(),
+        bucket["bucketId"].as_str().unwrap_or_default(),
+    ]
+    .into_iter()
+    .map(crate::display::sanitize_untrusted_field)
+    .find(|name| !name.trim().is_empty())
+    .unwrap_or_else(|| "Model pool".to_string())
 }
 
 /// `remainingFraction` is required and must be finite: defaulting a missing or
@@ -1629,16 +1718,29 @@ pub fn parse_cache(bytes: &[u8], account: Option<&str>) -> Result<AntigravitySna
 /// This matters more here than for other vendors: "nothing running" is the
 /// normal state for Antigravity, and `MAX_STALE` is seven days — far past the
 /// five hours after which the session window is guaranteed wrong.
-fn expired_window(snap: &AntigravitySnapshot, now: DateTime<Utc>) -> Option<&'static str> {
-    [
+fn expired_window(snap: &AntigravitySnapshot, now: DateTime<Utc>) -> Option<String> {
+    let shared = [
         ("Gemini 5h", snap.session.as_ref()),
         ("Gemini weekly", snap.weekly.as_ref()),
         ("Claude & GPT OSS 5h", snap.third_party_session.as_ref()),
         ("Claude & GPT OSS weekly", snap.third_party_weekly.as_ref()),
     ]
     .into_iter()
-    .find(|(_, w)| w.and_then(|w| w.resets_at).is_some_and(|r| r <= now))
-    .map(|(name, _)| name)
+    .filter_map(|(name, w)| Some((name.to_string(), w?)));
+    let pools = snap.model_pools.iter().map(|pool| {
+        let name = format!("{} {}", pool.name, pool_cadence(pool.is_weekly()));
+        (name, &pool.window)
+    });
+    shared
+        .chain(pools)
+        .find(|(_, w)| w.resets_at.is_some_and(|r| r <= now))
+        .map(|(name, _)| name)
+}
+
+/// The cadence a cached pool window was written with. Pools reuse the shared
+/// windows' two lengths, so anything else is a document we did not write.
+fn pool_cadence(weekly: bool) -> &'static str {
+    if weekly { "weekly" } else { "5h" }
 }
 
 pub fn parse_cache_at(
@@ -1711,6 +1813,7 @@ pub fn parse_cache_at(
         weekly: optional("weekly_pct", "weekly_reset", true)?,
         third_party_session: optional("tp_session_pct", "tp_session_reset", false)?,
         third_party_weekly: optional("tp_weekly_pct", "tp_weekly_reset", true)?,
+        model_pools: cached_pools(&v)?,
     };
 
     // A cache with no window left is not a snapshot; refetch rather than draw
@@ -1719,6 +1822,7 @@ pub fn parse_cache_at(
         && snap.weekly.is_none()
         && snap.third_party_session.is_none()
         && snap.third_party_weekly.is_none()
+        && snap.model_pools.is_empty()
     {
         return Err(AppError::Schema(
             "antigravity cache holds no usable window; refetching".into(),
@@ -1733,7 +1837,58 @@ pub fn parse_cache_at(
     Ok(snap)
 }
 
+/// The per-model pools of a cached payload. Payloads written before pools
+/// existed have no `model_pools` key and carry none; an entry that is present
+/// but malformed means the document is not one we wrote whole, so it refetches.
+fn cached_pools(v: &serde_json::Value) -> Result<Vec<ModelPoolWindow>> {
+    let Some(entries) = v.get("model_pools") else {
+        return Ok(Vec::new());
+    };
+    let malformed = || AppError::Schema("antigravity: cached model_pools is malformed".into());
+    entries
+        .as_array()
+        .ok_or_else(malformed)?
+        .iter()
+        .map(|entry| {
+            let name = entry["name"].as_str().ok_or_else(malformed)?;
+            let weekly = match entry["window"].as_str() {
+                Some(cadence) if cadence == pool_cadence(true) => true,
+                Some(cadence) if cadence == pool_cadence(false) => false,
+                _ => return Err(malformed()),
+            };
+            let pct = entry["pct"]
+                .as_i64()
+                .filter(|pct| (0..=100).contains(pct))
+                .ok_or_else(malformed)?;
+            Ok(ModelPoolWindow {
+                name: name.to_string(),
+                window: UsageWindow {
+                    utilization_pct: pct as i32,
+                    resets_at: parse_reset(&entry["reset"], "model_pools reset")?,
+                    window_duration: if weekly {
+                        chrono::Duration::days(7)
+                    } else {
+                        chrono::Duration::hours(5)
+                    },
+                },
+            })
+        })
+        .collect()
+}
+
 pub fn snap_to_json(snap: &AntigravitySnapshot) -> serde_json::Value {
+    let model_pools: Vec<serde_json::Value> = snap
+        .model_pools
+        .iter()
+        .map(|pool| {
+            serde_json::json!({
+                "name": pool.name,
+                "window": pool_cadence(pool.is_weekly()),
+                "pct": pool.window.utilization_pct,
+                "reset": pool.window.resets_at.map(|dt| dt.to_rfc3339()),
+            })
+        })
+        .collect();
     serde_json::json!({
         "plan": snap.plan,
         "account": snap.account,
@@ -1746,6 +1901,7 @@ pub fn snap_to_json(snap: &AntigravitySnapshot) -> serde_json::Value {
         "tp_session_reset": snap.third_party_session.as_ref().and_then(|w| w.resets_at.map(|dt| dt.to_rfc3339())),
         "tp_weekly_pct": snap.third_party_weekly.as_ref().map(|w| w.utilization_pct),
         "tp_weekly_reset": snap.third_party_weekly.as_ref().and_then(|w| w.resets_at.map(|dt| dt.to_rfc3339())),
+        "model_pools": model_pools,
     })
 }
 
@@ -1869,21 +2025,134 @@ mod tests {
         assert!(snap.third_party_weekly.is_none());
     }
 
+    /// The summary as Antigravity CLI served it in October 2026: a per-model
+    /// "Gemini 4 Argon" pool beside the two shared ones. Its id looks like a
+    /// Gemini weekly bucket to the heuristic, and used to fail the whole parse
+    /// as a duplicate of `gemini-weekly`. It is a separate limit on Pro plans,
+    /// so it is reported as a pool of its own.
+    #[test]
+    fn a_per_model_pool_is_reported_beside_the_canonical_buckets() {
+        let v: serde_json::Value = serde_json::from_str(
+            r#"{"response":{"groups":[
+              {"displayName":"Gemini Models","buckets":[
+                {"bucketId":"gemini-weekly","displayName":"Weekly Limit Remaining","window":"weekly",
+                 "remainingFraction":0.7839184,"resetTime":"2026-10-23T12:22:17Z"},
+                {"bucketId":"gemini-5h","displayName":"Five Hour Limit Remaining","window":"5h",
+                 "remainingFraction":0.253501,"resetTime":"2026-10-16T17:22:17Z"}]},
+              {"displayName":"Claude and GPT models","buckets":[
+                {"bucketId":"3p-weekly","displayName":"Weekly Limit Remaining","window":"weekly",
+                 "remainingFraction":1,"resetTime":"2026-10-23T17:05:12Z"},
+                {"bucketId":"3p-5h","displayName":"Five Hour Limit Remaining","window":"5h",
+                 "remainingFraction":1,"resetTime":"2026-10-16T22:05:12Z"}]},
+              {"displayName":"Gemini 4 Argon","buckets":[
+                {"bucketId":"gemini-argon-wtu-weekly","displayName":"Gemini 4 Argon Weekly Limit",
+                 "window":"weekly","remainingFraction":0.4,"resetTime":"2026-10-23T17:05:12Z"}]}
+            ]}}"#,
+        )
+        .unwrap();
+        let snap = parse_quota_summary(&v, "Google AI Pro".into()).unwrap();
+        assert_eq!(snap.session.as_ref().unwrap().utilization_pct, 75);
+        assert_eq!(snap.weekly.as_ref().unwrap().utilization_pct, 22);
+        assert_eq!(
+            snap.third_party_session.as_ref().unwrap().utilization_pct,
+            0
+        );
+        assert_eq!(snap.third_party_weekly.as_ref().unwrap().utilization_pct, 0);
+        let [argon] = snap.model_pools.as_slice() else {
+            panic!("{:?}", snap.model_pools);
+        };
+        assert_eq!(argon.name, "Gemini 4 Argon");
+        assert_eq!(argon.window.utilization_pct, 60);
+        assert!(argon.is_weekly());
+    }
+
+    /// A pool that will not parse is left out; it must not take the shared
+    /// windows down with it.
+    #[test]
+    fn a_malformed_model_pool_is_left_out() {
+        let v: serde_json::Value = serde_json::from_str(
+            r#"{"response":{"groups":[
+              {"displayName":"Gemini Models","buckets":[
+                {"bucketId":"gemini-weekly","window":"weekly","remainingFraction":0.5}]},
+              {"displayName":"Gemini 4 Argon","buckets":[
+                {"bucketId":"gemini-argon-wtu-weekly","window":"weekly","remainingFraction":"x"}]}
+            ]}}"#,
+        )
+        .unwrap();
+        let snap = parse_quota_summary(&v, "Pro".into()).unwrap();
+        assert_eq!(snap.weekly.unwrap().utilization_pct, 50);
+        assert!(snap.model_pools.is_empty());
+    }
+
+    /// A pool's label is API text bound for every frontend.
+    #[test]
+    fn a_model_pool_name_is_sanitized_and_falls_back_to_the_bucket() {
+        let v: serde_json::Value = serde_json::from_str(
+            "{\"response\":{\"groups\":[
+              {\"displayName\":\"Gemini Models\",\"buckets\":[
+                {\"bucketId\":\"gemini-weekly\",\"window\":\"weekly\",\"remainingFraction\":0.5}]},
+              {\"displayName\":\"Argon\\u001b[31m\",\"buckets\":[
+                {\"bucketId\":\"argon-weekly\",\"window\":\"weekly\",\"remainingFraction\":0.5}]},
+              {\"buckets\":[
+                {\"bucketId\":\"nova-5h\",\"displayName\":\"Nova Five Hour\",\"window\":\"5h\",\"remainingFraction\":0.5}]}
+            ]}}",
+        )
+        .unwrap();
+        let snap = parse_quota_summary(&v, "Pro".into()).unwrap();
+        let names: Vec<&str> = snap.model_pools.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, ["Argon[31m", "Nova Five Hour"]);
+    }
+
+    #[test]
+    fn canonical_presence_disables_inference_in_a_shared_group() {
+        for remaining in [serde_json::json!(0.1), serde_json::json!("unknown")] {
+            let summary = serde_json::json!({"groups": [{
+                "displayName": "Gemini Models",
+                "buckets": [
+                    {"bucketId": "gemini-5h", "remainingFraction": 0.5},
+                    {"bucketId": "gemini-argon-wtu-weekly", "remainingFraction": remaining}
+                ]
+            }]});
+            let snap = parse_quota_summary(&summary, "Pro".into()).unwrap();
+            assert_eq!(snap.session.unwrap().utilization_pct, 50);
+            assert!(snap.weekly.is_none());
+            assert!(snap.model_pools.is_empty());
+        }
+    }
+
     #[test]
     fn duplicate_or_unclassified_buckets_cannot_overwrite_a_slot() {
-        let duplicate: serde_json::Value = serde_json::from_str(
+        // A bucket that only resembles a canonical one never displaces it, and
+        // is not even parsed: its missing fraction would otherwise be an error.
+        let lookalike: serde_json::Value = serde_json::from_str(
             r#"{"response":{"groups":[{"displayName":"Gemini Models","buckets":[
+              {"bucketId":"gemini-5h-copy","window":"5h"},
               {"bucketId":"gemini-5h","window":"5h","remainingFraction":0.9},
-              {"bucketId":"gemini-5h-copy","window":"5h","remainingFraction":0.1},
               {"bucketId":"gemini-weekly","window":"weekly","remainingFraction":0.8}
             ]}]}}"#,
         )
         .unwrap();
-        let err = parse_quota_summary(&duplicate, "Pro".into()).unwrap_err();
-        assert!(err.to_string().contains("duplicate Gemini 5h"), "{err}");
+        let snap = parse_quota_summary(&lookalike, "Pro".into()).unwrap();
+        assert_eq!(snap.session.as_ref().unwrap().utilization_pct, 10);
 
-        // A future pool or cadence is ignored, not silently treated as the
-        // Claude/GPT 5h slot.
+        // Two buckets at the same rank cannot be told apart: canonical ids
+        // repeated, or two lookalikes competing for a slot nobody named.
+        for buckets in [
+            r#"{"bucketId":"gemini-5h","window":"5h","remainingFraction":0.9},
+               {"bucketId":"gemini-5h","window":"5h","remainingFraction":0.1}"#,
+            r#"{"bucketId":"x1","window":"5h","remainingFraction":0.9},
+               {"bucketId":"x2","window":"5h","remainingFraction":0.1}"#,
+        ] {
+            let duplicate: serde_json::Value = serde_json::from_str(&format!(
+                r#"{{"response":{{"groups":[{{"displayName":"Gemini Models","buckets":[{buckets}]}}]}}}}"#
+            ))
+            .unwrap();
+            let err = parse_quota_summary(&duplicate, "Pro".into()).unwrap_err();
+            assert!(err.to_string().contains("duplicate Gemini 5h"), "{err}");
+        }
+
+        // A future cadence is ignored, and a future group is a pool of its
+        // own, not silently treated as the Claude/GPT 5h slot.
         let unrelated: serde_json::Value = serde_json::from_str(
             r#"{"response":{"groups":[
               {"displayName":"Gemini Models","buckets":[
@@ -1900,6 +2169,11 @@ mod tests {
         let snap = parse_quota_summary(&unrelated, "Pro".into()).unwrap();
         assert!(snap.third_party_session.is_none());
         assert!(snap.third_party_weekly.is_none());
+        let [future] = snap.model_pools.as_slice() else {
+            panic!("{:?}", snap.model_pools);
+        };
+        assert_eq!(future.name, "Future Models");
+        assert!(!future.is_weekly());
     }
 
     /// A drifted bucket must fail the parse rather than report a reassuring
@@ -4039,6 +4313,56 @@ mod tests {
             "{:?}",
             outcome.last_error
         );
+    }
+
+    fn argon(pct: i32, reset: &str) -> ModelPoolWindow {
+        ModelPoolWindow {
+            name: "Gemini 4 Argon".into(),
+            window: UsageWindow {
+                utilization_pct: pct,
+                resets_at: Some(
+                    DateTime::parse_from_rfc3339(reset)
+                        .unwrap()
+                        .with_timezone(&Utc),
+                ),
+                window_duration: chrono::Duration::days(7),
+            },
+        }
+    }
+
+    #[test]
+    fn model_pools_round_trip_through_the_cache() {
+        let mut snap = parsed();
+        snap.model_pools.push(argon(60, "2026-07-28T17:00:00Z"));
+        let bytes = serde_json::to_vec(&snap_to_json(&snap)).unwrap();
+        assert_eq!(parse_cache_at(&bytes, None, now()).unwrap(), snap);
+
+        // A payload from before pools existed carries none.
+        let mut legacy = snap_to_json(&parsed());
+        legacy.as_object_mut().unwrap().remove("model_pools");
+        let legacy = serde_json::to_vec(&legacy).unwrap();
+        assert!(
+            parse_cache_at(&legacy, None, now())
+                .unwrap()
+                .model_pools
+                .is_empty()
+        );
+
+        // A pool entry we did not write whole refetches.
+        let mut torn = snap_to_json(&snap);
+        torn["model_pools"][0]["window"] = "monthly".into();
+        let torn = serde_json::to_vec(&torn).unwrap();
+        assert!(parse_cache_at(&torn, None, now()).is_err());
+    }
+
+    /// A pool past its reset is as obsolete as a shared window past its own.
+    #[test]
+    fn a_cached_model_pool_past_its_reset_refetches() {
+        let mut snap = parsed();
+        snap.model_pools.push(argon(60, "2026-07-22T11:00:00Z"));
+        let bytes = serde_json::to_vec(&snap_to_json(&snap)).unwrap();
+        let err = parse_cache_at(&bytes, None, now()).unwrap_err();
+        assert!(err.to_string().contains("Gemini 4 Argon weekly"), "{err}");
     }
 
     #[test]

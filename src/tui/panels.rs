@@ -537,6 +537,7 @@ pub fn headline_pct(snapshot: &VendorSnapshot) -> Option<i32> {
         ]
         .into_iter()
         .flatten()
+        .chain(s.model_pools.iter().map(|p| p.window.utilization_pct))
         .max(),
         VendorSnapshot::Cursor(s) => (!s.unlimited).then_some(s.total_pct),
         VendorSnapshot::Minimax(s) => Some(s.session.utilization_pct.max(s.weekly.utilization_pct)),
@@ -1149,28 +1150,22 @@ fn orcarouter_sections(s: &crate::usage::OrcaRouterSnapshot, now: DateTime<Utc>)
 
 /// Antigravity holds two independent pools (Gemini, Claude & GPT OSS), each
 /// with a 5-hour and a weekly window. Grouped by window type so the two pools
-/// sit side by side, matching the GNOME dropdown.
+/// sit side by side, matching the GNOME dropdown. A per-model pool (Pro's
+/// "Gemini 4 Argon") joins them under the heading of its cadence, in the order
+/// `antigravity::vendor::rows` sets.
 fn antigravity_sections(
     s: &crate::usage::AntigravitySnapshot,
     now: DateTime<Utc>,
 ) -> SectionBuilder {
-    use crate::antigravity::vendor::{GROUP_PRIMARY, GROUP_THIRD_PARTY};
-
     let mut v = SectionBuilder::new(vec![Section::Title {
         left: s.plan.clone(),
         right: None,
     }]);
-    for (heading, primary, third_party) in [
-        (
-            "Session",
-            s.session.as_ref(),
-            s.third_party_session.as_ref(),
-        ),
-        ("Weekly", s.weekly.as_ref(), s.third_party_weekly.as_ref()),
-    ] {
+    for (heading, weekly) in [("Session", false), ("Weekly", true)] {
+        let rows = crate::antigravity::vendor::rows(s, weekly);
         // A cadence no bucket reported gets no heading either — an empty
         // "Session" with nothing under it reads as a failed fetch.
-        if primary.is_none() && third_party.is_none() {
+        if rows.is_empty() {
             continue;
         }
         v.push(Section::Spacer);
@@ -1178,11 +1173,8 @@ fn antigravity_sections(
             label: heading.into(),
             value: String::new(),
         });
-        if let Some(w) = primary {
-            push_window(&mut v, GROUP_PRIMARY, w, now, 5, false);
-        }
-        if let Some(w) = third_party {
-            push_window(&mut v, GROUP_THIRD_PARTY, w, now, 5, false);
+        for (label, w) in rows {
+            push_window(&mut v, label, w, now, 5, false);
         }
     }
     // Figures read from the Cloud Code API fallback can lag what the local
@@ -4375,7 +4367,39 @@ mod tests {
             weekly: None,
             third_party_session: None,
             third_party_weekly: None,
+            model_pools: Vec::new(),
         })
+    }
+
+    /// A per-model pool is a row of its own under the heading of its cadence,
+    /// and that heading appears even when no shared window of the cadence did.
+    #[test]
+    fn antigravity_model_pool_gets_its_own_row_under_its_cadence() {
+        let VendorSnapshot::Antigravity(mut snap) =
+            antigravity_snap(crate::usage::AntigravitySource::Local)
+        else {
+            unreachable!()
+        };
+        snap.model_pools.push(crate::usage::ModelPoolWindow {
+            name: "Gemini 4 Argon".into(),
+            window: UsageWindow {
+                utilization_pct: 60,
+                resets_at: Some(now() + chrono::Duration::days(3)),
+                window_duration: chrono::Duration::days(7),
+            },
+        });
+        let sections = sections_for(&ready(VendorSnapshot::Antigravity(snap)), now(), 5);
+        let weekly = sections
+            .iter()
+            .position(|s| matches!(s, Section::Text { label, .. } if label == "Weekly"))
+            .expect("Weekly heading");
+        let argon = sections
+            .iter()
+            .position(|s| {
+                matches!(s, Section::Metric { label, pct: 60, .. } if label == "Gemini 4 Argon")
+            })
+            .expect("Argon row");
+        assert!(argon > weekly);
     }
 
     /// Figures read off the API while nothing runs say so; a running product's

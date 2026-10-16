@@ -1,5 +1,32 @@
 ## [Unreleased]
 
+### Added
+
+- **Antigravity shows per-model quota pools.** On Pro plans the "Gemini 4
+  Argon" models have a weekly limit of their own, separate from the shared
+  Gemini pool. It now appears as its own row, named as Antigravity names it,
+  under the Weekly heading of the tooltip, the TUI, and every desktop frontend
+  that draws the report; it also counts toward the panel's severity and
+  notifications. Any future pool reported the same way is shown too. The bar's
+  `{placeholder}` slots are unchanged.
+
+### Fixed
+
+- **Antigravity no longer fails with "duplicate Gemini weekly bucket".** The
+  per-model pool's bucket id (`gemini-argon-wtu-weekly`) looked like the shared
+  Gemini weekly bucket to the parser, which classified by id prefix and
+  suffix, so every refresh failed as a duplicate. The four canonical bucket
+  ids now always claim their slot, and the prefix/suffix and group-name
+  inference runs only when none of them arrived. A pool that will not parse is
+  left out instead of failing the shared windows.
+
+- **The macOS status-line path cannot show a model's own limit as Gemini
+  weekly.** It kept the first bucket of each kind in key order, where
+  `gemini-argon-wtu-weekly` sorts ahead of `gemini-weekly`. Canonical ids now
+  take precedence there too. Their presence is checked before parsing values;
+  while any is present, missing or malformed shared windows stay empty instead
+  of borrowing a model pool's quota.
+
 ## [1.39.0] — 2026-10-16
 
 ### Added
