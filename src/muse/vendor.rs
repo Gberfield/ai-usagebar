@@ -25,17 +25,26 @@ pub fn build_placeholders(
     let session = window_placeholders(snap.session.as_ref(), opts, now);
     let weekly = window_placeholders(snap.weekly.as_ref(), opts, now);
     placeholders([
+        ("icon", VendorId::MuseCode.bar_icon().into()),
         ("plan", snap.plan.clone()),
         ("vendor_short", VendorId::MuseCode.short_name().into()),
         ("session_pct", session.pct.clone()),
         ("session_reset", session.reset.clone()),
+        ("session_elapsed", session.elapsed.clone()),
         ("weekly_pct", weekly.pct.clone()),
         ("weekly_reset", weekly.reset.clone()),
+        ("weekly_elapsed", weekly.elapsed.clone()),
         ("muse_plan", snap.plan.clone()),
         ("muse_session_pct", session.pct),
         ("muse_session_reset", session.reset),
+        ("muse_session_elapsed", session.elapsed),
+        ("muse_session_pace", session.ratio_pace),
+        ("muse_session_pace_indicator", session.point_pace),
         ("muse_weekly_pct", weekly.pct),
         ("muse_weekly_reset", weekly.reset),
+        ("muse_weekly_elapsed", weekly.elapsed),
+        ("muse_weekly_pace", weekly.ratio_pace),
+        ("muse_weekly_pace_indicator", weekly.point_pace),
     ])
 }
 
@@ -106,3 +115,4 @@ pub fn render(
         class: Class::from(severity(snap)),
     }
 }
+
