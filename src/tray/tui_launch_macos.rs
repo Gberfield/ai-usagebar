@@ -33,6 +33,7 @@ pub fn run_in_terminal(line: &str) {
 /// predictable file directly in `/tmp` can be pre-planted as a symlink.
 fn write_terminal_script(line: &str) -> std::io::Result<PathBuf> {
     let dir = tempfile::Builder::new().prefix("ai-usagebar-").tempdir()?;
+    fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700))?;
     let path = dir.path().join("launch.sh");
     let cleanup = quote(&dir.path().to_string_lossy());
     fs::write(
