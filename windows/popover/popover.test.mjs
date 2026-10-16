@@ -1633,6 +1633,85 @@ assert.equal(resolvedTheme('system'), 'light');
   assert.equal(stripCommand({ ...seeded, showAs: 'sideways' }, cards).show_as, 'left');
 }
 
+// --- stars for providers that arrive late, and stars taken off on purpose (#437) --
+
+{
+  // ARRANGE: Claude was starred on first launch; Antigravity was enabled later
+  const payload = parseHostPayload({
+    entries: [
+      { id: 'anthropic', display_name: 'Claude', sections: [
+        { type: 'metric', label: 'Session', percent: 41 },
+        { type: 'metric', label: 'Weekly', percent: 19 },
+      ] },
+      { id: 'antigravity', display_name: 'Antigravity', sections: [
+        { type: 'text', label: 'Session', value: '' },
+        { type: 'metric', label: 'Gemini', percent: 0 },
+        { type: 'text', label: 'Weekly', value: '' },
+        { type: 'metric', label: 'Gemini', percent: 95 },
+      ] },
+    ],
+  });
+  const cards = projectCards(payload, 0);
+  const remembered = { ...emptyLayout(), stars: { anthropic: ['metric:Weekly'] } };
+
+  // ACT
+  const seeded = seedStars(remembered, cards);
+
+  // ASSERT: the newcomer gets its defaults and reaches the strip; the remembered
+  // choice is untouched, and with nothing left to seed the same layout comes back
+  assert.deepEqual(seeded.stars.anthropic, ['metric:Weekly']);
+  assert.deepEqual(seeded.stars.antigravity, ['metric:Gemini (Session)', 'metric:Gemini (Weekly)']);
+  assert.deepEqual(stripCommand(seeded, cards).stars.antigravity, ['metric:Gemini (Session)', 'metric:Gemini (Weekly)']);
+  assert.equal(seedStars(seeded, cards), seeded);
+}
+
+{
+  // ARRANGE: two starred providers
+  const payload = parseHostPayload({
+    entries: [
+      { id: 'anthropic', display_name: 'Claude', sections: [{ type: 'metric', label: 'Weekly', percent: 19 }] },
+      { id: 'openai', display_name: 'Codex', sections: [{ type: 'metric', label: 'Codex weekly', percent: 2 }] },
+    ],
+  });
+  const cards = projectCards(payload, 0);
+  const start = seedStars(emptyLayout(), cards);
+  assert.deepEqual(start.stars.openai, ['metric:Codex weekly']);
+
+  // ACT: the user unstars Codex's only metric
+  const off = { ...start, stars: toggleStar(start.stars, 'openai', 'metric:Codex weekly').stars };
+
+  // ASSERT: an explicit empty list that seeding, storage, sync and the strip respect
+  assert.deepEqual(off.stars.openai, []);
+  assert.equal(seedStars(off, cards), off);
+  const restored = normalizeLayout(JSON.parse(JSON.stringify(off)));
+  assert.deepEqual(restored.stars.openai, []);
+  assert.equal(seedStars(restored, cards), restored);
+  assert.deepEqual(syncLayout(restored, ['anthropic', 'openai']).stars.openai, []);
+  assert.deepEqual(stripCommand(off, cards).stars, { anthropic: ['metric:Weekly'] });
+}
+
+{
+  // ARRANGE: Antigravity's entry id switches as agy statusline sessions come and go
+  const entriesFor = (id) => [
+    { id: 'anthropic', display_name: 'Claude', sections: [{ type: 'metric', label: 'Weekly', percent: 19 }] },
+    { id, display_name: 'Antigravity', sections: [{ type: 'metric', label: 'Gemini', percent: 95 }] },
+  ];
+  const step = (layout, id) => {
+    const payload = parseHostPayload({ entries: entriesFor(id) });
+    return seedStars(absorbPayload(layout, payload.entries), projectCards(payload, 0));
+  };
+
+  // ACT: the plain id, then a per-account one, then the plain id again
+  const first = step(emptyLayout(), 'antigravity');
+  const perAccount = step(first, 'antigravity@abc123');
+  const back = step(perAccount, 'antigravity');
+
+  // ASSERT: whichever id the report uses is starred, so the strip never drops it
+  assert.deepEqual(first.stars.antigravity, ['metric:Gemini']);
+  assert.deepEqual(perAccount.stars['antigravity@abc123'], ['metric:Gemini']);
+  assert.deepEqual(back.stars.antigravity, ['metric:Gemini']);
+}
+
 {
   const payload = parseHostPayload({
     entries: [

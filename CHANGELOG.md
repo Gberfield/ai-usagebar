@@ -11,6 +11,16 @@
   channel, which serves both groups; daily stays as failover, the role it
   already played, and the plan lookup keeps its original order.
 
+- **A provider switched on after first launch reaches the macOS menu bar.**
+  The popover filled the menu bar's stars only while none were stored — on
+  first launch — and dropped a provider's stars whenever a payload arrived
+  without it, so a provider enabled later never showed in the Logos strip,
+  and Antigravity fell out of it each time its entry switched between
+  `antigravity` and `antigravity@<account>` with `agy` sessions (#437). Every
+  provider without a stars entry now gets its default stars, and unstarring a
+  provider's last metric stores an empty list that survives restarts, so
+  taking a provider off the menu bar still sticks.
+
 ## [1.38.1] — 2026-10-16
 
 ### Fixed
