@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Muse Code exports window elapsed and pace placeholders.** Custom format
+  strings and frontends (such as GNOME extension and macOS menu bar) querying
+  `{session_elapsed}`, `{weekly_elapsed}`, or `{muse_session_pace}` now receive
+  the window's elapsed percentage and pace indicator rather than unexpanded
+  tokens.
+
 ## [1.38.0] — 2026-10-15
 
 ### Added
