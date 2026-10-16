@@ -2,17 +2,25 @@
 /** @typedef {import('../runtime.js').LocalizedString} LocalizedString */
 /** @typedef {{}} _10_MinutesInputs */
 /** @typedef {{}} _12_HourInputs */
+/** @typedef {{}} _15_MinutesInputs */
+/** @typedef {{}} _1_HourInputs */
 /** @typedef {{}} _1_MinuteInputs */
 /** @typedef {{}} _24_HourInputs */
+/** @typedef {{}} _30_MinutesInputs */
 /** @typedef {{}} _5_HourInputs */
 /** @typedef {{}} _5_MinutesInputs */
 /** @typedef {{}} AboutInputs */
 /** @typedef {{}} About_Summary_Menu_BarInputs */
 /** @typedef {{}} About_Summary_TrayInputs */
 /** @typedef {{}} ActivityInputs */
+/** @typedef {{}} Add_Claude_Code_AccountInputs */
+/** @typedef {{}} Add_Claude_Desktop_AccountInputs */
+/** @typedef {{}} Add_Codex_AccountInputs */
 /** @typedef {{}} Alert_ThresholdInputs */
 /** @typedef {{}} Alert_Threshold_HintInputs */
 /** @typedef {{}} AlertsInputs */
+/** @typedef {{}} All_ProvidersInputs */
+/** @typedef {{}} All_Providers_HintInputs */
 /** @typedef {{}} Always_ShowInputs */
 /** @typedef {{}} Always_Show_PacingInputs */
 /** @typedef {{}} Always_Show_Pacing_HintInputs */
@@ -164,7 +172,14 @@
 /** @typedef {{}} Press_KeysInputs */
 /** @typedef {{}} Press_Keys_EllipsisInputs */
 /** @typedef {{}} ProviderInputs */
+/** @typedef {{}} Provider_Add_KeyInputs */
+/** @typedef {{}} Provider_EnableInputs */
 /** @typedef {{}} Provider_Is_UnavailableInputs */
+/** @typedef {{}} Provider_OffInputs */
+/** @typedef {{}} Provider_Off_ReadyInputs */
+/** @typedef {{}} Provider_Open_AppInputs */
+/** @typedef {{}} Provider_ReadyInputs */
+/** @typedef {{}} Provider_Sign_InInputs */
 /** @typedef {{}} ProvidersInputs */
 /** @typedef {{}} QuattroInputs */
 /** @typedef {{}} QuitInputs */
@@ -273,12 +288,24 @@ export const _12_hour = /** @type {(inputs: _12_HourInputs) => LocalizedString} 
 	return /** @type {LocalizedString} */ (`12시간제`)
 };
 
+export const _15_minutes = /** @type {(inputs: _15_MinutesInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`15분`)
+};
+
+export const _1_hour = /** @type {(inputs: _1_HourInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`1시간`)
+};
+
 export const _1_minute = /** @type {(inputs: _1_MinuteInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`1분`)
 };
 
 export const _24_hour = /** @type {(inputs: _24_HourInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`24시간제`)
+};
+
+export const _30_minutes = /** @type {(inputs: _30_MinutesInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`30분`)
 };
 
 export const _5_hour = /** @type {(inputs: _5_HourInputs) => LocalizedString} */ () => {
@@ -305,6 +332,18 @@ export const activity = /** @type {(inputs: ActivityInputs) => LocalizedString} 
 	return /** @type {LocalizedString} */ (`활동`)
 };
 
+export const add_claude_code_account = /** @type {(inputs: Add_Claude_Code_AccountInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Claude Code 계정 추가`)
+};
+
+export const add_claude_desktop_account = /** @type {(inputs: Add_Claude_Desktop_AccountInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Claude Desktop 계정 추가`)
+};
+
+export const add_codex_account = /** @type {(inputs: Add_Codex_AccountInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`Codex 계정 추가`)
+};
+
 export const alert_threshold = /** @type {(inputs: Alert_ThresholdInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`알림 기준`)
 };
@@ -315,6 +354,14 @@ export const alert_threshold_hint = /** @type {(inputs: Alert_Threshold_HintInpu
 
 export const alerts = /** @type {(inputs: AlertsInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`알림`)
+};
+
+export const all_providers = /** @type {(inputs: All_ProvidersInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`모든 제공자`)
+};
+
+export const all_providers_hint = /** @type {(inputs: All_Providers_HintInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`제공자를 켜면 사용량을 가져옵니다. 변경 사항은 config.toml에 저장됩니다.`)
 };
 
 export const always_show = /** @type {(inputs: Always_ShowInputs) => LocalizedString} */ () => {
@@ -921,8 +968,36 @@ export const provider = /** @type {(inputs: ProviderInputs) => LocalizedString} 
 	return /** @type {LocalizedString} */ (`제공자`)
 };
 
+export const provider_add_key = /** @type {(inputs: Provider_Add_KeyInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`키 추가`)
+};
+
+export const provider_enable = /** @type {(inputs: Provider_EnableInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`사용`)
+};
+
 export const provider_is_unavailable = /** @type {(inputs: Provider_Is_UnavailableInputs) => LocalizedString} */ () => {
 	return /** @type {LocalizedString} */ (`제공자를 사용할 수 없음`)
+};
+
+export const provider_off = /** @type {(inputs: Provider_OffInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`꺼짐`)
+};
+
+export const provider_off_ready = /** @type {(inputs: Provider_Off_ReadyInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`꺼짐 — 자격 증명 있음`)
+};
+
+export const provider_open_app = /** @type {(inputs: Provider_Open_AppInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`앱 열기`)
+};
+
+export const provider_ready = /** @type {(inputs: Provider_ReadyInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`로그인됨`)
+};
+
+export const provider_sign_in = /** @type {(inputs: Provider_Sign_InInputs) => LocalizedString} */ () => {
+	return /** @type {LocalizedString} */ (`로그인`)
 };
 
 export const providers = /** @type {(inputs: ProvidersInputs) => LocalizedString} */ () => {

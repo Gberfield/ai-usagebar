@@ -261,5 +261,20 @@
   "welcome_to_ai_usage": "AI Usage에 오신 것을 환영합니다",
   "what_changed_each_version": "버전별 변경 사항",
   "you_have_no_rate_limit_resets": "사용 가능한 속도 제한 초기화가 없습니다",
-  "youre_up_to_date": "최신 버전입니다"
+  "youre_up_to_date": "최신 버전입니다",
+  "all_providers": "모든 제공자",
+  "all_providers_hint": "제공자를 켜면 사용량을 가져옵니다. 변경 사항은 config.toml에 저장됩니다.",
+  "provider_off": "꺼짐",
+  "provider_off_ready": "꺼짐 — 자격 증명 있음",
+  "provider_ready": "로그인됨",
+  "provider_sign_in": "로그인",
+  "provider_open_app": "앱 열기",
+  "provider_add_key": "키 추가",
+  "provider_enable": "사용",
+  "15_minutes": "15분",
+  "30_minutes": "30분",
+  "1_hour": "1시간",
+  "add_claude_code_account": "Claude Code 계정 추가",
+  "add_claude_desktop_account": "Claude Desktop 계정 추가",
+  "add_codex_account": "Codex 계정 추가"
 }

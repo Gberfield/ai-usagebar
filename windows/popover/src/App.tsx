@@ -485,6 +485,7 @@ export default function App() {
             <Customize
               cards={cards}
               layout={layout}
+              payload={payload}
               onOpen={(id) => openProvider(id, "customize")}
               onOpenSettings={() => go("settings")}
               onReorder={(ids) => commit({ ...layout, cardOrder: mergeVisibleOrder(layout.cardOrder, ids) })}

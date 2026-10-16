@@ -52,7 +52,6 @@ import {
   paceWarmupHint,
   paceWarmupText,
   prefsForCard,
-  providerIconId,
   resetAlternate,
   resetCreditDetails,
   resetText,
@@ -61,6 +60,7 @@ import {
   usageGoal,
   usageGoalPercent,
   visibleRowsFor,
+  formatAgo,
 } from "../model.js";
 
 interface SectionHandle {
@@ -255,17 +255,19 @@ export function ProviderSectionHeader({
   onSwitchAccount,
 }: ProviderSectionHeaderProps) {
   const plan = displayPlan(card.title, card.plan);
+  const { language } = useI18n();
+  const age = card.stale && card.fetchedAt && nowMs > card.fetchedAt ? ` · ${formatAgo(nowMs - card.fetchedAt, language)}` : "";
   return (
     <header
       className="group/header flex items-center gap-[var(--gap-inline)] px-[var(--card-pad)] py-[var(--space-2xs)]"
       {...handle?.attributes}
       {...handle?.listeners}
     >
-      <ProviderIcon className="text-label-2" size="var(--sz-icon)" slug={providerIconId(card.id)} title={card.title} />
+      <ProviderIcon className="text-label-2" size="var(--sz-icon)" slug={card.icon} title={card.title} />
       <div className="flex min-w-0 items-baseline gap-[var(--gap-inline)]">
         <TruncatedText className="min-w-0 text-[length:var(--sz-header)] font-semibold">{card.title}</TruncatedText>
         {plan ? <span className="shrink-0 text-[length:var(--sz-badge)] text-label-2">{plan}</span> : null}
-        {card.stale ? <span className="text-[length:var(--sz-badge)] text-label-3">{m.stale()}</span> : null}
+        {card.stale ? <span className="text-[length:var(--sz-badge)] text-label-3">{m.stale()}{age}</span> : null}
       </div>
       {card.errorTitle ? (
         <MdiAlert className="size-[var(--icon-mark)] shrink-0 text-meter-red" aria-label={card.errorTitle}>

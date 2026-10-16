@@ -1,5 +1,28 @@
 ## [Unreleased]
 
+### Added
+
+- **The tray lists every provider in Settings, enabled or not.** Settings →
+  Providers (and Classic's Customize screen) used to show only the providers
+  `usage --json` reported, so one switched off in `config.toml` had no row and
+  no way back on — Cursor, which `config.example.toml` ships as
+  `enabled = false` and detection never overrides, simply never appeared. The
+  list now comes from the Rust provider catalog: each provider has a switch
+  that writes `enabled`, a status line, and for one with no credential a
+  Sign in / Open app / Add key button (the login command in a terminal,
+  Cursor or Antigravity on macOS, or the TUI's Settings).
+
+- **Add Claude Code, Claude Desktop and Codex accounts from the tray** (macOS).
+  The Claude and Codex rows in Settings → Providers open Terminal, ask for the
+  label, and run `account add`, as the Swift menu bar did.
+
+- **Refresh every 15, 30 or 60 minutes.** `[tray] refresh_minutes` and the
+  tray's Refresh Every picker accept them alongside 1, 5 and 10.
+
+- **Cursor's On-Demand cap draws as a bar in the tray**, and a stale card says
+  how old its numbers are. Capped text rows now carry `severity` in
+  `usage --json`.
+
 ### Fixed
 
 - **Antigravity's remote fallback reads quota from prod before the daily
@@ -20,6 +43,11 @@
   provider without a stars entry now gets its default stars, and unstarring a
   provider's last metric stores an empty list that survives restarts, so
   taking a provider off the menu bar still sticks.
+
+- **The tray draws OpenCode Go's mark**, and Kilo, Novita, Kiro, Nous, Ollama,
+  Devin and Muse Code get theirs instead of initials. The mark tables keyed
+  OpenCode Go as `opencode_go` while entries use the `opencode-go` slug. A
+  `[[custom]]` provider that declares a `brand` now draws that brand's mark.
 
 ## [1.38.1] — 2026-10-16
 

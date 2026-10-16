@@ -171,6 +171,9 @@ enum ReportSection {
         /// Present only together with a positive cap.
         #[serde(skip_serializing_if = "Option::is_none")]
         percent: Option<u16>,
+        /// Bar colour for `percent`, on the same scale as a metric's.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        severity: Option<String>,
     },
     Block {
         label: String,
@@ -443,12 +446,18 @@ fn entry_from_state(tab: &TabId, state: &TabState, now: chrono::DateTime<Utc>) -
                     (Some(used), Some(limit)) => consumed_percent(used, limit),
                     _ => None,
                 };
+                let severity = percent.map(|percent| {
+                    crate::pango::severity_for(i32::from(percent))
+                        .as_str()
+                        .to_string()
+                });
                 entry.sections.push(ReportSection::Text {
                     label,
                     value,
                     used_cents,
                     limit_cents,
                     percent,
+                    severity,
                 });
             }
             Section::Block { label, body } => {
@@ -654,6 +663,7 @@ fn apply_session_activity(entries: &mut [Entry], scanned: Vec<(usize, SessionAct
             used_cents: None,
             limit_cents: None,
             percent: None,
+            severity: None,
         });
     }
 }
@@ -682,6 +692,7 @@ fn context_session_sections(scan: &ContextScan) -> Vec<ReportSection> {
             used_cents: None,
             limit_cents: None,
             percent: None,
+            severity: None,
         });
     }
     sections
@@ -2224,6 +2235,7 @@ mod tests {
                         used_cents: None,
                         limit_cents: None,
                         percent: None,
+                        severity: None,
                     },
                     ReportSection::Block {
                         label: "Usage by period".into(),
@@ -2331,6 +2343,7 @@ mod tests {
                 used_cents: None,
                 limit_cents: None,
                 percent: None,
+                severity: None,
             } if label == "Balance" && value == "$12.50"
         )));
         assert!(
@@ -2388,7 +2401,8 @@ mod tests {
                 used_cents: Some(125),
                 limit_cents: Some(500),
                 percent: Some(25),
-            } if label == "On-Demand" && value == "$1.25 / $5.00"
+                severity: Some(severity),
+            } if label == "On-Demand" && value == "$1.25 / $5.00" && severity == "low"
         )));
         let rendered = render_json_for_primary(std::slice::from_ref(&projected), None);
         let value: serde_json::Value = serde_json::from_str(&rendered).unwrap();

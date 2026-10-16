@@ -2,15 +2,16 @@ import MdiChevronRight from "~icons/mdi/chevron-right";
 import MdiCogOutline from "~icons/mdi/cog-outline";
 import { ScreenCrossLinkRow } from "@/components/Chrome";
 import { DragHandle } from "@/components/DragHandle";
+import { ProviderCatalog } from "@/components/ProviderCatalog";
 import { ProviderIcon } from "@/components/ProviderIcon";
 import { TruncatedText } from "@/components/TruncatedText";
 import { SortableItem, VerticalDnd } from "@/components/dnd";
 import { Switch } from "@/components/ui/switch";
-import type { Card, Layout } from "@/lib/types";
+import type { Card, Layout, Payload } from "@/lib/types";
 import { m } from "@/paraglide/messages.js";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { metricCount, orderedCards, providerIconId } from "../model.js";
+import { metricCount, orderedCards } from "../model.js";
 
 interface CustomizeProps {
   cards: Card[];
@@ -20,10 +21,12 @@ interface CustomizeProps {
   onReorder: (ids: string[]) => void;
   onToggle: (id: string, on: boolean) => void;
   embedded?: boolean;
+  /** Classic's Customize screen also lists every provider; native shows that under Settings. */
+  payload?: Payload;
 }
 
 /** CustomizeProviderListView (L1): one grouped card of provider rows, then the Settings cross-link. */
-export function Customize({ cards, layout, onOpen, onOpenSettings, onReorder, onToggle, embedded = false }: CustomizeProps) {
+export function Customize({ cards, layout, onOpen, onOpenSettings, onReorder, onToggle, embedded = false, payload }: CustomizeProps) {
   const ordered = orderedCards(cards, layout);
   const ids = ordered.map((card) => card.id);
   return (
@@ -60,6 +63,7 @@ export function Customize({ cards, layout, onOpen, onOpenSettings, onReorder, on
           })}
         </div>
       </VerticalDnd>
+      {payload ? <ProviderCatalog error={payload.providersError} providers={payload.providers} /> : null}
       {embedded ? null : <ScreenCrossLinkRow
         icon={<MdiCogOutline />}
         subtitle={m.startup_appearance_and_more()}
@@ -89,7 +93,7 @@ function ProviderListRow({ card, enabled, handle, onOpen, onToggle }: ProviderLi
     >
       <DragHandle attributes={handle?.attributes} listeners={handle?.listeners} />
       <button type="button" className="plain-btn hover-fill flex min-w-0 flex-1 items-center gap-[var(--row-gap)]" onClick={onOpen}>
-        <ProviderIcon className="text-label-2" size="var(--row-icon-box)" slug={providerIconId(card.id)} title={card.title} />
+        <ProviderIcon className="text-label-2" size="var(--row-icon-box)" slug={card.icon} title={card.title} />
         <span className="flex min-w-0 flex-col">
           <TruncatedText className="text-[length:var(--sz-header)] font-semibold">{card.title}</TruncatedText>
           <span className="text-[length:var(--sz-badge)] text-label-2">

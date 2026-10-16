@@ -13,6 +13,7 @@ mod marks;
 mod menu_bar;
 mod panel;
 mod payload;
+mod providers;
 mod strip;
 
 #[cfg(windows)]

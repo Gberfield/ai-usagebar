@@ -261,5 +261,20 @@
   "welcome_to_ai_usage": "Te damos la bienvenida a AI Usage",
   "what_changed_each_version": "Qué cambió en cada versión",
   "you_have_no_rate_limit_resets": "No tienes reinicios de límite",
-  "youre_up_to_date": "Estás al día"
+  "youre_up_to_date": "Estás al día",
+  "all_providers": "Todos los proveedores",
+  "all_providers_hint": "Activa un proveedor para consultarlo. Los cambios se guardan en config.toml.",
+  "provider_off": "Desactivado",
+  "provider_off_ready": "Desactivado — credencial encontrada",
+  "provider_ready": "Conectado",
+  "provider_sign_in": "Iniciar sesión",
+  "provider_open_app": "Abrir app",
+  "provider_add_key": "Añadir clave",
+  "provider_enable": "Activar",
+  "15_minutes": "15 minutos",
+  "30_minutes": "30 minutos",
+  "1_hour": "1 hora",
+  "add_claude_code_account": "Añadir cuenta de Claude Code",
+  "add_claude_desktop_account": "Añadir cuenta de Claude Desktop",
+  "add_codex_account": "Añadir cuenta de Codex"
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import MdiInformationOutline from "~icons/mdi/information-outline";
 import MdiTune from "~icons/mdi/tune-variant";
 import { ScreenCrossLinkRow } from "@/components/Chrome";
+import { ProviderCatalog } from "@/components/ProviderCatalog";
 import { ShortcutRecorder } from "@/components/ShortcutRecorder";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -145,6 +146,7 @@ export function Settings({
               <button type="button" className="text-[var(--accent)]" onClick={() => sendCommand("detect")}>{m.detect_providers()}</button>
             </div>
           )}
+          <ProviderCatalog error={payload.providersError} providers={payload.providers} />
         </div>
       ) : null}
       {!native || tab === "general" ? (
@@ -163,6 +165,9 @@ export function Settings({
               ["1", m["1_minute"]()],
               ["5", m["5_minutes"]()],
               ["10", m["10_minutes"]()],
+              ["15", m["15_minutes"]()],
+              ["30", m["30_minutes"]()],
+              ["60", m["1_hour"]()],
             ]}
             value={String(payload.refreshMinutes)}
             onChange={(minutes) => sendCommand("set-refresh", { minutes: Number(minutes) })}

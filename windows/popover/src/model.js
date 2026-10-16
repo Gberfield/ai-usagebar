@@ -56,6 +56,8 @@ export function emptyPayload(hostError) {
     updateCheckedAt: 0,
     repository: "",
     accounts: {},
+    providers: [],
+    providersError: "",
     accent: null,
   };
 }
@@ -105,6 +107,8 @@ function normalizePayload(parsed) {
     updateCheckedAt: finiteNumber(parsed.update_checked_at),
     repository: githubPage(parsed.repository),
     accounts: normalizeAccounts(parsed.accounts),
+    providers: normalizeProviders(parsed.providers),
+    providersError: clean(parsed.providers_error, 300),
     accent: normalizeAccent(parsed.accent),
   };
 }
@@ -115,6 +119,38 @@ function normalizeAccent(value) {
   const color = /^#[0-9a-f]{6}$/i;
   if (!color.test(value.light) || !color.test(value.dark)) return null;
   return { light: value.light.toLowerCase(), dark: value.dark.toLowerCase() };
+}
+
+const SIGN_IN_ACTIONS = ["terminal", "app", "settings"];
+const ADD_ACCOUNT_KINDS = ["code", "desktop", "codex"];
+
+// Every built-in provider from the host's catalog (Settings → Providers).
+// The host owns names, hints and actions; this only bounds and types them.
+function normalizeProviders(value) {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const raw of value.slice(0, MAX_ENTRIES)) {
+    if (!isPlainObject(raw)) continue;
+    const id = clean(raw.id, 64).trim();
+    if (!id) continue;
+    out.push({
+      id,
+      name: clean(raw.name, 120) || id,
+      enabled: raw.enabled === true,
+      configured: raw.configured === true,
+      env: clean(raw.env, 120),
+      signIn: clean(raw.sign_in, 200),
+      action: SIGN_IN_ACTIONS.includes(raw.action) ? raw.action : "",
+      addAccounts: Array.isArray(raw.add_accounts) ? ADD_ACCOUNT_KINDS.filter((kind) => raw.add_accounts.includes(kind)) : [],
+    });
+  }
+  return out;
+}
+
+/** "off" | "off-ready" (credential found) | "ready" | "needs" (enabled, not signed in). */
+export function providerState(provider) {
+  if (!provider.enabled) return provider.configured ? "off-ready" : "off";
+  return provider.configured ? "ready" : "needs";
 }
 
 const SWITCHABLE_VENDORS = ["anthropic", "openai", "claude-desktop"];
@@ -225,7 +261,7 @@ function windowSeconds(value) {
   return secs > 0 ? secs : 0;
 }
 
-const REFRESH_MINUTES = [1, 5, 10];
+const REFRESH_MINUTES = [1, 5, 10, 15, 30, 60];
 
 function normalizeOs(value) {
   const os = String(value || "").toLowerCase();
@@ -292,6 +328,10 @@ function normalizeEntry(raw) {
     // How to sign this provider in, from VendorId::sign_in_hint on the host.
     // Deliberately not a table in this file; see signInHint.
     signIn: clean(raw.sign_in, 200),
+    // A `[[custom]]` provider can name the built-in it mirrors; its mark follows.
+    brand: clean(raw.brand, 64),
+    // Wall-clock ms of the payload on screen; 0 when the report has none.
+    fetchedAt: Date.parse(clean(raw.fetched_at, 64)) || 0,
     sections,
   };
 }
@@ -345,6 +385,11 @@ function normalizeSection(raw) {
       // Claude CLI "Sessions"); "" when it stands on its own.
       group: clean(raw.group, 80),
     };
+  }
+  // A text row that meters a cap (Cursor's On-Demand spend) carries `percent`
+  // and `severity`: draw it as a bar headed by its amount.
+  if (type === "text" && typeof raw.percent === "number" && Number.isFinite(raw.percent) && raw.severity) {
+    return normalizeSection({ ...raw, type: "metric", headline: "value", detail: "" });
   }
   if (type === "text") {
     return { type: "text", label: clean(raw.label, 160), value: clean(raw.value, 1000) };
@@ -861,6 +906,8 @@ export function projectCards(payload, nowMs, locale) {
     const explained = explainError(entry.error, entry, locale);
     cards.push({
       id: entry.id,
+      icon: providerIconId(entry.brand || entry.id),
+      fetchedAt: entry.fetchedAt,
       title: entry.displayName || entry.shortName || entry.id,
       plan: entry.plan,
       stale: entry.stale,
