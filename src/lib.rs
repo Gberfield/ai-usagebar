@@ -63,6 +63,7 @@ pub mod report;
 pub mod safe_storage;
 pub mod serde_helpers;
 pub mod supergrok;
+pub mod synthetic;
 pub mod theme;
 pub mod tooltip;
 pub mod tray;

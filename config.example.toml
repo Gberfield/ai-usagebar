@@ -11,7 +11,7 @@
 # Valid: anthropic | anthropic_api | openai | copilot | zai | openrouter | deepseek
 #        | kimi | kilo | novita | moonshot | grok | supergrok | grokbot | antigravity
 #        | cursor | minimax | kiro | nous | opencode-go | commandcode | ollama
-#        | orcarouter | modelstudio | lyceum | devin | cline | muse-code
+#        | orcarouter | modelstudio | lyceum | devin | cline | muse-code | synthetic
 # When unset, the TUI opens on the Overview (all vendors at once); set this to
 # open directly on a vendor's tab instead.
 # primary = "anthropic"
@@ -656,3 +656,13 @@ enabled = false
                                   # environment outranks the credential file.
 # api_key = "[REDACTED]"          # optional inline fallback; prefer the env var
 # auth_paths = ["~/.cline/data/settings/providers.json"]
+
+# Synthetic (https://synthetic.new) — subscription quotas from the documented
+# api.synthetic.new/v2/quotas endpoint: regenerating 5h-request and
+# weekly-credit allowances plus an hourly web-search window. Opt in only
+# after exporting the API key under this variable; the key itself is never
+# written to this example.
+[synthetic]
+enabled = false
+api_key_env = "SYNTHETIC_API_KEY"
+# api_key = "[REDACTED]"  # optional inline fallback; prefer the environment

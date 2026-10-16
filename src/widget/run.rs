@@ -177,6 +177,7 @@ async fn build_output(cli: &Cli) -> Result<WaybarOutput> {
         Vendor::ModelStudio => modelstudio_output(cli, &config).await,
         Vendor::Devin => devin_output(cli, &config).await,
         Vendor::MuseCode => muse_output(cli, &config).await,
+        Vendor::Synthetic => synthetic_output(cli, &config).await,
         Vendor::Cline => cline_output(cli, &config).await,
     }
 }
@@ -681,6 +682,30 @@ async fn lyceum_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
     let snapshot = outcome.snapshot.clone();
     let vendor_outcome: crate::vendor::VendorOutcome = outcome.into();
     Ok(lyceum::vendor::render(
+        &vendor_outcome,
+        &snapshot,
+        &theme_from_cli(cli),
+        &RenderOpts::from_cli(cli),
+        Utc::now(),
+    ))
+}
+
+async fn synthetic_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> {
+    let (api_key, cache) = api_key_target(cli, config, VendorId::Synthetic)?;
+    let client = http_client()?;
+    let outcome =
+        match crate::synthetic::fetch::fetch_snapshot(&client, &api_key, &cache, DEFAULT_TTL)
+            .await
+        {
+            Ok(outcome) => outcome,
+            Err(error) if error.is_transient() => {
+                return Ok(WaybarOutput::loading(cli.icon.as_deref()));
+            }
+            Err(error) => return Err(error),
+        };
+    let snapshot = outcome.snapshot.clone();
+    let vendor_outcome: crate::vendor::VendorOutcome = outcome.into();
+    Ok(crate::synthetic::vendor::render(
         &vendor_outcome,
         &snapshot,
         &theme_from_cli(cli),

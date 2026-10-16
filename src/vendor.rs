@@ -191,6 +191,7 @@ pub enum VendorId {
     Cline,
     #[serde(rename = "muse-code")]
     MuseCode,
+    Synthetic,
 }
 
 /// How a provider authenticates. Drives what a frontend offers a provider that
@@ -249,6 +250,7 @@ impl VendorId {
             VendorId::Lyceum => "lyceum",
             VendorId::Devin => "devin",
             VendorId::MuseCode => "muse-code",
+            VendorId::Synthetic => "synthetic",
             VendorId::Cline => "cline",
         }
     }
@@ -287,6 +289,7 @@ impl VendorId {
             VendorId::Lyceum => "Lyceum",
             VendorId::Devin => "Devin",
             VendorId::MuseCode => "Muse Code",
+            VendorId::Synthetic => "Synthetic",
         }
     }
 
@@ -326,6 +329,7 @@ impl VendorId {
             VendorId::Lyceum => VendorId::Lyceum.short_name(),
             VendorId::Devin => VendorId::Devin.short_name(),
             VendorId::MuseCode => VendorId::MuseCode.short_name(),
+            VendorId::Synthetic => VendorId::Synthetic.short_name(),
             VendorId::Cline => VendorId::Cline.short_name(),
         }
     }
@@ -364,6 +368,7 @@ impl VendorId {
             VendorId::Lyceum => "lyc",
             VendorId::Devin => "dvn",
             VendorId::MuseCode => "msc",
+            VendorId::Synthetic => "syn",
             VendorId::Cline => "cln",
         }
     }
@@ -406,6 +411,7 @@ impl VendorId {
             VendorId::Lyceum => "lyceum",
             VendorId::Devin => "devin",
             VendorId::MuseCode => "muse-code",
+            VendorId::Synthetic => "synthetic",
         }
     }
 
@@ -436,7 +442,8 @@ impl VendorId {
             | VendorId::OpenCodeGo
             | VendorId::Ollama
             | VendorId::OrcaRouter
-            | VendorId::Lyceum => AuthKind::ApiKey,
+            | VendorId::Lyceum
+            | VendorId::Synthetic => AuthKind::ApiKey,
             // No credential of their own: another local product's session is
             // the login. Antigravity has no credential file at all (the binary
             // probes whichever local server answers), Cursor and Kiro read the
@@ -477,6 +484,7 @@ impl VendorId {
             VendorId::Ollama => "OLLAMA_API_KEY",
             VendorId::OrcaRouter => "ORCAROUTER_API_KEY",
             VendorId::Lyceum => "LYCEUM_API_KEY",
+            VendorId::Synthetic => "SYNTHETIC_API_KEY",
             // OAuth-first, with an environment override for CI and headless
             // use. Neither name is configurable, so neither has an
             // `api_key_env` field in its config section.
@@ -547,7 +555,8 @@ impl VendorId {
             | VendorId::OpenCodeGo
             | VendorId::Ollama
             | VendorId::OrcaRouter
-            | VendorId::Lyceum => "Add an API key in Settings, then Refresh.",
+            | VendorId::Lyceum
+            | VendorId::Synthetic => "Add an API key in Settings, then Refresh.",
         }
     }
 
@@ -584,7 +593,8 @@ impl VendorId {
             | VendorId::OpenCodeGo
             | VendorId::Ollama
             | VendorId::OrcaRouter
-            | VendorId::Lyceum => "",
+            | VendorId::Lyceum
+            | VendorId::Synthetic => "",
         }
     }
 
@@ -626,6 +636,7 @@ impl VendorId {
             VendorId::Devin,
             VendorId::Cline,
             VendorId::MuseCode,
+            VendorId::Synthetic,
         ]
     }
 

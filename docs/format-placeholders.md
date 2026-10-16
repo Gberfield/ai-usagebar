@@ -12,6 +12,15 @@ Muse Code (`--vendor muse-code`, short name `msc`) supplies `{muse_plan}`,
 `{weekly_pct}`, `{weekly_reset}`, and `{weekly_elapsed}`.
 Percentages are used allowance; an omitted window expands to an empty string.
 
+Synthetic (`--vendor synthetic`, short name `syn`) supplies `{syn_plan}`,
+`{syn_session_pct}`, `{syn_session_reset}`, `{syn_weekly_pct}`,
+`{syn_weekly_reset}`, `{syn_search_pct}`, `{syn_search_reset}`,
+`{syn_credits_left}`, and `{syn_credits_max}`, plus the generic `{icon}`,
+`{plan}`, `{vendor_short}`, `{session_pct}`, `{session_reset}`,
+`{weekly_pct}`, and `{weekly_reset}`. The reset placeholders carry the
+lane's *next top-up* (the search lane's real reset); weekly credits keep the
+API's own formatting (`$46.45`).
+
 ## Cross-provider formats
 
 `{vendor_short}` identifies the active provider:
@@ -25,6 +34,7 @@ Percentages are used allowance; an omitted window expands to an empty string.
 | Kimi | `kmi` | Kilo | `klo` |
 | Novita | `nvt` | Moonshot | `msh` |
 | Lyceum | `lyc` | Grok | `grk` |
+| Synthetic | `syn` | | |
 | Anthropic API | `aac` | Antigravity | `agy` |
 | Cursor | `cur` | MiniMax | `mmx` |
 | Kiro CLI | `kir` | Nous Research | `nrs` |

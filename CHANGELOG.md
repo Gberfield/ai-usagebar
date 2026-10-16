@@ -1,5 +1,20 @@
 ## [Unreleased]
 
+### Added
+
+- **Synthetic** ([synthetic.new](https://synthetic.new)) as a new opt-in
+  vendor: subscription quotas from the documented
+  `api.synthetic.new/v2/quotas` endpoint over an API key
+  (`SYNTHETIC_API_KEY` env or `[synthetic] api_key`). The 5h-request and
+  weekly-credit lanes render with next-top-up countdowns (Synthetic's
+  allowances regenerate in slices rather than resetting on a timer, so no
+  pacing is applied), the weekly lane carries the API's own credit figures
+  (`$46.45 of $48.00 left`), and the hourly web-search window keeps normal
+  reset semantics. Lane parsing is schema-tolerant — a lane may report a
+  consumed- or remaining-percent or a used/limit pair under any observed
+  spelling — but a present-but-unreadable lane is a schema error, never a
+  fabricated 0%.
+
 ## [1.38.1] — 2026-10-16
 
 ### Fixed

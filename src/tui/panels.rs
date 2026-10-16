@@ -312,6 +312,22 @@ pub fn compact_cells(snapshot: &VendorSnapshot) -> (String, Vec<(String, PaceSev
             }
             (s.plan.clone(), cells)
         }
+        VendorSnapshot::Synthetic(s) => {
+            let mut cells = Vec::new();
+            if let Some(window) = &s.session {
+                cells.push(pct("5h", window.utilization_pct));
+            }
+            if let Some(window) = &s.weekly {
+                cells.push(pct("W", window.utilization_pct));
+            }
+            if let Some(window) = &s.search {
+                cells.push(pct("srch", window.utilization_pct));
+            }
+            if let Some(credits) = &s.credits {
+                cells.push((credits.remaining.clone(), PaceSeverity::Low));
+            }
+            (s.plan.clone(), cells)
+        }
         VendorSnapshot::Copilot(s) => (
             s.plan.clone(),
             s.quotas()
@@ -548,6 +564,15 @@ pub fn headline_pct(snapshot: &VendorSnapshot) -> Option<i32> {
         VendorSnapshot::MuseCode(s) => [s.session.as_ref(), s.weekly.as_ref()]
             .into_iter()
             .flatten()
+            .map(|w| w.utilization_pct)
+            .max(),
+        VendorSnapshot::Synthetic(s) => [
+            s.session.as_ref(),
+            s.weekly.as_ref(),
+            s.search.as_ref(),
+        ]
+            .into_iter()
+            .flatten()
             .map(|window| window.utilization_pct)
             .max(),
         VendorSnapshot::OpenCodeGo(s) => [
@@ -671,6 +696,7 @@ pub(crate) fn sections_with_metadata_for(
                 VendorSnapshot::ModelStudio(s) => modelstudio_sections(s, now, pace_tolerance),
                 VendorSnapshot::Devin(s) => devin_sections(s, now, pace_tolerance),
                 VendorSnapshot::MuseCode(s) => muse_sections(s, now, pace_tolerance),
+                VendorSnapshot::Synthetic(s) => synthetic_sections(s, now),
                 VendorSnapshot::Antigravity(s) => antigravity_sections(s, now),
                 VendorSnapshot::Cursor(s) => cursor_sections(s, now, pace_tolerance),
                 VendorSnapshot::Minimax(s) => minimax_sections(s, now, pace_tolerance),
@@ -2183,6 +2209,54 @@ fn muse_sections(
     }
     if let Some(window) = &s.weekly {
         push_window(&mut sections, "Weekly quota", window, now, tolerance, true);
+    }
+    sections
+}
+
+/// Synthetic's two subscription lanes regenerate rather than reset, so their
+/// rows say "Top-up" and carry no pacing footnote (there is no cliff to pace
+/// against — see `SyntheticSnapshot`); the hourly search lane is a real
+/// window and keeps the "Resets" wording.
+fn synthetic_sections(s: &crate::usage::SyntheticSnapshot, now: DateTime<Utc>) -> SectionBuilder {
+    let mut sections = SectionBuilder::new(vec![Section::Title {
+        left: s.plan.clone(),
+        right: None,
+    }]);
+    for (label, window, verb) in [
+        ("5h requests", s.session.as_ref(), "Top-up"),
+        ("Weekly credits", s.weekly.as_ref(), "Top-up"),
+        ("Web search (hourly)", s.search.as_ref(), "Resets"),
+    ] {
+        if let Some(w) = window {
+            let pct = w.utilization_pct.clamp(0, 100);
+            sections.push_metric(
+                Section::Metric {
+                    label: label.into(),
+                    pct: pct as u16,
+                    severity: severity_for(pct),
+                    value_label: format!("{pct}%"),
+                    footnote: String::new(),
+                },
+                w.resets_at,
+            );
+            sections.push(Section::Text {
+                label: verb.into(),
+                value: countdown::format(w.resets_at, now),
+            });
+        }
+    }
+    if let Some(c) = &s.credits {
+        sections.push(Section::Text {
+            label: "Credits left".into(),
+            value: format!("{} of {}", c.remaining, c.max),
+        });
+    }
+    if s.session.is_none() && s.weekly.is_none() && s.search.is_none() {
+        sections.push(Section::Spacer);
+        sections.push(Section::Text {
+            label: "".into(),
+            value: "  no usage windows reported".into(),
+        });
     }
     sections
 }

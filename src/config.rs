@@ -80,6 +80,7 @@ pub struct Config {
     /// User-defined providers, one `[[custom]]` table each.
     pub custom: Vec<CustomProviderConfig>,
     pub cline: ClineConfig,
+    pub synthetic: SyntheticConfig,
 }
 
 /// UI / dispatch preferences. Currently just `primary` — which vendor the
@@ -1300,6 +1301,27 @@ pub struct MuseConfig {
     pub credentials_path: Option<PathBuf>,
 }
 
+/// Synthetic (https://synthetic.new) — subscription quotas from the
+/// documented `/v2/quotas` endpoint over an API key.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct SyntheticConfig {
+    pub enabled: bool,
+    pub api_key_env: String,
+    pub api_key: Option<String>,
+}
+
+impl Default for SyntheticConfig {
+    fn default() -> Self {
+        // Opt-in like the other API-key vendors: needs an explicit key.
+        Self {
+            enabled: false,
+            api_key_env: "SYNTHETIC_API_KEY".to_string(),
+            api_key: None,
+        }
+    }
+}
+
 /// Devin CLI quota — reuses its existing credentials file read-only. The
 /// provider is opt-in and stores only a path override in ai-usagebar config.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
@@ -2402,6 +2424,7 @@ impl Config {
             self.ollama.api_key.as_deref(),
             self.orcarouter.api_key.as_deref(),
             self.lyceum.api_key.as_deref(),
+            self.synthetic.api_key.as_deref(),
             self.antigravity.oauth_client_secret.as_deref(),
             self.cline.api_key.as_deref(),
         ]
@@ -2508,6 +2531,7 @@ impl Config {
             VendorId::Lyceum => self.lyceum.enabled,
             VendorId::Devin => self.devin.enabled,
             VendorId::MuseCode => self.muse.enabled,
+            VendorId::Synthetic => self.synthetic.enabled,
         }
     }
 
@@ -2534,6 +2558,7 @@ impl Config {
             VendorId::Ollama => &self.ollama.api_key_env,
             VendorId::OrcaRouter => &self.orcarouter.api_key_env,
             VendorId::Lyceum => &self.lyceum.api_key_env,
+            VendorId::Synthetic => &self.synthetic.api_key_env,
             VendorId::Cline => &self.cline.api_key_env,
             // Fixed names: OAuth-first providers whose environment override is
             // not user-renameable, and the providers with no key at all.
@@ -2573,6 +2598,7 @@ impl Config {
             VendorId::Ollama => self.ollama.api_key.as_deref(),
             VendorId::OrcaRouter => self.orcarouter.api_key.as_deref(),
             VendorId::Lyceum => self.lyceum.api_key.as_deref(),
+            VendorId::Synthetic => self.synthetic.api_key.as_deref(),
             VendorId::Cline => self.cline.api_key.as_deref(),
             VendorId::Anthropic
             | VendorId::Openai

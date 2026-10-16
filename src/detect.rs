@@ -113,6 +113,7 @@ pub fn has_local_credentials(vendor: VendorId, config: &Config) -> bool {
         VendorId::Ollama => key_present(config, vendor),
         VendorId::OrcaRouter => key_present(config, vendor),
         VendorId::Lyceum => key_present(config, vendor),
+        VendorId::Synthetic => key_present(config, vendor),
         // File-exists only, like Grok Bot: parsing the JSON here would be
         // wasted work — the fetch reads the same file and reports honestly.
         VendorId::ModelStudio => crate::modelstudio::config_path(&config.modelstudio)
