@@ -989,8 +989,10 @@ function normalizeStars(raw) {
   for (const id of Object.keys(raw)) {
     const key = clean(id, 180).trim();
     if (!key) continue;
-    const keys = cleanIdList(raw[id]).slice(0, MAX_STARS_PER_PROVIDER);
-    if (keys.length) stars[key] = keys;
+    // An empty list is a provider the user took off the menu bar (see
+    // `toggleStar`); it must survive storage, or `seedStars` would star it again.
+    if (!Array.isArray(raw[id])) continue;
+    stars[key] = cleanIdList(raw[id]).slice(0, MAX_STARS_PER_PROVIDER);
   }
   return stars;
 }
@@ -1025,8 +1027,10 @@ export function toggleStar(stars, providerId, key) {
   const idx = list.indexOf(metric);
   if (idx >= 0) {
     list.splice(idx, 1);
-    if (list.length === 0) delete current[id];
-    else current[id] = list;
+    // Unstarring the last metric keeps an empty list rather than dropping the
+    // provider: "off the menu bar on purpose", which `seedStars` leaves alone,
+    // unlike a provider that never had an entry.
+    current[id] = list;
     return { stars: current, error: "" };
   }
   if (list.length >= MAX_STARS_PER_PROVIDER) {
@@ -1215,9 +1219,8 @@ function pruneStars(source, known) {
   const stars = {};
   if (!source || typeof source !== "object") return stars;
   for (const id of Object.keys(source)) {
-    if (!known.has(id)) continue;
-    const keys = Array.isArray(source[id]) ? source[id].slice(0, MAX_STARS_PER_PROVIDER) : [];
-    if (keys.length) stars[id] = keys;
+    if (!known.has(id) || !Array.isArray(source[id])) continue;
+    stars[id] = source[id].slice(0, MAX_STARS_PER_PROVIDER);
   }
   return stars;
 }
@@ -1333,11 +1336,22 @@ export function seedLayout(layout, entries) {
   return Object.assign({}, layout, { hidden, seeded: true });
 }
 
-/** Fill default stars once, from projected cards (metric keys). */
+/**
+ * Give every provider without a stars entry its default stars, from projected
+ * cards (metric keys). Filling the map only while it was empty — on first
+ * launch — left a provider switched on later, or one whose entry `syncLayout`
+ * pruned while its id was missing from a payload (Antigravity switches between
+ * `antigravity` and `antigravity@<account>`), off the menu bar for good
+ * (#437). An empty list is the user's own "off" and is left alone.
+ */
 export function seedStars(layout, cards) {
-  if (!layout || (layout.stars && Object.keys(layout.stars).length)) return layout;
-  const stars = defaultStars(cards);
-  if (!Object.keys(stars).length) return layout;
+  if (!layout) return layout;
+  const current = layout.stars && typeof layout.stars === "object" ? layout.stars : {};
+  const defaults = defaultStars(cards);
+  const missing = Object.keys(defaults).filter((id) => !Array.isArray(current[id]));
+  if (!missing.length) return layout;
+  const stars = Object.assign({}, current);
+  for (const id of missing) stars[id] = defaults[id];
   return Object.assign({}, layout, { stars });
 }
 
