@@ -108,6 +108,22 @@ fn the_modelstudio_monthly_placeholders_the_macos_menu_bar_reads_keep_their_name
         Some("18d 0h")
     );
 
+    let unknown_reset = ai_usagebar::usage::ModelStudioSnapshot {
+        session: None,
+        weekly: None,
+        monthly: Some(UsageWindow {
+            utilization_pct: 35,
+            resets_at: None,
+            window_duration: chrono::Duration::days(30),
+        }),
+    };
+    let v = ai_usagebar::modelstudio::vendor::build_placeholders(&unknown_reset, &opts, now);
+    assert_eq!(v.get("mst_monthly_pct").map(String::as_str), Some("35"));
+    assert_eq!(
+        v.get("mst_monthly_reset").map(String::as_str),
+        Some("—")
+    );
+
     let without_monthly = ai_usagebar::usage::ModelStudioSnapshot {
         session: None,
         weekly: None,

@@ -605,7 +605,7 @@ func parse(_ text: String, vendor: String) -> Snapshot? {
         }
     } else if vendor == "modelstudio" {
         if (quotaWindow(1, 2, 13) != nil || quotaWindow(3, 4, 14) != nil),
-           isReported(t(64)), let w = quotaWindow(63, 64, -1) {
+           let w = quotaWindow(63, 64, -1) {
             sonnet = w
             sonnetLabel = "Monthly"
         }
@@ -756,7 +756,7 @@ func parse(_ text: String, vendor: String) -> Snapshot? {
         weeklyLabel = "Weekly"
     case "modelstudio":
         if sessionWindow == nil, quotaWindow(3, 4, 14) == nil,
-           isReported(t(64)), let monthly = quotaWindow(63, 64, -1) {
+           let monthly = quotaWindow(63, 64, -1) {
             sessionWindow = monthly
             weeklyWindow = nil
             sessionTag = "mo"

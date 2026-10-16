@@ -671,6 +671,16 @@ func testParserBalances() {
     assertNil(mstMonthlyOnly?.weekly, "modelstudio monthly-only has no weekly window")
     assertNil(mstMonthlyOnly?.sonnet, "modelstudio monthly-only does not duplicate monthly into sonnet")
 
+    // A percentage is usable even when the API omits the reset timestamp.
+    let mstMonthlyUnknownReset = snapshot(FORMAT, vendor: "modelstudio",
+                                          fields: fields(through: 64, set: [
+                                             0: "Token Plan", 16: "mst",
+                                             63: "35", 64: "—"
+                                          ]))
+    assertEqual(mstMonthlyUnknownReset?.session?.pct, 35, "modelstudio monthly parses without a reset")
+    assertEqual(mstMonthlyUnknownReset?.session?.reset, "—", "modelstudio preserves an unknown reset")
+    assertEqual(mstMonthlyUnknownReset?.sessionLabel, "Monthly", "modelstudio unknown-reset row stays monthly")
+
     // Old binary fallback: slots 63-64 absent or empty.
     let mstOldBinary = snapshot(FORMAT, vendor: "modelstudio",
                                 fields: fields(through: 16, set: [
