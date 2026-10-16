@@ -116,3 +116,110 @@ pub fn render(
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::usage::UsageWindow;
+
+    fn now() -> DateTime<Utc> {
+        DateTime::from_timestamp(1_791_014_400, 0).unwrap()
+    }
+
+    fn window(pct: i32, duration_hours: i64) -> UsageWindow {
+        UsageWindow {
+            utilization_pct: pct,
+            resets_at: Some(now() + chrono::Duration::hours(2)),
+            window_duration: chrono::Duration::hours(duration_hours),
+        }
+    }
+
+    fn opts() -> RenderOpts {
+        RenderOpts {
+            format: None,
+            tooltip_format: None,
+            icon: None,
+            pace_tolerance: 5,
+            format_pace_color: false,
+            tooltip_pace_pts: false,
+        }
+    }
+
+    #[test]
+    fn placeholders_export_cross_vendor_and_muse_elapsed_and_pace() {
+        let snap = MuseSnapshot {
+            plan: "Pro".into(),
+            session: Some(window(40, 5)),
+            weekly: Some(window(70, 168)),
+        };
+        let values = build_placeholders(&snap, &opts(), now());
+
+        assert_eq!(values.get("plan").map(String::as_str), Some("Pro"));
+        assert_eq!(values.get("muse_plan").map(String::as_str), Some("Pro"));
+        assert_eq!(values.get("vendor_short").map(String::as_str), Some("msc"));
+        assert_eq!(values.get("icon").map(String::as_str), Some("msc"));
+
+        assert_eq!(values.get("session_pct").map(String::as_str), Some("40"));
+        assert_eq!(values.get("muse_session_pct").map(String::as_str), Some("40"));
+        assert_eq!(values.get("session_elapsed"), values.get("muse_session_elapsed"));
+        assert!(!values["session_elapsed"].is_empty());
+        assert_eq!(values.get("session_reset"), values.get("muse_session_reset"));
+        assert!(!values["session_reset"].is_empty());
+
+        assert_eq!(values.get("weekly_pct").map(String::as_str), Some("70"));
+        assert_eq!(values.get("muse_weekly_pct").map(String::as_str), Some("70"));
+        assert_eq!(values.get("weekly_elapsed"), values.get("muse_weekly_elapsed"));
+        assert!(!values["weekly_elapsed"].is_empty());
+        assert_eq!(values.get("weekly_reset"), values.get("muse_weekly_reset"));
+        assert!(!values["weekly_reset"].is_empty());
+
+        assert!(values.contains_key("muse_session_pace"));
+        assert!(values.contains_key("muse_session_pace_indicator"));
+        assert!(values.contains_key("muse_weekly_pace"));
+        assert!(values.contains_key("muse_weekly_pace_indicator"));
+    }
+
+    #[test]
+    fn omitted_windows_expand_to_empty_strings() {
+        let snap = MuseSnapshot {
+            plan: "Pro".into(),
+            session: None,
+            weekly: None,
+        };
+        let values = build_placeholders(&snap, &opts(), now());
+
+        assert_eq!(values["session_pct"], "");
+        assert_eq!(values["session_reset"], "");
+        assert_eq!(values["session_elapsed"], "");
+        assert_eq!(values["weekly_pct"], "");
+        assert_eq!(values["weekly_reset"], "");
+        assert_eq!(values["weekly_elapsed"], "");
+        assert_eq!(values["muse_session_pct"], "");
+        assert_eq!(values["muse_session_reset"], "");
+        assert_eq!(values["muse_session_elapsed"], "");
+        assert_eq!(values["muse_session_pace"], "");
+        assert_eq!(values["muse_session_pace_indicator"], "");
+        assert_eq!(values["muse_weekly_pct"], "");
+        assert_eq!(values["muse_weekly_reset"], "");
+        assert_eq!(values["muse_weekly_elapsed"], "");
+        assert_eq!(values["muse_weekly_pace"], "");
+        assert_eq!(values["muse_weekly_pace_indicator"], "");
+    }
+
+    #[test]
+    fn severity_selects_worst_reported_window() {
+        let snap = MuseSnapshot {
+            plan: "Pro".into(),
+            session: Some(window(30, 5)),
+            weekly: Some(window(85, 168)),
+        };
+        assert_eq!(severity(&snap), severity_for(85));
+
+        let snap_no_windows = MuseSnapshot {
+            plan: "Pro".into(),
+            session: None,
+            weekly: None,
+        };
+        assert_eq!(severity(&snap_no_windows), severity_for(0));
+    }
+}
+
