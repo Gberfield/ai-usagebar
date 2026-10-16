@@ -55,7 +55,7 @@ use super::payload::{
 };
 use super::strip::{
     BARS_PIXEL_SIDE, BARS_POINT_SIDE, HiddenRows, Stars, UsageReading, bar_fill, bars_layout,
-    bars_rgba, content_from_payload, parse_hidden_rows, parse_strip_ipc,
+    bars_rgba, content_from_payload, parse_hidden_rows, parse_strip_ipc, tooltip,
 };
 use super::style::PopoverStyle;
 use super::updates::Updates;
@@ -612,8 +612,8 @@ fn apply_facts(state: &mut TrayState) {
 
 fn apply_strip_icon(state: &mut TrayState) {
     let content = content_from_payload(&state.payload, &state.stars, &state.strip_order);
-    let tooltip = menu_bar::tooltip(&content, state.usage_reading);
-    let _ = state.tray.set_tooltip(Some(tooltip.as_str()));
+    let tooltip_text = tooltip(&content, state.usage_reading);
+    let _ = state.tray.set_tooltip(Some(tooltip_text.as_str()));
     state.tray.set_title(Some(""));
     let segments = menu_bar::logo_segments(
         &content,
