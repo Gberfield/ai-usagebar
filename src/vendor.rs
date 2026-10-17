@@ -782,6 +782,28 @@ mod tests {
     }
 
     #[test]
+    fn key_only_vendors_prompt_for_settings_api_key() {
+        for vendor in VendorId::all() {
+            if vendor.auth_kind() == AuthKind::ApiKey && vendor.login_command().is_empty() {
+                assert_eq!(
+                    vendor.sign_in_hint(),
+                    "Add an API key in Settings, then Refresh.",
+                    "{}",
+                    vendor.slug()
+                );
+            }
+        }
+        assert_eq!(
+            VendorId::Supergrok.sign_in_hint(),
+            "Sign in with `grok`, then Refresh."
+        );
+        assert_eq!(
+            VendorId::Grok.sign_in_hint(),
+            "Add an API key in Settings, then Refresh."
+        );
+    }
+
+    #[test]
     fn vendor_secret_env_vars_cover_config_defaults() {
         let configured_defaults = [
             "ZAI_API_KEY",
