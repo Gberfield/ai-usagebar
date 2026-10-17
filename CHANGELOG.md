@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Grok sign-in hint points to Settings API key.** `VendorId::Grok` requires an
+  API key (`[grok]` or `XAI_MANAGEMENT_KEY`), but its sign-in hint erroneously
+  suggested running `grok`, which belongs to SuperGrok. The hint now instructs
+  the user to add an API key in Settings, matching its tray action and provider
+  auth kind.
+
 ## [1.39.0] — 2026-10-16
 
 ### Added
