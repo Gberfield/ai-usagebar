@@ -532,7 +532,7 @@ impl VendorId {
             }
             VendorId::Cursor => "Sign in to the Cursor app, then Refresh.",
             VendorId::Antigravity => "Open Antigravity or run `agy`, then Refresh.",
-            VendorId::Grok | VendorId::Supergrok => "Sign in with `grok`, then Refresh.",
+            VendorId::Supergrok => "Sign in with `grok`, then Refresh.",
             VendorId::Grokbot => "Install and sign in to the Grok Bot desktop app, then Refresh.",
             // Local login through the official CLI's own console session.
             VendorId::ModelStudio => {
@@ -553,6 +553,7 @@ impl VendorId {
             | VendorId::Novita
             | VendorId::Synthetic
             | VendorId::Moonshot
+            | VendorId::Grok
             | VendorId::Minimax
             | VendorId::OpenCodeGo
             | VendorId::Ollama
