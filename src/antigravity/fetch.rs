@@ -4100,6 +4100,7 @@ mod tests {
 
     /// What `agy -p "/quota" --output-format json` prints, cut down to the
     /// fields read, on the fixture's clock.
+    #[cfg(unix)]
     const AGY_QUOTA: &str = r#"{"status":"SUCCESS","num_turns":0,"command":{"name":"usage","data":{"groups":[
 {"name":"Gemini Models","buckets":[
  {"id":"gemini-weekly","name":"Weekly Limit Remaining","window":"weekly","remaining_fraction":0.63,"reset_time":"2026-07-28T01:11:19Z"},
