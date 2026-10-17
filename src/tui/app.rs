@@ -876,6 +876,7 @@ async fn build_outcome(client: &Client, config: &Config, tab: &TabId) -> Result<
                 &cache,
                 DEFAULT_TTL,
                 oauth.as_ref(),
+                config.antigravity.agy_binary.as_deref(),
                 config.antigravity.ide_language_server,
             )
             .await?;

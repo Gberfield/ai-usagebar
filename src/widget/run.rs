@@ -427,6 +427,7 @@ async fn antigravity_output(cli: &Cli, config: &Config) -> Result<WaybarOutput> 
         &cache,
         DEFAULT_TTL,
         oauth.as_ref(),
+        config.antigravity.agy_binary.as_deref(),
         config.antigravity.ide_language_server,
     )
     .await

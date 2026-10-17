@@ -1839,6 +1839,9 @@ fn default_grok_binary() -> PathBuf {
 #[serde(default)]
 pub struct AntigravityConfig {
     pub enabled: bool,
+    /// Exact `agy` executable to run for quota and saved-session renewal.
+    /// Unset preserves discovery on `PATH` and in `~/.local/bin`.
+    pub agy_binary: Option<PathBuf>,
     /// OAuth client id used to refresh the keyring session.
     pub oauth_client_id: Option<String>,
     /// OAuth client secret paired with `oauth_client_id`. An
@@ -1856,6 +1859,7 @@ impl Default for AntigravityConfig {
     fn default() -> Self {
         Self {
             enabled: false,
+            agy_binary: None,
             oauth_client_id: None,
             oauth_client_secret: None,
             ide_language_server: true,
@@ -2378,6 +2382,7 @@ impl Config {
         expand_tilde_opt(&mut self.anthropic.desktop_profiles_dir);
         expand_tilde_opt(&mut self.anthropic.desktop_prepare_binary);
         expand_tilde_opt(&mut self.openai.codex_auth_path);
+        expand_tilde_opt(&mut self.antigravity.agy_binary);
         expand_tilde_opt(&mut self.cursor.db_path);
         expand_tilde_opt(&mut self.cursor.agent_auth_path);
         expand_tilde_opt(&mut self.kiro.db_path);
@@ -2840,6 +2845,16 @@ impl Config {
         if self.supergrok.grok_binary.as_os_str().is_empty() {
             return Err(AppError::Other(
                 "[supergrok] grok_binary must not be empty".into(),
+            ));
+        }
+        if self
+            .antigravity
+            .agy_binary
+            .as_ref()
+            .is_some_and(|path| path.as_os_str().is_empty())
+        {
+            return Err(AppError::Other(
+                "[antigravity] agy_binary must not be empty".into(),
             ));
         }
         let mut labels = HashSet::new();
@@ -3332,6 +3347,35 @@ ide_language_server = false
         )
         .unwrap();
         assert!(!opted_out.antigravity.ide_language_server);
+    }
+
+    #[test]
+    fn antigravity_agy_binary_is_optional_and_tilde_expanded() {
+        assert!(Config::default().antigravity.agy_binary.is_none());
+        let file = write_toml(
+            r#"
+            [antigravity]
+            enabled = true
+            agy_binary = "~/bin/agy"
+            "#,
+        );
+        let config = Config::load_from(file.path()).unwrap();
+        assert_eq!(
+            config.antigravity.agy_binary,
+            Some(crate::cache::home_dir().unwrap().join("bin/agy"))
+        );
+    }
+
+    #[test]
+    fn antigravity_agy_binary_must_not_be_empty() {
+        let file = write_toml(
+            r#"
+            [antigravity]
+            agy_binary = ""
+            "#,
+        );
+        let error = Config::load_from(file.path()).unwrap_err().to_string();
+        assert!(error.contains("[antigravity] agy_binary must not be empty"));
     }
 
     #[cfg(unix)]
