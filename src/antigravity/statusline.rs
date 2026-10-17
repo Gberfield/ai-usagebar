@@ -570,6 +570,8 @@ fn read_active_accounts(root: &Path, inspector: &impl ProcessInspector) -> Vec<A
         return Vec::new();
     };
     let mut snapshots = Vec::new();
+    // Snapshots whose `agy` has exited, with the file each was read from.
+    let mut exited = Vec::new();
     for entry in entries.flatten() {
         let path = entry.path();
         let Some(pid) = path
@@ -602,19 +604,56 @@ fn read_active_accounts(root: &Path, inspector: &impl ProcessInspector) -> Vec<A
                 .is_some_and(|(local, domain)| {
                     local.ends_with("***") && !domain.is_empty() && !domain.contains('@')
                 });
-        if !process_is_agy || !snapshot_is_safe {
+        if !snapshot_is_safe {
             let _ = std::fs::remove_file(&path);
             continue;
         }
-        snapshots.push(snapshot);
+        if process_is_agy {
+            snapshots.push(snapshot);
+        } else {
+            exited.push((path, snapshot));
+        }
     }
     if snapshots.is_empty() {
+        for (path, _) in exited {
+            let _ = std::fs::remove_file(path);
+        }
         return Vec::new();
     }
     let Ok(identity_key) = load_or_create_identity_key(root) else {
         return Vec::new();
     };
-    aggregate_active_with_key(snapshots, inspector, &identity_key)
+    let mut latest = latest_by_account(snapshots, inspector);
+    keep_later_exited_readings(&mut latest, exited);
+    accounts_with_key(latest, &identity_key)
+}
+
+/// The session that did the work is often the first one closed, and its last
+/// reading is then the latest the account has: the sessions still open keep
+/// sending what they fetched before it (#447). So an exited session's snapshot
+/// stands in for its account while its figures are strictly the later reading
+/// — never on arrival order, since nothing will arrive from it again — and only
+/// while another session of that account is still running. Every other exited
+/// snapshot is deleted, as before.
+#[cfg(any(target_os = "macos", test))]
+fn keep_later_exited_readings(
+    latest: &mut std::collections::BTreeMap<String, SessionSnapshot>,
+    exited: Vec<(PathBuf, SessionSnapshot)>,
+) {
+    let mut standing_in = std::collections::BTreeMap::<String, PathBuf>::new();
+    for (path, snapshot) in exited {
+        let later = latest.get(&snapshot.account_hash).is_some_and(|current| {
+            reading_order(&snapshot, current) == Some(std::cmp::Ordering::Greater)
+        });
+        if !later {
+            let _ = std::fs::remove_file(&path);
+            continue;
+        }
+        if let Some(replaced) = standing_in.insert(snapshot.account_hash.clone(), path) {
+            let _ = std::fs::remove_file(replaced);
+        }
+        latest.insert(snapshot.account_hash.clone(), snapshot);
+    }
 }
 
 #[cfg(any(target_os = "macos", test))]
@@ -716,12 +755,12 @@ fn supersedes(candidate: &SessionSnapshot, current: &SessionSnapshot) -> bool {
     }
 }
 
+/// Per account, the live snapshot that holds the latest reading of its quota.
 #[cfg(any(target_os = "macos", test))]
-fn aggregate_active_with_key(
+fn latest_by_account(
     snapshots: Vec<SessionSnapshot>,
     inspector: &impl ProcessInspector,
-    identity_key: &[u8; 32],
-) -> Vec<AccountSession> {
+) -> std::collections::BTreeMap<String, SessionSnapshot> {
     let mut newest_by_account = std::collections::BTreeMap::<String, SessionSnapshot>::new();
     for snapshot in snapshots {
         if !inspector
@@ -738,7 +777,14 @@ fn aggregate_active_with_key(
             }
         }
     }
+    newest_by_account
+}
 
+#[cfg(any(target_os = "macos", test))]
+fn accounts_with_key(
+    mut newest_by_account: std::collections::BTreeMap<String, SessionSnapshot>,
+    identity_key: &[u8; 32],
+) -> Vec<AccountSession> {
     let hashes = newest_by_account.keys().cloned().collect::<Vec<_>>();
     let identifiers = hashes
         .iter()
@@ -805,7 +851,7 @@ fn aggregate_active(
     snapshots: Vec<SessionSnapshot>,
     inspector: &impl ProcessInspector,
 ) -> Vec<AccountSession> {
-    aggregate_active_with_key(snapshots, inspector, &[0x42; 32])
+    accounts_with_key(latest_by_account(snapshots, inspector), &[0x42; 32])
 }
 
 #[cfg(test)]
@@ -1430,6 +1476,66 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The busy session is closed and the one left open is idle: the account
+    /// keeps the closed session's later reading instead of falling back to the
+    /// figures the idle one fetched at startup.
+    #[test]
+    fn a_closed_session_keeps_its_later_reading_while_its_account_runs() {
+        let root = TempDir::new().unwrap();
+        let closed = reading(
+            42,
+            agy_quota(0.55, now() - Duration::minutes(3)),
+            now() - Duration::minutes(1),
+        );
+        let open = reading(43, agy_quota(0.64, now() - Duration::minutes(30)), now());
+        write_snapshot_atomic(root.path(), &closed).unwrap();
+        write_snapshot_atomic(root.path(), &open).unwrap();
+        let inspector = FakeInspector::default().process(43, 1, "agy");
+        for _ in 0..2 {
+            let accounts = read_active_accounts(root.path(), &inspector);
+            let [account] = accounts.as_slice() else {
+                panic!("{accounts:?}");
+            };
+            assert_eq!(
+                account.snapshot.session.as_ref().unwrap().utilization_pct,
+                45
+            );
+        }
+        assert!(snapshot_path(root.path(), 42).is_file());
+    }
+
+    /// A closed session's reading goes as soon as a running session has read
+    /// the quota since, and with the last running session of its account.
+    #[test]
+    fn a_closed_sessions_reading_goes_once_superseded_or_alone() {
+        let root = TempDir::new().unwrap();
+        let closed = reading(
+            42,
+            agy_quota(0.55, now() - Duration::minutes(3)),
+            now() - Duration::minutes(1),
+        );
+        let fresher = reading(43, agy_quota(0.5, now() - Duration::minutes(1)), now());
+        write_snapshot_atomic(root.path(), &closed).unwrap();
+        write_snapshot_atomic(root.path(), &fresher).unwrap();
+        let inspector = FakeInspector::default().process(43, 1, "agy");
+        let accounts = read_active_accounts(root.path(), &inspector);
+        assert_eq!(
+            accounts[0]
+                .snapshot
+                .session
+                .as_ref()
+                .unwrap()
+                .utilization_pct,
+            50
+        );
+        assert!(!snapshot_path(root.path(), 42).exists());
+
+        write_snapshot_atomic(root.path(), &closed).unwrap();
+        assert!(read_active_accounts(root.path(), &FakeInspector::default()).is_empty());
+        assert!(!snapshot_path(root.path(), 42).exists());
+        assert!(!snapshot_path(root.path(), 43).exists());
     }
 
     #[test]
