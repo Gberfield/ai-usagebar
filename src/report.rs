@@ -432,7 +432,8 @@ fn entry_from_state(tab: &TabId, state: &TabState, now: chrono::DateTime<Utc>) -
                     reset_at: projected.reset_at,
                     window_secs: projected
                         .window
-                        .map(|window| window.num_seconds().max(0) as u64),
+                        .filter(|window| window.num_seconds() > 0)
+                        .map(|window| window.num_seconds() as u64),
                     group: projected.group.map(str::to_string),
                 });
             }
