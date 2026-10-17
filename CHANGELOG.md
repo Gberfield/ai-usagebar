@@ -39,6 +39,12 @@
   the user to add an API key in Settings, matching its tray action and provider
   auth kind.
 
+- **Omit non-positive window durations from report `window_secs`.** Unstated
+  renewal cycles or zero-length windows (such as Synthetic's subscription quota)
+  were emitting `"window_secs": 0` in reports instead of omitting the field.
+  Metrics with unstated durations now omit `window_secs`, matching Kiro and the
+  documented schema.
+
 ## [1.39.1] — 2026-10-17
 
 ### Fixed
