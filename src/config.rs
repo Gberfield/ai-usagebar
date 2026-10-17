@@ -2284,8 +2284,16 @@ pub fn resolve_api_key(
 /// an absent API key is a legitimate state rather than an error — Kimi accepts
 /// a Kimi Code CLI subscription login instead.
 pub fn optional_api_key(env_var_name: &str, inline: Option<&str>) -> Option<String> {
+    optional_api_key_with(env_var_name, inline, |name| std::env::var(name).ok())
+}
+
+fn optional_api_key_with(
+    env_var_name: &str,
+    inline: Option<&str>,
+    environment: impl FnOnce(&str) -> Option<String>,
+) -> Option<String> {
     if is_valid_env_var_name(env_var_name)
-        && let Ok(v) = std::env::var(env_var_name)
+        && let Some(v) = environment(env_var_name)
         && !v.is_empty()
     {
         return Some(v);
@@ -3807,12 +3815,26 @@ api_key = "synthetic-account"
         );
         assert_eq!(optional_api_key("9INVALID", None), None);
         assert_eq!(optional_api_key("9INVALID", Some("")), None);
-        // An unusable `api_key_env` still lets an inline key through, exactly
-        // as `resolve_api_key` does.
+    }
+
+    #[test]
+    fn optional_api_key_prefers_env_and_falls_through_to_inline() {
+        let from_env = |name: &str| (name == "TEST_API_KEY").then(|| "from-env".to_string());
         assert_eq!(
-            optional_api_key("9INVALID", Some("inline")),
-            Some("inline".to_string())
+            optional_api_key_with("TEST_API_KEY", Some("from-config"), from_env),
+            Some("from-env".to_string())
         );
+        assert_eq!(
+            optional_api_key_with("TEST_API_KEY", Some("from-config"), |_| None),
+            Some("from-config".to_string())
+        );
+        assert_eq!(
+            optional_api_key_with("TEST_API_KEY", Some("from-config"), |_| {
+                Some(String::new())
+            }),
+            Some("from-config".to_string())
+        );
+        assert_eq!(optional_api_key_with("TEST_API_KEY", None, |_| None), None);
     }
 
     #[test]
