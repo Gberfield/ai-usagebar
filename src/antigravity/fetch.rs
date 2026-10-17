@@ -4000,19 +4000,16 @@ mod tests {
         file: &std::path::Path,
         blob: &str,
     ) -> std::path::PathBuf {
-        use std::os::unix::fs::PermissionsExt;
         let path = dir.join("agy");
-        std::fs::write(
+        super::super::agy::test_support::write_script(
             &path,
-            format!(
-                "#!/bin/sh\n[ \"$1\" = -p ] && exit 1\necho \"$@\" >> '{}'\nprintf '%s' '{}' > '{}'\n",
+            &format!(
+                "[ \"$1\" = -p ] && exit 1\necho \"$@\" >> '{}'\nprintf '%s' '{}' > '{}'",
                 runs.display(),
                 blob,
                 file.display()
             ),
-        )
-        .unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        );
         path
     }
 
@@ -4115,17 +4112,14 @@ mod tests {
     /// with [`AGY_QUOTA`]; any other command fails.
     #[cfg(unix)]
     fn agy_reading(dir: &std::path::Path, runs: &std::path::Path) -> std::path::PathBuf {
-        use std::os::unix::fs::PermissionsExt;
         let path = dir.join("agy");
-        std::fs::write(
+        super::super::agy::test_support::write_script(
             &path,
-            format!(
-                "#!/bin/sh\necho \"$@\" >> '{}'\n[ \"$1\" = -p ] || exit 1\ncat <<'EOF'\n{AGY_QUOTA}\nEOF\n",
+            &format!(
+                "echo \"$@\" >> '{}'\n[ \"$1\" = -p ] || exit 1\ncat <<'EOF'\n{AGY_QUOTA}\nEOF",
                 runs.display()
             ),
-        )
-        .unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        );
         path
     }
 
@@ -4252,15 +4246,10 @@ mod tests {
         let (td, cache) = fixture();
         let runs = td.path().join("runs");
         let agy = td.path().join("agy");
-        std::fs::write(
+        super::super::agy::test_support::write_script(
             &agy,
-            format!("#!/bin/sh\necho \"$@\" >> '{}'\nexit 1\n", runs.display()),
-        )
-        .unwrap();
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&agy, std::fs::Permissions::from_mode(0o755)).unwrap();
-        }
+            &format!("echo \"$@\" >> '{}'\nexit 1", runs.display()),
+        );
         let remote = || RemoteOverride {
             agy: super::super::agy::AgyCommand::At(agy.clone()),
             ..remote(&blob, &eps)
