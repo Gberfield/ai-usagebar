@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [1.40.1] — 2026-10-17
+
 ### Fixed
 
 - **With several `agy` sessions open, the macOS Antigravity entry shows the
@@ -4602,7 +4604,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.0...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.1...HEAD
+[1.40.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.0...v1.40.1
 [1.40.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.1...v1.40.0
 [1.39.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.0...v1.39.1
 [1.39.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.1...v1.39.0
