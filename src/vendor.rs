@@ -532,7 +532,7 @@ impl VendorId {
             }
             VendorId::Cursor => "Sign in to the Cursor app, then Refresh.",
             VendorId::Antigravity => "Open Antigravity or run `agy`, then Refresh.",
-            VendorId::Grok | VendorId::Supergrok => "Sign in with `grok`, then Refresh.",
+            VendorId::Supergrok => "Sign in with `grok`, then Refresh.",
             VendorId::Grokbot => "Install and sign in to the Grok Bot desktop app, then Refresh.",
             // Local login through the official CLI's own console session.
             VendorId::ModelStudio => {
@@ -553,6 +553,7 @@ impl VendorId {
             | VendorId::Novita
             | VendorId::Synthetic
             | VendorId::Moonshot
+            | VendorId::Grok
             | VendorId::Minimax
             | VendorId::OpenCodeGo
             | VendorId::Ollama
@@ -778,6 +779,28 @@ mod tests {
         assert_eq!(VendorId::Cline.display_name(), "Cline");
         assert_eq!(VendorId::Cline.short_name(), "cln");
         assert_eq!(VendorId::Cline.auth_kind(), AuthKind::Oauth);
+    }
+
+    #[test]
+    fn key_only_vendors_prompt_for_settings_api_key() {
+        for vendor in VendorId::all() {
+            if vendor.auth_kind() == AuthKind::ApiKey && vendor.login_command().is_empty() {
+                assert_eq!(
+                    vendor.sign_in_hint(),
+                    "Add an API key in Settings, then Refresh.",
+                    "{}",
+                    vendor.slug()
+                );
+            }
+        }
+        assert_eq!(
+            VendorId::Supergrok.sign_in_hint(),
+            "Sign in with `grok`, then Refresh."
+        );
+        assert_eq!(
+            VendorId::Grok.sign_in_hint(),
+            "Add an API key in Settings, then Refresh."
+        );
     }
 
     #[test]
