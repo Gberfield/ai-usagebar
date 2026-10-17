@@ -952,7 +952,9 @@ function toggleCursorPool(flags, id) {
  */
 function antigravityPoolOf(section) {
   if (!section || section.type !== "metric") return ""
-  if (section.label === "Gemini") return "gemini"
+  // Per-model Gemini pools (currently "Gemini 4 Argon") belong to the same
+  // visibility control and headline as the shared Gemini windows.
+  if (section.label === "Gemini" || section.label.indexOf("Gemini ") === 0) return "gemini"
   if (section.label === "Claude & GPT OSS") return "third_party"
   return ""
 }

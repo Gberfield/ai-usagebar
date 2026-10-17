@@ -825,13 +825,24 @@ async fn antigravity_remote_live() {
             assert_pct(label, window.utilization_pct);
         }
     }
+    for pool in &snap.model_pools {
+        assert!(
+            !pool.name.trim().is_empty(),
+            "antigravity model-pool label empty"
+        );
+        assert_pct("antigravity.model_pool", pool.window.utilization_pct);
+    }
     println!(
-        "✅ antigravity (app closed) — plan={}, session={:?}, weekly={:?}, third-party session={:?}, third-party weekly={:?}",
+        "✅ antigravity (app closed) — plan={}, session={:?}, weekly={:?}, third-party session={:?}, third-party weekly={:?}, model pools={:?}",
         snap.plan,
         snap.session.as_ref().map(|w| w.utilization_pct),
         snap.weekly.as_ref().map(|w| w.utilization_pct),
         snap.third_party_session.as_ref().map(|w| w.utilization_pct),
         snap.third_party_weekly.as_ref().map(|w| w.utilization_pct),
+        snap.model_pools
+            .iter()
+            .map(|pool| (&pool.name, pool.window.utilization_pct))
+            .collect::<Vec<_>>(),
     );
 }
 

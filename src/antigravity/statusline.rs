@@ -38,6 +38,10 @@ pub struct SessionSnapshot {
     pub weekly: Option<SnapshotWindow>,
     pub third_party_session: Option<SnapshotWindow>,
     pub third_party_weekly: Option<SnapshotWindow>,
+    /// Quota windows whose bucket id identifies the known Argon model pool.
+    /// Older snapshots predate this field and remain readable.
+    #[serde(default)]
+    pub argon: Vec<SnapshotWindow>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
@@ -397,6 +401,7 @@ fn snapshot_from_payload(
         weekly: None,
         third_party_session: None,
         third_party_weekly: None,
+        argon: Vec::new(),
         updated_at: now,
     };
     // The canonical ids claim their slot first. `quota` iterates in key order,
@@ -411,6 +416,13 @@ fn snapshot_from_payload(
     let mut inferred: [Vec<SnapshotWindow>; 4] = Default::default();
     for (bucket, data) in quota {
         if !renamed && !CANONICAL_IDS.contains(&bucket.as_str()) {
+            let weekly = bucket.ends_with("-weekly");
+            if bucket.to_ascii_lowercase().contains("argon")
+                && (weekly || bucket.ends_with("-session") || bucket.ends_with("-5h"))
+                && let Some(window) = quota_window(data, weekly, now)
+            {
+                snapshot.argon.push(window);
+            }
             continue;
         }
         let (third_party, weekly) = match bucket.as_str() {
@@ -452,7 +464,8 @@ fn snapshot_from_payload(
     (snapshot.session.is_some()
         || snapshot.weekly.is_some()
         || snapshot.third_party_session.is_some()
-        || snapshot.third_party_weekly.is_some())
+        || snapshot.third_party_weekly.is_some()
+        || !snapshot.argon.is_empty())
     .then_some(snapshot)
 }
 
@@ -696,9 +709,17 @@ fn aggregate_active_with_key(
                 weekly: session.weekly.map(Into::into),
                 third_party_session: session.third_party_session.map(Into::into),
                 third_party_weekly: session.third_party_weekly.map(Into::into),
-                // The status line names buckets by id alone, with no group
-                // display name to label a per-model pool by.
-                model_pools: Vec::new(),
+                // The flattened status-line payload has no group display
+                // names. Argon is the one model pool whose stable bucket id
+                // lets us label it without guessing.
+                model_pools: session
+                    .argon
+                    .into_iter()
+                    .map(|window| crate::usage::ModelPoolWindow {
+                        name: "Gemini 4 Argon".to_string(),
+                        window: window.into(),
+                    })
+                    .collect(),
             };
             Some(AccountSession {
                 id_suffix,
@@ -895,6 +916,8 @@ mod tests {
         .unwrap();
         assert_eq!(snapshot.weekly.unwrap().utilization_pct, 20);
         assert_eq!(snapshot.session.unwrap().utilization_pct, 40);
+        assert_eq!(snapshot.argon.len(), 1);
+        assert_eq!(snapshot.argon[0].utilization_pct, 90);
 
         // With no canonical id, one lookalike still fills its slot; two cannot
         // be told apart and leave it empty.
@@ -938,7 +961,7 @@ mod tests {
     }
 
     #[test]
-    fn canonical_presence_is_detected_even_when_no_canonical_value_is_valid() {
+    fn valid_argon_pool_survives_when_the_shared_canonical_value_is_invalid() {
         let snapshot = snapshot_from_payload(
             &payload(
                 "test@example.com",
@@ -949,8 +972,11 @@ mod tests {
             ),
             42,
             now(),
-        );
-        assert!(snapshot.is_none());
+        )
+        .unwrap();
+        assert!(snapshot.weekly.is_none());
+        assert_eq!(snapshot.argon.len(), 1);
+        assert_eq!(snapshot.argon[0].utilization_pct, 90);
     }
 
     #[test]
@@ -1131,6 +1157,38 @@ mod tests {
             aggregate_active(vec![sample_snapshot(42, "one@example.com")], &inspector).len(),
             1
         );
+    }
+
+    #[test]
+    fn aggregates_argon_as_a_named_model_pool() {
+        let inspector = FakeInspector::default().process(42, 1, "agy");
+        let snapshot = snapshot_from_payload(
+            &payload(
+                "one@example.com",
+                json!({
+                    "gemini-weekly": {"remaining_fraction": 0.75},
+                    "gemini-argon-wtu-weekly": {"remaining_fraction": 0.1}
+                }),
+            ),
+            42,
+            now(),
+        )
+        .unwrap();
+        let accounts = aggregate_active(vec![snapshot], &inspector);
+        let [pool] = accounts[0].snapshot.model_pools.as_slice() else {
+            panic!("{:?}", accounts[0].snapshot.model_pools);
+        };
+        assert_eq!(pool.name, "Gemini 4 Argon");
+        assert_eq!(pool.window.utilization_pct, 90);
+        assert!(pool.is_weekly());
+    }
+
+    #[test]
+    fn snapshots_written_before_argon_remain_readable() {
+        let mut value = serde_json::to_value(sample_snapshot(42, "one@example.com")).unwrap();
+        value.as_object_mut().unwrap().remove("argon");
+        let restored: SessionSnapshot = serde_json::from_value(value).unwrap();
+        assert!(restored.argon.is_empty());
     }
 
     #[test]

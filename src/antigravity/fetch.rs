@@ -8,8 +8,9 @@
 //!
 //! Each exposes a CSRF-guarded JSON-RPC surface on a **dynamically assigned**
 //! loopback port (`--https_server_port 0`), so the port cannot be hardcoded.
-//! Quota lives behind `RetrieveUserQuotaSummary`, which reports two model groups
-//! — Gemini, and Claude/GPT — each holding a 5-hour and a weekly bucket.
+//! Quota lives behind `RetrieveUserQuotaSummary`, which reports two shared model
+//! groups — Gemini, and Claude/GPT — each holding a 5-hour and a weekly bucket,
+//! plus plan-dependent per-model pools such as Gemini 4 Argon.
 //! `GetUserStatus` carries only the plan name; its per-model `quotaInfo` mirrors
 //! whichever bucket is scarcest and must not be read as a window in its own
 //! right.
@@ -1861,7 +1862,10 @@ fn cached_pools(v: &serde_json::Value) -> Result<Vec<ModelPoolWindow>> {
                 .filter(|pct| (0..=100).contains(pct))
                 .ok_or_else(malformed)?;
             Ok(ModelPoolWindow {
-                name: name.to_string(),
+                // Cache files are local, but keeping the same display-field
+                // invariant as live responses prevents terminal/control text
+                // from re-entering renderers through a damaged file.
+                name: crate::display::sanitize_untrusted_field(name),
                 window: UsageWindow {
                     utilization_pct: pct as i32,
                     resets_at: parse_reset(&entry["reset"], "model_pools reset")?,
@@ -4353,6 +4357,14 @@ mod tests {
         torn["model_pools"][0]["window"] = "monthly".into();
         let torn = serde_json::to_vec(&torn).unwrap();
         assert!(parse_cache_at(&torn, None, now()).is_err());
+
+        // A locally damaged cache cannot reintroduce control text into any
+        // renderer even though the rest of the entry remains usable.
+        let mut damaged = snap_to_json(&snap);
+        damaged["model_pools"][0]["name"] = "Argon\u{001b}[31m".into();
+        let damaged = serde_json::to_vec(&damaged).unwrap();
+        let restored = parse_cache_at(&damaged, None, now()).unwrap();
+        assert_eq!(restored.model_pools[0].name, "Argon[31m");
     }
 
     /// A pool past its reset is as obsolete as a shared window past its own.

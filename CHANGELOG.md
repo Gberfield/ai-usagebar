@@ -7,8 +7,10 @@
   Gemini pool. It now appears as its own row, named as Antigravity names it,
   under the Weekly heading of the tooltip, the TUI, and every desktop frontend
   that draws the report; it also counts toward the panel's severity and
-  notifications. Any future pool reported the same way is shown too. The bar's
-  `{placeholder}` slots are unchanged.
+  notifications. The macOS `agy` status-line bridge also carries the known
+  Argon bucket, and Omarchy treats it as part of the Gemini pool for filtering
+  and the bar headline. Any future pool reported with a display name is shown
+  too. The bar's `{placeholder}` slots are unchanged.
 
 ### Fixed
 
@@ -26,6 +28,10 @@
   take precedence there too. Their presence is checked before parsing values;
   while any is present, missing or malformed shared windows stay empty instead
   of borrowing a model pool's quota.
+
+- **Cached Antigravity pool labels keep the same display-safety guarantee as
+  live responses.** A locally damaged cache can no longer reintroduce control
+  characters into terminal or desktop renderers.
 
 ## [1.39.1] — 2026-10-17
 

@@ -1777,6 +1777,21 @@ const zaiReport = (mcpPercent) => model.parseReport(JSON.stringify({entries: [{
 }
 
 {
+  const argon = model.parseReport(JSON.stringify({entries: [{id: 'antigravity', sections: [
+    {type: 'text', label: 'Weekly', value: ''},
+    {type: 'metric', label: 'Gemini', percent: 20, window_secs: 604800},
+    {type: 'metric', label: 'Gemini 4 Argon', percent: 90, window_secs: 604800},
+    {type: 'metric', label: 'Claude & GPT OSS', percent: 30, window_secs: 604800}
+  ]}]})).entries[0];
+  assert.deepEqual({...model.antigravityPoolPresence(argon)}, {gemini: true, third_party: true});
+  const geminiHidden = model.panelEntry(argon, {}, {}, {gemini: false, third_party: true});
+  assert.deepEqual(Array.from(geminiHidden.sections, row => row.label), ['Weekly', 'Claude & GPT OSS'],
+    'the Gemini switch hides both shared and per-model Gemini quota');
+  assert.equal(model.antigravityDualHeadline(argon, {gemini: true, third_party: true}, 'used', 'weekly').text, '90% · 30%',
+    'the Gemini headline includes the worst per-model quota');
+}
+
+{
   const partial = model.parseReport(JSON.stringify({entries: [{id: 'antigravity', sections: [
     {type: 'spacer'},
     {type: 'text', label: 'Session', value: ''},
