@@ -1050,7 +1050,7 @@ mod tests {
     use crate::usage::{
         CursorCreditGrant, CursorSnapshot, DeepseekSnapshot, KimiSnapshot, KiroSnapshot,
         OpenAiSnapshot, OpenAiSource, OpenRouterSnapshot, ResetCredit, ResetCredits,
-        SuperGrokPeriod, SuperGrokSnapshot, VendorSnapshot,
+        SuperGrokPeriod, SuperGrokSnapshot, SyntheticSnapshot, UsageWindow, VendorSnapshot,
     };
     use crate::vendor::VendorId;
 
@@ -1511,6 +1511,35 @@ mod tests {
         assert_eq!(first["metrics"][0]["severity"], "low");
         // Kiro states a reset but not how long its window is; a frontend
         // must not be handed a length to pace against.
+        assert!(first["metrics"][0]["window_secs"].is_null());
+        assert!(first["sections"][1].get("window_secs").is_none());
+    }
+
+    #[test]
+    fn unstated_cycle_omits_window_secs_from_report() {
+        let fetched_at = Utc::now() - chrono::Duration::minutes(1);
+        let reset_at = Utc::now() + chrono::Duration::days(14);
+        let state = TabState::Ready(Box::new(ReadyTab {
+            snapshot: VendorSnapshot::Synthetic(SyntheticSnapshot {
+                subscription: UsageWindow {
+                    utilization_pct: 35,
+                    resets_at: Some(reset_at),
+                    window_duration: chrono::Duration::zero(),
+                },
+                requests: 350.0,
+                limit: 1000.0,
+            }),
+            stale: false,
+            last_error: None,
+            fetched_at: Some(fetched_at),
+            display: Default::default(),
+        }));
+        let projected = entry_from_state(&TabId::vendor(VendorId::Synthetic), &state, Utc::now());
+        let rendered = render_json_for_primary(&[projected], None);
+        let value: serde_json::Value = serde_json::from_str(&rendered).unwrap();
+        let first = &value["entries"][0];
+
+        // An unstated or zero-length cycle duration must not emit `window_secs: 0`.
         assert!(first["metrics"][0]["window_secs"].is_null());
         assert!(first["sections"][1].get("window_secs").is_none());
     }
