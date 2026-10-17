@@ -162,19 +162,13 @@ fn the_synthetic_placeholders_the_macos_menu_bar_reads_keep_their_names() {
     };
     let v = ai_usagebar::synthetic::vendor::build_placeholders(&snapshot, &opts, now);
     assert_eq!(v.get("synthetic_pct").map(String::as_str), Some("60"));
-    assert_eq!(
-        v.get("synthetic_reset").map(String::as_str),
-        Some("15d 0h")
-    );
+    assert_eq!(v.get("synthetic_reset").map(String::as_str), Some("15d 0h"));
     assert_eq!(
         v.get("session_pct").map(String::as_str),
         Some("60"),
         "the generic session alias must remain populated for backward compatibility"
     );
-    assert_eq!(
-        v.get("session_reset").map(String::as_str),
-        Some("15d 0h")
-    );
+    assert_eq!(v.get("session_reset").map(String::as_str), Some("15d 0h"));
 }
 
 /// `push_window` is the shared tooltip row helper. Its sixth argument stayed an
