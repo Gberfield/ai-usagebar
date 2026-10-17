@@ -43,6 +43,16 @@
   provider. Ambiguous multi-account histories remain separate instead of
   assigning one account's preferences to another (#452).
 
+- **An exhausted Gemini 4 Argon no longer reads as an exhausted Antigravity
+  in the macOS menu bar.** The Logos and Quattro chips, and the popover's
+  provider tabs, show a provider's busiest quota window, and the per-model
+  pool counted as one: at 100% it hid shared Gemini windows at 55% and 39%
+  that Flash, Pro, Claude and GPT-OSS still draw on. The report now marks a
+  per-model pool's metric `model_pool: true`, and those summaries rank it
+  like a breakdown row — it stands in only when nothing the provider shares
+  is left. The pool keeps its own row and still counts toward severity and
+  notifications (#453).
+
 ## [1.40.0] — 2026-10-17
 
 ### Added
