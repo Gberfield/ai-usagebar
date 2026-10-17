@@ -653,6 +653,69 @@ fn opaque_account_id(identity_key: &[u8; 32], account_hash: &str) -> String {
         .collect()
 }
 
+/// How two snapshots of one account order as readings of its quota, judged by
+/// the figures rather than by when they were ingested.
+///
+/// `updated_at` is when a status line arrived, not when its figures were
+/// fetched. Every `agy` process re-sends the quota it last fetched each time it
+/// redraws, and it fetches only after a turn of its own, so an idle session
+/// keeps sending the figures it read at startup — and with two sessions open,
+/// the last to redraw is as likely to be the idle one (#447). The figures carry
+/// their own order: a window's reset only ever moves later (an untouched
+/// bucket's slides with the clock and anchors on first use, and the next
+/// window starts after it), and within one window usage only grows.
+///
+/// Judged over the shared windows both carry with a reset. `None` when those
+/// windows disagree; `Equal` when none of them tells the two apart.
+#[cfg(any(target_os = "macos", test))]
+fn reading_order(a: &SessionSnapshot, b: &SessionSnapshot) -> Option<std::cmp::Ordering> {
+    use std::cmp::Ordering;
+
+    fn shared(snapshot: &SessionSnapshot) -> [Option<&SnapshotWindow>; 4] {
+        [
+            snapshot.session.as_ref(),
+            snapshot.weekly.as_ref(),
+            snapshot.third_party_session.as_ref(),
+            snapshot.third_party_weekly.as_ref(),
+        ]
+    }
+
+    let mut order = Ordering::Equal;
+    for (a, b) in shared(a).into_iter().zip(shared(b)) {
+        let (Some(a), Some(b)) = (a, b) else {
+            continue;
+        };
+        // Without a reset, usage alone cannot tell a later reading of one
+        // window from an earlier reading of the window before it.
+        let (Some(a_reset), Some(b_reset)) = (a.resets_at, b.resets_at) else {
+            continue;
+        };
+        let window = a_reset
+            .cmp(&b_reset)
+            .then(a.utilization_pct.cmp(&b.utilization_pct));
+        if window == Ordering::Equal {
+            continue;
+        }
+        if order != Ordering::Equal && order != window {
+            return None;
+        }
+        order = window;
+    }
+    Some(order)
+}
+
+/// Whether `candidate` should stand for its account in place of `current`: when
+/// its figures are the later reading, or — only when the figures cannot tell
+/// the two apart — when it arrived more recently.
+#[cfg(any(target_os = "macos", test))]
+fn supersedes(candidate: &SessionSnapshot, current: &SessionSnapshot) -> bool {
+    match reading_order(candidate, current) {
+        Some(std::cmp::Ordering::Greater) => true,
+        Some(std::cmp::Ordering::Less) => false,
+        Some(std::cmp::Ordering::Equal) | None => candidate.updated_at > current.updated_at,
+    }
+}
+
 #[cfg(any(target_os = "macos", test))]
 fn aggregate_active_with_key(
     snapshots: Vec<SessionSnapshot>,
@@ -669,7 +732,7 @@ fn aggregate_active_with_key(
             continue;
         }
         match newest_by_account.get(&snapshot.account_hash) {
-            Some(existing) if existing.updated_at >= snapshot.updated_at => {}
+            Some(existing) if !supersedes(&snapshot, existing) => {}
             _ => {
                 newest_by_account.insert(snapshot.account_hash.clone(), snapshot);
             }
@@ -1249,6 +1312,124 @@ mod tests {
             25
         );
         assert_eq!(accounts[0].snapshot.account, older.account_hash);
+    }
+
+    fn reading(pid: u32, quota: serde_json::Value, arrived: DateTime<Utc>) -> SessionSnapshot {
+        snapshot_from_payload(&payload("same@example.com", quota), pid, arrived).unwrap()
+    }
+
+    fn bucket(remaining: f64, reset: &str) -> serde_json::Value {
+        json!({"remaining_fraction": remaining, "reset_time": reset})
+    }
+
+    /// What one `agy` session re-sends on every redraw: the quota as it last
+    /// fetched it. The Claude & GPT OSS buckets are untouched, so their resets
+    /// slide from the moment of that fetch; the Gemini ones are anchored.
+    fn agy_quota(gemini_5h_remaining: f64, fetched: DateTime<Utc>) -> serde_json::Value {
+        let slid = |window: Duration| (fetched + window).to_rfc3339();
+        json!({
+            "gemini-5h": bucket(gemini_5h_remaining, "2026-09-28T15:25:45Z"),
+            "gemini-weekly": bucket(0.65, "2026-10-04T01:11:19Z"),
+            "gemini-argon-wtu-weekly": bucket(0.0, "2026-10-04T01:10:47Z"),
+            "3p-5h": bucket(1.0, &slid(Duration::hours(5))),
+            "3p-weekly": bucket(1.0, &slid(Duration::days(7)))
+        })
+    }
+
+    /// An idle session keeps re-sending the quota it fetched at startup, so it
+    /// is as likely as the busy one to arrive last. Arriving last must not let
+    /// its figures replace a later reading.
+    #[test]
+    fn an_idle_session_redrawing_last_cannot_replace_a_later_reading() {
+        let busy_fetch = now() - Duration::minutes(2);
+        let busy = reading(
+            42,
+            agy_quota(0.58, busy_fetch),
+            now() - Duration::seconds(4),
+        );
+        let idle = reading(43, agy_quota(0.64, now() - Duration::minutes(12)), now());
+        let inspector = FakeInspector::default()
+            .process(42, 1, "agy")
+            .process(43, 1, "agy");
+        for snapshots in [vec![busy.clone(), idle.clone()], vec![idle, busy]] {
+            let accounts = aggregate_active(snapshots, &inspector);
+            let [account] = accounts.as_slice() else {
+                panic!("{accounts:?}");
+            };
+            let snapshot = &account.snapshot;
+            assert_eq!(snapshot.session.as_ref().unwrap().utilization_pct, 42);
+            assert_eq!(
+                snapshot.third_party_session.as_ref().unwrap().resets_at,
+                Some(busy_fetch + Duration::hours(5))
+            );
+            // The shared weekly window, with the exhausted Argon pool beside it.
+            assert_eq!(snapshot.weekly.as_ref().unwrap().utilization_pct, 35);
+            assert_eq!(snapshot.model_pools[0].window.utilization_pct, 100);
+        }
+    }
+
+    /// A later reset is a later window: a reading taken after the 5-hour window
+    /// rolled over wins over one from before it, despite its lower usage and
+    /// despite arriving first.
+    #[test]
+    fn a_reading_of_the_next_window_wins_despite_its_lower_usage() {
+        let before = reading(
+            43,
+            json!({"gemini-5h": bucket(0.1, "2026-09-28T11:50:00Z")}),
+            now(),
+        );
+        let after = reading(
+            42,
+            json!({"gemini-5h": bucket(0.95, "2026-09-28T16:55:00Z")}),
+            now() - Duration::minutes(1),
+        );
+        let inspector = FakeInspector::default()
+            .process(42, 1, "agy")
+            .process(43, 1, "agy");
+        let accounts = aggregate_active(vec![after, before], &inspector);
+        assert_eq!(
+            accounts[0]
+                .snapshot
+                .session
+                .as_ref()
+                .unwrap()
+                .utilization_pct,
+            5
+        );
+    }
+
+    /// The figures overrule the arrival order only when they agree. Identical
+    /// readings, readings whose windows disagree, and windows without a reset
+    /// all leave the latest arrival standing for the account.
+    #[test]
+    fn figures_that_cannot_order_two_readings_keep_the_latest_arrival() {
+        let quota = |five_hour: f64, weekly: f64| {
+            json!({
+                "gemini-5h": bucket(five_hour, "2026-09-28T15:00:00Z"),
+                "gemini-weekly": bucket(weekly, "2026-10-04T01:00:00Z")
+            })
+        };
+        let unreset = |five_hour: f64| json!({"gemini-5h": {"remaining_fraction": five_hour}});
+        let inspector = FakeInspector::default()
+            .process(42, 1, "agy")
+            .process(43, 1, "agy");
+        let arrived = now() + Duration::seconds(5);
+        for (earlier, later) in [
+            (quota(0.5, 0.8), quota(0.5, 0.8)),
+            // The 5-hour window puts the earlier arrival ahead, the weekly
+            // window the later one.
+            (quota(0.4, 0.8), quota(0.5, 0.7)),
+            (unreset(0.4), unreset(0.5)),
+        ] {
+            let earlier = reading(42, earlier, now());
+            let later = reading(43, later, arrived);
+            for snapshots in [vec![earlier.clone(), later.clone()], vec![later, earlier]] {
+                assert_eq!(
+                    aggregate_active(snapshots, &inspector)[0].updated_at,
+                    arrived
+                );
+            }
+        }
     }
 
     #[test]
