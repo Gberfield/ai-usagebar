@@ -504,9 +504,30 @@ pub struct AntigravitySnapshot {
     pub third_party_session: Option<UsageWindow>,
     /// Claude/GPT group, weekly window.
     pub third_party_weekly: Option<UsageWindow>,
+    /// Pools kept apart from the two shared groups, such as the weekly
+    /// "Gemini 4 Argon" limit on Pro plans, in the order the response listed
+    /// them. Empty for a product or plan that reports none.
+    pub model_pools: Vec<ModelPoolWindow>,
 }
 
 impl Eq for AntigravitySnapshot {}
+
+/// One window of an Antigravity per-model pool, named by the response's group
+/// display name. Its cadence is `window.window_duration`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModelPoolWindow {
+    pub name: String,
+    pub window: UsageWindow,
+}
+
+impl Eq for ModelPoolWindow {}
+
+impl ModelPoolWindow {
+    /// Pools report the shared windows' two cadences, 5-hour and weekly.
+    pub fn is_weekly(&self) -> bool {
+        self.window.window_duration > chrono::Duration::hours(5)
+    }
+}
 
 /// Which path produced an [`AntigravitySnapshot`]. The local language server
 /// is the primary source; the remote API is the fallback for when no product

@@ -1099,6 +1099,7 @@ mod tests {
                 weekly: None,
                 third_party_session: None,
                 third_party_weekly: None,
+                model_pools: Vec::new(),
             },
         }
     }

@@ -399,7 +399,20 @@ fn snapshot_from_payload(
         third_party_weekly: None,
         updated_at: now,
     };
+    // The canonical ids claim their slot first. `quota` iterates in key order,
+    // and per-model pools sort ahead of the shared buckets
+    // (`gemini-argon-wtu-weekly` < `gemini-weekly`), so taking the first match
+    // would show a model's own limit as the Gemini weekly figure. Infer slots
+    // only when no canonical id arrived, checking presence before parsing so
+    // an invalid canonical value cannot be replaced with a model's quota.
+    const CANONICAL_IDS: [&str; 4] = ["gemini-5h", "gemini-weekly", "3p-5h", "3p-weekly"];
+    let renamed = !quota.keys().any(|id| CANONICAL_IDS.contains(&id.as_str()));
+    let mut exact: [Vec<SnapshotWindow>; 4] = Default::default();
+    let mut inferred: [Vec<SnapshotWindow>; 4] = Default::default();
     for (bucket, data) in quota {
+        if !renamed && !CANONICAL_IDS.contains(&bucket.as_str()) {
+            continue;
+        }
         let (third_party, weekly) = match bucket.as_str() {
             name if name.starts_with("gemini-") => (false, name.ends_with("-weekly")),
             name if name.starts_with("claude-")
@@ -417,14 +430,23 @@ fn snapshot_from_payload(
         let Some(window) = quota_window(data, weekly, now) else {
             continue;
         };
-        let target = match (third_party, weekly) {
-            (false, false) => &mut snapshot.session,
-            (false, true) => &mut snapshot.weekly,
-            (true, false) => &mut snapshot.third_party_session,
-            (true, true) => &mut snapshot.third_party_weekly,
-        };
-        if target.is_none() {
-            *target = Some(window);
+        let slot = usize::from(third_party) * 2 + usize::from(weekly);
+        if CANONICAL_IDS.contains(&bucket.as_str()) {
+            exact[slot].push(window);
+        } else {
+            inferred[slot].push(window);
+        }
+    }
+    let targets = [
+        &mut snapshot.session,
+        &mut snapshot.weekly,
+        &mut snapshot.third_party_session,
+        &mut snapshot.third_party_weekly,
+    ];
+    for ((target, exact), inferred) in targets.into_iter().zip(exact).zip(inferred) {
+        let mut candidates = if renamed { inferred } else { exact };
+        if candidates.len() == 1 {
+            *target = candidates.pop();
         }
     }
     (snapshot.session.is_some()
@@ -674,6 +696,9 @@ fn aggregate_active_with_key(
                 weekly: session.weekly.map(Into::into),
                 third_party_session: session.third_party_session.map(Into::into),
                 third_party_weekly: session.third_party_weekly.map(Into::into),
+                // The status line names buckets by id alone, with no group
+                // display name to label a per-model pool by.
+                model_pools: Vec::new(),
             };
             Some(AccountSession {
                 id_suffix,
@@ -849,6 +874,83 @@ mod tests {
         )
         .unwrap();
         assert_eq!(snapshot.weekly.unwrap().resets_at, None);
+    }
+
+    /// Per-model pools sort ahead of the shared buckets in key order; the
+    /// canonical id must still own its slot.
+    #[test]
+    fn a_per_model_pool_never_stands_in_for_the_shared_window() {
+        let snapshot = snapshot_from_payload(
+            &payload(
+                "test@example.com",
+                json!({
+                    "gemini-argon-wtu-weekly": {"remaining_fraction": 0.1},
+                    "gemini-weekly": {"remaining_fraction": 0.8},
+                    "gemini-5h": {"remaining_fraction": 0.6}
+                }),
+            ),
+            42,
+            now(),
+        )
+        .unwrap();
+        assert_eq!(snapshot.weekly.unwrap().utilization_pct, 20);
+        assert_eq!(snapshot.session.unwrap().utilization_pct, 40);
+
+        // With no canonical id, one lookalike still fills its slot; two cannot
+        // be told apart and leave it empty.
+        let renamed = snapshot_from_payload(
+            &payload(
+                "test@example.com",
+                json!({
+                    "gemini-session": {"remaining_fraction": 0.5},
+                    "gemini-pro-weekly": {"remaining_fraction": 0.9},
+                    "gemini-argon-weekly": {"remaining_fraction": 0.1}
+                }),
+            ),
+            42,
+            now(),
+        )
+        .unwrap();
+        assert_eq!(renamed.session.unwrap().utilization_pct, 50);
+        assert!(renamed.weekly.is_none());
+    }
+
+    #[test]
+    fn canonical_presence_keeps_missing_or_invalid_windows_empty() {
+        for shared in [
+            None,
+            Some(json!(null)),
+            Some(json!("unknown")),
+            Some(json!(1.1)),
+        ] {
+            let mut quota = json!({
+                "gemini-5h": {"remaining_fraction": 0.5},
+                "gemini-argon-wtu-weekly": {"remaining_fraction": 0.1}
+            });
+            if let Some(remaining) = shared {
+                quota["gemini-weekly"] = json!({"remaining_fraction": remaining});
+            }
+            let snapshot =
+                snapshot_from_payload(&payload("test@example.com", quota), 42, now()).unwrap();
+            assert_eq!(snapshot.session.unwrap().utilization_pct, 50);
+            assert!(snapshot.weekly.is_none());
+        }
+    }
+
+    #[test]
+    fn canonical_presence_is_detected_even_when_no_canonical_value_is_valid() {
+        let snapshot = snapshot_from_payload(
+            &payload(
+                "test@example.com",
+                json!({
+                    "gemini-weekly": {"remaining_fraction": "unknown"},
+                    "gemini-argon-wtu-weekly": {"remaining_fraction": 0.1}
+                }),
+            ),
+            42,
+            now(),
+        );
+        assert!(snapshot.is_none());
     }
 
     #[test]

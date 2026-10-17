@@ -1300,6 +1300,7 @@ mod tests {
                 weekly: window(weekly, at(26, 1, 34), 168),
                 third_party_session: window(third_party_session, at(24, 2, 19), 5),
                 third_party_weekly: window(third_party_weekly, at(30, 19, 19), 168),
+                model_pools: Vec::new(),
             }),
             stale: false,
             last_error: None,
