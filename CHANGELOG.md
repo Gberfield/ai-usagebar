@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+## [1.39.1] — 2026-10-17
+
+### Fixed
+
+- **Credential fallback and Z.AI in-band authentication failures have direct
+  regression coverage.** Tests now pin environment-over-inline API-key
+  precedence and ensure Z.AI's HTTP-200 `Authentication Failed` envelope is
+  rejected instead of being treated as usage data.
+
 ## [1.39.0] — 2026-10-16
 
 ### Added
@@ -4493,7 +4502,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.0...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.1...HEAD
+[1.39.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.0...v1.39.1
 [1.39.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.1...v1.39.0
 [1.38.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.38.0...v1.38.1
 [1.38.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.37.0...v1.38.0
