@@ -15,7 +15,7 @@ use serde_json::Value;
 use crate::config::{CustomMetricSpec, CustomProviderConfig, CustomTextSpec};
 use crate::display::sanitize_untrusted_line;
 use crate::error::{AppError, Result};
-use crate::format::clamp_pct;
+use crate::format::{clamp_pct, money};
 
 use super::types::{CustomMetric, CustomSnapshot, CustomText};
 
@@ -63,9 +63,17 @@ fn project_metric(body: &Value, id: &str, spec: &CustomMetricSpec) -> Result<Cus
                     "custom {id}: {limit_ptr} must be greater than zero"
                 )));
             }
+            let footnote = match spec.currency.as_deref() {
+                Some(currency) => format!(
+                    "{} of {}",
+                    money(used, currency),
+                    money(limit, currency)
+                ),
+                None => format!("{} of {}", format_number(used), format_number(limit)),
+            };
             (
                 clamp_pct(used / limit * 100.0),
-                format!("{} of {}", format_number(used), format_number(limit)),
+                footnote,
             )
         }
         // `Config::validate` already rejects this shape; the arm is here so
@@ -91,18 +99,24 @@ fn project_metric(body: &Value, id: &str, spec: &CustomMetricSpec) -> Result<Cus
 }
 
 fn project_text(body: &Value, id: &str, spec: &CustomTextSpec) -> Result<CustomText> {
-    let value = match lookup(body, id, &spec.value)? {
-        Value::String(s) => clean(s),
-        Value::Number(n) => format_json_number(n, id, &spec.value)?,
-        Value::Bool(b) => b.to_string(),
-        other => {
-            return Err(wrong_type(
-                id,
-                &spec.value,
-                "a string, number, or boolean",
-                other,
-            ));
+    let value = match spec.currency.as_deref() {
+        Some(currency) => {
+            let amount = read_number(body, id, &spec.value)?;
+            money(amount, currency)
         }
+        None => match lookup(body, id, &spec.value)? {
+            Value::String(s) => clean(s),
+            Value::Number(n) => format_json_number(n, id, &spec.value)?,
+            Value::Bool(b) => b.to_string(),
+            other => {
+                return Err(wrong_type(
+                    id,
+                    &spec.value,
+                    "a string, number, or boolean",
+                    other,
+                ));
+            }
+        },
     };
     Ok(CustomText {
         label: clean(&spec.label),
@@ -344,6 +358,23 @@ mod tests {
     }
 
     #[test]
+    fn footnote_formats_as_money_when_currency_is_set() {
+        let mut metric_spec = metric("Spend", "/used", "/limit");
+        metric_spec.currency = Some("USD".into());
+        let spec = spec(vec![metric_spec], vec![]);
+        let m = only_metric(&spec, &json!({"used": 0.17, "limit": 25.0}));
+        assert_eq!(m.pct, 1);
+        assert_eq!(m.footnote, "$0.17 of $25.00");
+
+        let mut eur_metric = metric("Spend", "/used", "/limit");
+        eur_metric.currency = Some("EUR".into());
+        let spec_eur = spec(vec![eur_metric], vec![]);
+        let m = only_metric(&spec_eur, &json!({"used": 1.5, "limit": 10}));
+        assert_eq!(m.pct, 15);
+        assert_eq!(m.footnote, "€1.50 of €10.00");
+    }
+
+    #[test]
     fn resets_at_accepts_rfc3339_and_epoch_seconds_and_milliseconds() {
         let spec = spec(
             vec![CustomMetricSpec {
@@ -435,6 +466,44 @@ mod tests {
         let values: Vec<&str> = snap.texts.iter().map(|t| t.value.as_str()).collect();
         assert_eq!(values, ["Pro", "5", "12.5", "true", "12345678901234567890"]);
         assert_eq!(snap.texts[0].label, "Tier");
+    }
+
+    #[test]
+    fn text_values_format_as_money_when_currency_is_set() {
+        let texts = vec![
+            CustomTextSpec {
+                label: "Spend".into(),
+                value: "/spend".into(),
+                currency: Some("USD".into()),
+            },
+            CustomTextSpec {
+                label: "Cost String".into(),
+                value: "/cost_str".into(),
+                currency: Some("EUR".into()),
+            },
+            text("Plain", "/plain"),
+        ];
+        let spec = spec(vec![], texts);
+        let body = json!({
+            "spend": 12.5,
+            "cost_str": "3.45",
+            "plain": 12.5,
+        });
+        let snap = project(&body, &spec).unwrap();
+        let values: Vec<&str> = snap.texts.iter().map(|t| t.value.as_str()).collect();
+        assert_eq!(values, ["$12.50", "€3.45", "12.5"]);
+
+        let bad_body = json!({
+            "spend": "not-a-number",
+            "cost_str": "3.45",
+            "plain": 12.5,
+        });
+        let err = project(&bad_body, &spec).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("/spend is a string that does not hold a number"),
+            "{err}"
+        );
     }
 
     #[test]
