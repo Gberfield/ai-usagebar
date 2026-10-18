@@ -534,6 +534,12 @@ fn render_default_tooltip(input: &RenderInput) -> String {
             " <span foreground='{dim}'>  󰀓  Limit: {lim}</span>",
             lim = escape(&lim)
         )));
+        if let Some(note) = extra.status_note() {
+            lines.push(Line::Body(format!(
+                " <span foreground='{dim}'>  Status: {note}</span>",
+                note = escape(note)
+            )));
+        }
     }
 
     if snap.reset_credits.available > 0 {
@@ -655,6 +661,7 @@ mod tests {
                 spent: Cents(250),
                 currency: None,
                 decimal_places: Some(2),
+                status: crate::usage::ExtraUsageStatus::Active,
             }),
             reset_credits: Default::default(),
         };
@@ -731,6 +738,20 @@ mod tests {
             out2.tooltip.contains("R$141.57"),
             "tooltip must carry the block's currency"
         );
+    }
+
+    #[test]
+    fn provider_disabled_extra_usage_explains_why_it_stopped() {
+        let mut oc = sample_outcome();
+        oc.snapshot.extra.as_mut().unwrap().status = crate::usage::ExtraUsageStatus::OutOfCredits;
+        let theme = Theme::default();
+        let out = render_anthropic(&input(&oc, &theme));
+        assert!(
+            out.tooltip.contains("Status: out of credits"),
+            "{}",
+            out.tooltip
+        );
+        assert!(out.tooltip.contains("$2.50"), "{}", out.tooltip);
     }
 
     #[test]

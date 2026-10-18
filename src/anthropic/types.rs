@@ -8,8 +8,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::usage::{
-    AnthropicSnapshot, Cents, ExtraUsage, ResetCredit, ResetCredits, ScopedWindow, UsageWindow,
-    checked_reset_title,
+    AnthropicSnapshot, Cents, ExtraUsage, ExtraUsageStatus, ResetCredit, ResetCredits,
+    ScopedWindow, UsageWindow, checked_reset_title,
 };
 
 /// Top-level response from `GET /api/oauth/usage`.
@@ -130,6 +130,14 @@ pub struct ExtraUsageBlock {
     /// an absurd scale would corrupt every formatted amount downstream.
     #[serde(default, deserialize_with = "de_opt_decimal_places")]
     pub decimal_places: Option<u32>,
+    #[serde(default)]
+    pub user_disabled: bool,
+    #[serde(default)]
+    pub spend_limit_reached: bool,
+    #[serde(default)]
+    pub credits_ever_enabled: bool,
+    #[serde(default)]
+    pub disabled_reason: Option<String>,
 }
 
 /// Accept a plausible minor-unit scale (0..=6 covers every ISO 4217 currency;
@@ -285,7 +293,24 @@ impl UsageResponse {
         let session = to_window(self.five_hour, SESSION);
         let weekly = to_window(self.seven_day, WEEKLY);
         let sonnet = self.seven_day_sonnet.map(|w| to_window(Some(w), WEEKLY));
-        let extra = self.extra_usage.filter(|e| e.is_enabled).and_then(|e| {
+        let extra = self.extra_usage.and_then(|e| {
+            let status = if e.is_enabled {
+                ExtraUsageStatus::Active
+            } else if e.user_disabled {
+                return None;
+            } else {
+                match e.disabled_reason.as_deref() {
+                    Some("out_of_credits") => ExtraUsageStatus::OutOfCredits,
+                    Some("monthly_limit_reached" | "spend_limit_reached") => {
+                        ExtraUsageStatus::MonthlyLimitReached
+                    }
+                    _ if e.spend_limit_reached => ExtraUsageStatus::MonthlyLimitReached,
+                    _ if e.credits_ever_enabled && e.used_credits.unwrap_or_default() > 0 => {
+                        ExtraUsageStatus::Unavailable
+                    }
+                    _ => return None,
+                }
+            };
             Some(ExtraUsage {
                 // `monthly_limit: null` is semantic, not drift: the endpoint
                 // sends it for plans with no spending cap (e.g. Pro), so it
@@ -299,6 +324,7 @@ impl UsageResponse {
                 // displayed major-unit amount.
                 decimal_places: e.decimal_places,
                 currency: e.currency,
+                status,
             })
         });
         let scoped = self
@@ -447,15 +473,41 @@ mod tests {
     }
 
     #[test]
-    fn disabled_extra_usage_becomes_none() {
+    fn user_disabled_extra_usage_becomes_none() {
         let raw = r#"{
             "five_hour": {"utilization": 0},
             "seven_day": {"utilization": 0},
-            "extra_usage": {"is_enabled": false, "monthly_limit": 5000, "used_credits": 0}
+            "extra_usage": {"is_enabled": false, "user_disabled": true,
+                            "monthly_limit": 5000, "used_credits": 0}
         }"#;
         let resp: UsageResponse = serde_json::from_str(raw).unwrap();
         let snap = resp.into_snapshot("Pro".into());
         assert!(snap.extra.is_none());
+    }
+
+    #[test]
+    fn provider_disabled_extra_usage_keeps_spend_and_reason_visible() {
+        let raw = r#"{
+            "extra_usage": {
+                "is_enabled": false,
+                "monthly_limit": null,
+                "used_credits": 1234.0,
+                "currency": "USD",
+                "decimal_places": 2,
+                "disabled_reason": "out_of_credits",
+                "user_disabled": false,
+                "spend_limit_reached": false,
+                "credits_ever_enabled": true
+            }
+        }"#;
+        let extra = serde_json::from_str::<UsageResponse>(raw)
+            .unwrap()
+            .into_snapshot("Pro".into())
+            .extra
+            .unwrap();
+        assert_eq!(extra.fmt_spent(), "$12.34");
+        assert_eq!(extra.status, ExtraUsageStatus::OutOfCredits);
+        assert_eq!(extra.status_note(), Some("out of credits"));
     }
 
     #[test]

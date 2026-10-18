@@ -13,6 +13,12 @@
 
 ### Fixed
 
+- **Claude extra-usage spend stays visible when credits run out.** The API
+  marks provider-disabled extra usage as inactive at the moment its status and
+  month-to-date spend matter most. The row now distinguishes that state from a
+  user-disabled setting and explains whether credits or the monthly limit ran
+  out (#456).
+
 - **Nous Research credit amounts format as USD in detail lines and tooltips.**
   Credit balances on the popover and TUI cards, the card detail rows, and the
   Waybar tooltip now format with a currency sign through the shared USD helper

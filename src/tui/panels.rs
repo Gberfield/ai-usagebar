@@ -873,13 +873,17 @@ fn anthropic_sections(
         // An uncapped plan (`monthly_limit: null`) has spend but no
         // denominator: show the amount alone rather than "of $0.00" or a
         // percentage nobody can vouch for (#30).
-        let (value_label, footnote) = match e.fmt_limit() {
+        let (value_label, mut footnote) = match e.fmt_limit() {
             Some(l) => (
                 format!("{} of {}", e.fmt_spent(), l),
                 format!("{pct}% of monthly limit consumed"),
             ),
             None => (e.fmt_spent(), "no monthly limit reported".to_string()),
         };
+        if let Some(note) = e.status_note() {
+            footnote.push_str(" · ");
+            footnote.push_str(note);
+        }
         v.push_metric(
             Section::Metric {
                 label: "Extra usage".into(),
@@ -2849,6 +2853,7 @@ mod tests {
                 spent: Cents(250),
                 currency: None,
                 decimal_places: Some(2),
+                status: crate::usage::ExtraUsageStatus::Active,
             }),
             reset_credits: Default::default(),
         };
@@ -2893,6 +2898,7 @@ mod tests {
                 spent: Cents(14157),
                 currency: Some("BRL".into()),
                 decimal_places: Some(2),
+                status: crate::usage::ExtraUsageStatus::OutOfCredits,
             }),
             reset_credits: Default::default(),
         };
@@ -2918,7 +2924,7 @@ mod tests {
             "no denominator to show: {}",
             extra.1
         );
-        assert_eq!(extra.2, "no monthly limit reported");
+        assert_eq!(extra.2, "no monthly limit reported · out of credits");
     }
 
     #[test]
