@@ -56,11 +56,13 @@
 # used = "/requests/used"        # used + limit → "used of limit" under the bar...
 # limit = "/requests/limit"
 # # percent = "/requests/pct"    # ...or a ready-made percentage instead of both
+# # currency = "USD"             # optional ISO 4217 code to format used and limit as money
 # resets_at = "/requests/reset"  # RFC 3339 string, or epoch seconds / milliseconds
 # window_secs = 3600             # window length for pacing (>= 60)
 # [[custom.texts]]               # a free-text row
 # label = "Tier"
 # value = "/account/tier"        # string, number or boolean
+# # currency = "USD"             # optional ISO 4217 code to format numeric value as money
 #
 # Muse Code subscription quota is now a native provider: see [muse-code]
 # below and docs/muse-code.md. Legacy custom counters may retain id = "muse"
