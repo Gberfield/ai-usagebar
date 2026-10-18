@@ -2042,6 +2042,8 @@ pub struct CustomMetricSpec {
     pub resets_at: Option<String>,
     /// Window length for pacing, at least 60.
     pub window_secs: Option<u64>,
+    /// Three-letter uppercase currency code used to format `used` and `limit` as money.
+    pub currency: Option<String>,
 }
 
 /// One free-text row: a string, number, or boolean at `value`.
@@ -2050,6 +2052,8 @@ pub struct CustomMetricSpec {
 pub struct CustomTextSpec {
     pub label: String,
     pub value: String,
+    /// Three-letter uppercase currency code used to format numeric values as money.
+    pub currency: Option<String>,
 }
 
 impl CustomProviderConfig {
@@ -2199,6 +2203,15 @@ impl CustomProviderConfig {
                     metric.label
                 )));
             }
+            if metric.currency.is_some() && metric.percent.is_some() {
+                return Err(bad(format!(
+                    "metric {:?} cannot combine `currency` with `percent`",
+                    metric.label
+                )));
+            }
+            if let Some(currency) = &metric.currency {
+                validate_currency(&section, &format!("metric {:?}", metric.label), currency)?;
+            }
             for (field, pointer) in [
                 ("used", &metric.used),
                 ("limit", &metric.limit),
@@ -2225,6 +2238,9 @@ impl CustomProviderConfig {
                 return Err(bad(format!("duplicate text label {:?}", text.label)));
             }
             validate_pointer(&section, "value", &text.value)?;
+            if let Some(currency) = &text.currency {
+                validate_currency(&section, &format!("text {:?}", text.label), currency)?;
+            }
         }
         Ok(())
     }
@@ -2256,6 +2272,15 @@ fn validate_custom_label(section: &str, field: &str, label: &str) -> Result<()> 
     if len == 0 || len > 64 || label.chars().any(char::is_control) {
         return Err(AppError::Other(format!(
             "{section}: {field} {label:?} must be 1 to 64 characters without control characters"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_currency(section: &str, context: &str, currency: &str) -> Result<()> {
+    if currency.len() != 3 || !currency.bytes().all(|b| b.is_ascii_uppercase()) {
+        return Err(AppError::Other(format!(
+            "{section}: {context} currency {currency:?} must be a 3-letter uppercase code (e.g. \"USD\")"
         )));
     }
     Ok(())
@@ -5521,11 +5546,13 @@ value = "/tier"
         assert_eq!(c.metrics[0].used.as_deref(), Some("/requests/used"));
         assert_eq!(c.metrics[0].limit.as_deref(), Some("/requests/limit"));
         assert_eq!(c.metrics[0].percent, None);
+        assert_eq!(c.metrics[0].currency, None);
         assert_eq!(c.metrics[0].resets_at.as_deref(), Some("/requests/reset"));
         assert_eq!(c.metrics[0].window_secs, Some(3600));
         assert_eq!(c.texts.len(), 1);
         assert_eq!(c.texts[0].label, "Tier");
         assert_eq!(c.texts[0].value, "/tier");
+        assert_eq!(c.texts[0].currency, None);
         assert_eq!(c.section_label(), r#"[[custom]] id = "mytool""#);
     }
 
@@ -5850,6 +5877,60 @@ url = "https://example.test/u"
         let text_twice =
             format!("{CUSTOM_BLOCK}[[custom.texts]]\nlabel = \"Tier\"\nvalue = \"/other\"\n");
         assert_custom_rejected(&text_twice, "duplicate text label \"Tier\"");
+    }
+
+    #[test]
+    fn custom_metric_and_text_parse_currency() {
+        let toml = custom_with(
+            "window_secs = 3600\n",
+            "window_secs = 3600\ncurrency = \"USD\"\n",
+        )
+        .replace(
+            "value = \"/tier\"\n",
+            "value = \"/tier\"\ncurrency = \"EUR\"\n",
+        );
+        let config = Config::load_from(write_toml(&toml).path()).unwrap();
+        assert_eq!(config.custom[0].metrics[0].currency.as_deref(), Some("USD"));
+        assert_eq!(config.custom[0].texts[0].currency.as_deref(), Some("EUR"));
+    }
+
+    #[test]
+    fn custom_rejects_an_invalid_currency_code() {
+        let toml = custom_with(
+            "window_secs = 3600\n",
+            "window_secs = 3600\ncurrency = \"usd\"\n",
+        );
+        assert_custom_rejected(
+            &toml,
+            "metric \"Requests\" currency \"usd\" must be a 3-letter uppercase code",
+        );
+
+        let toml = custom_with(
+            "value = \"/tier\"\n",
+            "value = \"/tier\"\ncurrency = \"USDT\"\n",
+        );
+        assert_custom_rejected(
+            &toml,
+            "text \"Tier\" currency \"USDT\" must be a 3-letter uppercase code",
+        );
+    }
+
+    #[test]
+    fn custom_rejects_a_metric_mixing_currency_with_percent() {
+        let toml = r#"
+            [[custom]]
+            id = "bare"
+            short_name = "bre"
+            url = "https://example.test/u"
+            [[custom.metrics]]
+            label = "Quota"
+            percent = "/pct"
+            currency = "USD"
+        "#;
+        assert_custom_rejected(
+            toml,
+            "metric \"Quota\" cannot combine `currency` with `percent`",
+        );
     }
 
     #[test]

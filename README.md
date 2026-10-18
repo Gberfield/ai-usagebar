@@ -496,16 +496,21 @@ api_key_env = "MYTOOL_API_KEY"   # env var first, inline api_key second
 label = "Requests"
 used = "/usage/requests/used"    # numbers or numeric strings
 limit = "/usage/requests/limit"  # or percent = "/usage/pct" instead of used + limit
+currency = "USD"                 # optional; formats used and limit as money
 resets_at = "/usage/requests/reset_at"   # RFC 3339, epoch seconds or epoch ms
 window_secs = 86400              # window length; reported as `window_secs` for pacing
 
 [[custom.texts]]
 label = "Balance"
-value = "/balance/display"
+value = "/balance"               # string, number or boolean
+currency = "USD"                 # optional; when set, value must be numeric
 ```
 
 Each metric renders as a meter with the usual severity colours; texts render
-as one-line rows. `brand` lets supporting frontends, currently the Omarchy
+as one-line rows. `currency` accepts a three-letter uppercase code. Known
+currencies use their symbol; other codes follow the amount (for example,
+`3.50 SEK`). A metric cannot combine `currency` with a ready-made `percent`.
+`brand` lets supporting frontends, currently the Omarchy
 widget, draw a built-in vendor's mark for the custom entry; omit it to keep the
 `short_name` tag. The cache under `<cache>/ai-usagebar/custom/<id>` holds the
 projected snapshot (only the values the pointers selected, never the response

@@ -19,6 +19,14 @@
   rather than printing bare numbers. The `{nous_balance}` and `{balance}`
   placeholders now surface the total usable credits formatted as USD (#457).
 
+### Added
+
+- **Custom providers can format metric footnotes and text rows as money.** An
+  optional `currency` setting on `[[custom.metrics]]` and `[[custom.texts]]`
+  accepts a three-letter uppercase currency code (such as `"USD"` or `"EUR"`) and
+  formats the amounts through the program's standard money formatter, matching
+  built-in money rows instead of displaying bare numbers.
+
 ## [1.40.1] — 2026-10-17
 
 ### Fixed
