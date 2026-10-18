@@ -2203,13 +2203,13 @@ impl CustomProviderConfig {
                     metric.label
                 )));
             }
+            if metric.currency.is_some() && metric.percent.is_some() {
+                return Err(bad(format!(
+                    "metric {:?} cannot combine `currency` with `percent`",
+                    metric.label
+                )));
+            }
             if let Some(currency) = &metric.currency {
-                if metric.percent.is_some() {
-                    return Err(bad(format!(
-                        "metric {:?} cannot combine `currency` with `percent`",
-                        metric.label
-                    )));
-                }
                 validate_currency(&section, &format!("metric {:?}", metric.label), currency)?;
             }
             for (field, pointer) in [
@@ -5885,16 +5885,13 @@ url = "https://example.test/u"
             "window_secs = 3600\n",
             "window_secs = 3600\ncurrency = \"USD\"\n",
         )
-        .replace("value = \"/tier\"\n", "value = \"/tier\"\ncurrency = \"EUR\"\n");
+        .replace(
+            "value = \"/tier\"\n",
+            "value = \"/tier\"\ncurrency = \"EUR\"\n",
+        );
         let config = Config::load_from(write_toml(&toml).path()).unwrap();
-        assert_eq!(
-            config.custom[0].metrics[0].currency.as_deref(),
-            Some("USD")
-        );
-        assert_eq!(
-            config.custom[0].texts[0].currency.as_deref(),
-            Some("EUR")
-        );
+        assert_eq!(config.custom[0].metrics[0].currency.as_deref(), Some("USD"));
+        assert_eq!(config.custom[0].texts[0].currency.as_deref(), Some("EUR"));
     }
 
     #[test]
