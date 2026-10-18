@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+
+- **Nous Research credit amounts format as USD in detail lines and tooltips.**
+  Credit balances on the popover and TUI cards, the card detail rows, and the
+  Waybar tooltip now format with a currency sign through the shared USD helper
+  rather than printing bare numbers. The `{nous_balance}` and `{balance}`
+  placeholders now surface the total usable credits formatted as USD (#457).
+
 ## [1.40.1] — 2026-10-17
 
 ### Fixed
