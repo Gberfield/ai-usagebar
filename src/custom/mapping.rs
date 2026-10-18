@@ -64,17 +64,12 @@ fn project_metric(body: &Value, id: &str, spec: &CustomMetricSpec) -> Result<Cus
                 )));
             }
             let footnote = match spec.currency.as_deref() {
-                Some(currency) => format!(
-                    "{} of {}",
-                    money(used, currency),
-                    money(limit, currency)
-                ),
+                Some(currency) => {
+                    format!("{} of {}", money(used, currency), money(limit, currency))
+                }
                 None => format!("{} of {}", format_number(used), format_number(limit)),
             };
-            (
-                clamp_pct(used / limit * 100.0),
-                footnote,
-            )
+            (clamp_pct(used / limit * 100.0), footnote)
         }
         // `Config::validate` already rejects this shape; the arm is here so
         // a spec built in code cannot reach a bar with a percentage of nothing.
@@ -361,15 +356,15 @@ mod tests {
     fn footnote_formats_as_money_when_currency_is_set() {
         let mut metric_spec = metric("Spend", "/used", "/limit");
         metric_spec.currency = Some("USD".into());
-        let spec = spec(vec![metric_spec], vec![]);
-        let m = only_metric(&spec, &json!({"used": 0.17, "limit": 25.0}));
+        let provider_spec = spec(vec![metric_spec], vec![]);
+        let m = only_metric(&provider_spec, &json!({"used": 0.17, "limit": 25.0}));
         assert_eq!(m.pct, 1);
         assert_eq!(m.footnote, "$0.17 of $25.00");
 
         let mut eur_metric = metric("Spend", "/used", "/limit");
         eur_metric.currency = Some("EUR".into());
-        let spec_eur = spec(vec![eur_metric], vec![]);
-        let m = only_metric(&spec_eur, &json!({"used": 1.5, "limit": 10}));
+        let provider_spec_eur = spec(vec![eur_metric], vec![]);
+        let m = only_metric(&provider_spec_eur, &json!({"used": 1.5, "limit": 10}));
         assert_eq!(m.pct, 15);
         assert_eq!(m.footnote, "€1.50 of €10.00");
     }
@@ -483,13 +478,13 @@ mod tests {
             },
             text("Plain", "/plain"),
         ];
-        let spec = spec(vec![], texts);
+        let provider_spec = spec(vec![], texts);
         let body = json!({
             "spend": 12.5,
             "cost_str": "3.45",
             "plain": 12.5,
         });
-        let snap = project(&body, &spec).unwrap();
+        let snap = project(&body, &provider_spec).unwrap();
         let values: Vec<&str> = snap.texts.iter().map(|t| t.value.as_str()).collect();
         assert_eq!(values, ["$12.50", "€3.45", "12.5"]);
 
@@ -498,7 +493,7 @@ mod tests {
             "cost_str": "3.45",
             "plain": 12.5,
         });
-        let err = project(&bad_body, &spec).unwrap_err();
+        let err = project(&bad_body, &provider_spec).unwrap_err();
         assert!(
             err.to_string()
                 .contains("/spend is a string that does not hold a number"),
