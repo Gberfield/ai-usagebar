@@ -265,7 +265,8 @@ enabled = true             # disabled by default; enable once signed in or confi
 # $XDG_DATA_HOME/opencode or ~/.local/share/opencode (read-only).
 # The database must have an active opencode key or unexpired OAuth access token.
 # OpenCode owns token refresh; renew an expired session in the CLI.
-# An explicit key wins over both stores.
+# An explicit key wins over both stores. If v1 and v2 coexist, auth.json
+# keeps priority; use auth_paths with only opencode.db to select the v2 login.
 # api_key = "..."                          # or export OPENCODE_GO_API_KEY
 # auth_paths = ["/custom/opencode/opencode.db"]  # replaces the search list
 
