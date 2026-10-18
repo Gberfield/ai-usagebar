@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [1.41.0] — 2026-10-18
+
 ### Changed
 
 - **A critical quota toast now asks `notify-send` for a 30-second timeout**
@@ -4647,7 +4649,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.1...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.41.0...HEAD
+[1.41.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.1...v1.41.0
 [1.40.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.0...v1.40.1
 [1.40.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.1...v1.40.0
 [1.39.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.0...v1.39.1
