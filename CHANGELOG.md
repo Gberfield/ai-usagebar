@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Fixed
+
+- OpenCode Go recognizes OpenCode 2 logins from the CLI's `opencode.db`,
+  reading only the active API key or unexpired OAuth access token without
+  modifying the database or refreshing its credentials. Explicit keys and
+  legacy `auth.json` retain precedence; `auth_paths` can name either store.
+
 ## [1.41.0] — 2026-10-18
 
 ### Changed
