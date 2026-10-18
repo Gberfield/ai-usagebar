@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Changed
+
+- **A critical quota toast now asks `notify-send` for a 30-second timeout**
+  (`-t 30000`), so a 100% alert can expire on its own. Omarchy's notification
+  plugin treats critical urgency as immortal and throws the sender's timeout
+  away, so this changes nothing there until
+  [omacom/omarchy#12964](https://github.com/omacom/omarchy/pull/12964) lands;
+  that honours a positive timeout capped at 30s, while a critical toast sent
+  without one still stays until dismissed. Daemons that already honour `-t`
+  start expiring it now. Normal toasts still leave the timeout to the daemon.
+
 ## [1.40.1] — 2026-10-17
 
 ### Fixed

@@ -313,7 +313,13 @@ default at 97%: after a **fresh** fetch (never a cached or failed one), any
 window at or above the threshold raises one notification — normal urgency
 between the threshold and 99%, critical at 100% (exhausted). Linux delivers
 via `notify-send` (`-a ai-usagebar -c quota`); macOS delivers through
-Notification Center. The macOS popover also exposes the enable switch and
+Notification Center. A critical (100%) toast also asks for a 30-second
+timeout, so it can expire where the daemon honours one: Omarchy's notification
+plugin keeps critical toasts until they are dismissed and ignores the sender's
+timeout, and
+[omacom/omarchy#12964](https://github.com/omacom/omarchy/pull/12964) is what
+makes it honour a requested one, capped at 30s. The macOS popover also exposes
+the enable switch and
 threshold in Preferences. Windows delivery is planned for a later release.
 
 One crossing is one notification. A key re-arms only when usage drops 7

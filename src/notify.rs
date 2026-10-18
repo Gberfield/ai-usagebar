@@ -63,6 +63,16 @@ const LOCK_TIMEOUT: Duration = Duration::from_secs(2);
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 const SPAWN_KILL_AFTER: Duration = Duration::from_secs(5);
 
+/// Timeout a critical toast asks `notify-send` for, in milliseconds.
+///
+/// Omarchy's notification plugin treats critical urgency as immortal and
+/// ignores the sender's timeout, so a 100% toast stays until it is dismissed.
+/// [omacom/omarchy#12964](https://github.com/omacom/omarchy/pull/12964)
+/// honours a positive timeout instead, capped at 30s, while a critical toast
+/// sent without one still stays — hence asking for the cap.
+#[cfg(target_os = "linux")]
+const CRITICAL_TIMEOUT_MS: &str = "30000";
+
 /// Urgency band for one notification. `notify-send`'s `-u` maps directly.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Urgency {
@@ -377,20 +387,35 @@ impl NotifySendSink {
             program: program.into(),
         }
     }
+
+    /// `notify-send` arguments for one notification, program name aside.
+    ///
+    /// The title and body come last: `notify-send` reads the trailing
+    /// positionals as those two, so every switch has to precede them.
+    fn argv(&self, notification: &Notification) -> Vec<String> {
+        let mut args = vec![
+            "-a".to_string(),
+            "ai-usagebar".to_string(),
+            "-c".to_string(),
+            "quota".to_string(),
+            "-u".to_string(),
+            notification.urgency.as_arg().to_string(),
+        ];
+        if notification.urgency == Urgency::Critical {
+            args.push("-t".to_string());
+            args.push(CRITICAL_TIMEOUT_MS.to_string());
+        }
+        args.push(notification.title.clone());
+        args.push(notification.body.clone());
+        args
+    }
 }
 
 #[cfg(target_os = "linux")]
 impl NotifySink for NotifySendSink {
     fn deliver(&mut self, notification: &Notification) {
         let spawned = std::process::Command::new(&self.program)
-            .arg("-a")
-            .arg("ai-usagebar")
-            .arg("-c")
-            .arg("quota")
-            .arg("-u")
-            .arg(notification.urgency.as_arg())
-            .arg(&notification.title)
-            .arg(&notification.body)
+            .args(self.argv(notification))
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
@@ -1078,6 +1103,42 @@ mod tests {
             at(23, 12, 0),
         );
         assert!(sink.delivered.is_empty());
+    }
+
+    /// A 100% toast asks for the 30s Omarchy honours once it stops treating
+    /// critical urgency as immortal; a normal one leaves the timeout to the
+    /// daemon, which is where Omarchy's own 8s default lives.
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_critical_toast_asks_for_a_timeout_and_a_normal_one_does_not() {
+        let sink = NotifySendSink::new();
+        let toast = |urgency| Notification {
+            title: "Claude — Session (5h) at 100%".to_string(),
+            body: "resets in 2h".to_string(),
+            urgency,
+            key: "anthropic::Session (5h)".to_string(),
+        };
+        let critical_toast = toast(Urgency::Critical);
+
+        let critical = sink.argv(&critical_toast);
+        assert!(
+            critical
+                .windows(2)
+                .any(|pair| pair[0] == "-t" && pair[1] == "30000"),
+            "a critical toast asks for the cap: {critical:?}"
+        );
+
+        let normal = sink.argv(&toast(Urgency::Normal));
+        assert!(
+            !normal.iter().any(|arg| arg == "-t"),
+            "a normal toast leaves the timeout to the daemon: {normal:?}"
+        );
+
+        // `notify-send` reads the trailing positionals as title and body, so
+        // the switch this test is about must not land after them.
+        let tail = &critical[critical.len() - 2..];
+        assert_eq!(tail[0], critical_toast.title);
+        assert_eq!(tail[1], critical_toast.body);
     }
 
     /// The guard test for the whole feature: a notifier that cannot even be
