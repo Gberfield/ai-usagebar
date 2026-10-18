@@ -430,7 +430,7 @@ modified.
 `{nous_plan}`, `{nous_pct}`, `{nous_renewal}`, `{nous_credits_remaining}`,
 `{nous_monthly_credits}`, `{nous_purchased_credits_remaining}`,
 `{nous_top_up_credits_remaining}`, `{nous_total_usable_credits}`,
-`{nous_rollover_credits}`
+`{nous_rollover_credits}`, `{nous_balance}`, `{balance}`
 
 These describe the Portal account the OAuth login reads. `{nous_pct}` is the
 consumed share of the monthly subscription-credit pool, a whole number held to
@@ -441,7 +441,8 @@ current period (`—` when none is stated). The credit placeholders are plain
 numbers without a currency symbol: whole credits print without decimals,
 fractions keep up to six decimal places with trailing zeros trimmed, and a
 value the Portal does not report is `—`. `{nous_top_up_credits_remaining}`
-aliases `{nous_purchased_credits_remaining}`.
+aliases `{nous_purchased_credits_remaining}`. `{nous_balance}` and its alias
+`{balance}` report total usable credits formatted as USD (e.g. `$44.84`).
 
 The default format is `{nous_pct}% · {nous_renewal}`; with no `format`
 configured and no percentage available, the bar shows the renewal countdown
