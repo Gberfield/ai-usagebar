@@ -13,6 +13,11 @@
 
 ### Fixed
 
+- **Anthropic API spend states exactly how current it is.** The cost endpoint
+  returns completed daily buckets, so its total can omit today's activity. The
+  card and tooltip now show the last fully covered UTC day instead of implying
+  that the figure includes the live day (#459).
+
 - **Claude extra-usage spend stays visible when credits run out.** The API
   marks provider-disabled extra usage as inactive at the moment its status and
   month-to-date spend matter most. The row now distinguishes that state from a

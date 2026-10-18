@@ -617,6 +617,8 @@ pub struct MinimaxSnapshot {
 pub struct AnthropicApiSnapshot {
     pub spent: f64,
     pub limit: Option<f64>,
+    /// Last UTC calendar day fully covered by the daily cost buckets.
+    pub covered_through: Option<chrono::NaiveDate>,
 }
 
 impl Eq for AnthropicApiSnapshot {}
@@ -628,6 +630,20 @@ impl AnthropicApiSnapshot {
         self.limit
             .filter(|l| l.is_finite() && *l > 0.0)
             .map(|l| ((self.spent / l) * 100.0).round().clamp(0.0, 9999.0) as i32)
+    }
+
+    pub fn coverage_label(&self) -> String {
+        let Some(date) = self.covered_through else {
+            return "Completed daily buckets this month".into();
+        };
+        const MONTHS: [&str; 12] = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+        let month = MONTHS[chrono::Datelike::month0(&date) as usize];
+        format!(
+            "Month to date (through {month} {})",
+            chrono::Datelike::day(&date)
+        )
     }
 }
 

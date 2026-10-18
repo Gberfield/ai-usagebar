@@ -810,7 +810,7 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
             let p = pct.clamp(0, 100) as u16;
             v.push_metric(
                 Section::Metric {
-                    label: "Spend (mo)".into(),
+                    label: s.coverage_label(),
                     pct: p,
                     severity: severity_for(pct),
                     value_label: format!("{} of ${:.0}", usd(s.spent), limit),
@@ -821,7 +821,7 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
         }
         _ => {
             v.push(Section::Text {
-                label: "Spend (mo)".into(),
+                label: s.coverage_label(),
                 value: usd(s.spent),
             });
         }
@@ -829,7 +829,7 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
     v.push(Section::Spacer);
     v.push(Section::Text {
         label: "".into(),
-        value: "Month-to-date cost via the Admin usage API.".into(),
+        value: "Only completed daily buckets from the Admin usage API.".into(),
     });
     v.push(Section::Text {
         label: "".into(),

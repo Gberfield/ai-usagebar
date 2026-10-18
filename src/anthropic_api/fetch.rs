@@ -15,7 +15,7 @@ use crate::error::{AppError, Result};
 use crate::usage::{AnthropicApiSnapshot, finite_amount};
 use crate::vendor::{MAX_BODY_BYTES, read_body_capped};
 
-use super::types::{CostReport, page_dollars};
+use super::types::{CostReport, page_covered_through, page_dollars};
 
 pub const BASE_URL: &str = "https://api.anthropic.com";
 pub const ANTHROPIC_VERSION: &str = "2023-06-01";
@@ -121,12 +121,20 @@ pub async fn fetch_snapshot_at(
     }
 
     match fetch_live(client, endpoints, admin_key, now).await {
-        Ok(spent) => {
-            let snap = AnthropicApiSnapshot { spent, limit };
+        Ok((spent, covered_through)) => {
+            let snap = AnthropicApiSnapshot {
+                spent,
+                limit,
+                covered_through,
+            };
             let bytes = serde_json::to_vec(&serde_json::json!({
                 "month": month,
                 "target": target,
-                "snapshot": { "spent": snap.spent, "limit": snap.limit },
+                "snapshot": {
+                    "spent": snap.spent,
+                    "limit": snap.limit,
+                    "covered_through": snap.covered_through,
+                },
             }))?;
             cache.write_payload(&bytes)?;
             Ok(crate::outcome::Outcome::fresh(snap))
@@ -204,11 +212,19 @@ fn cached_snapshot(
     month: &str,
     target: &str,
 ) -> Result<AnthropicApiSnapshot> {
-    let spent = parse_cached_spent(bytes, month, target)?;
-    Ok(AnthropicApiSnapshot { spent, limit })
+    let (spent, covered_through) = parse_cached_spend(bytes, month, target)?;
+    Ok(AnthropicApiSnapshot {
+        spent,
+        limit,
+        covered_through,
+    })
 }
 
-fn parse_cached_spent(bytes: &[u8], month: &str, target: &str) -> Result<f64> {
+fn parse_cached_spend(
+    bytes: &[u8],
+    month: &str,
+    target: &str,
+) -> Result<(f64, Option<chrono::NaiveDate>)> {
     let v: serde_json::Value = serde_json::from_slice(bytes)?;
     // Payloads written before the month was recorded cannot be attributed to
     // one, so they are refetched rather than shown as the current month.
@@ -231,7 +247,19 @@ fn parse_cached_spent(bytes: &[u8], month: &str, target: &str) -> Result<f64> {
     let spent = s["spent"]
         .as_f64()
         .ok_or_else(|| AppError::Schema("anthropic-api cache missing 'spent'".into()))?;
-    crate::usage::finite_amount("anthropic-api cache", "spent", spent)
+    let spent = crate::usage::finite_amount("anthropic-api cache", "spent", spent)?;
+    let covered_through = s
+        .get("covered_through")
+        .and_then(serde_json::Value::as_str)
+        .map(|raw| {
+            chrono::NaiveDate::parse_from_str(raw, "%Y-%m-%d").map_err(|e| {
+                AppError::Schema(format!(
+                    "anthropic-api cache has invalid 'covered_through' {raw:?}: {e}"
+                ))
+            })
+        })
+        .transpose()?;
+    Ok((spent, covered_through))
 }
 
 async fn fetch_live(
@@ -239,11 +267,12 @@ async fn fetch_live(
     endpoints: &Endpoints,
     admin_key: &str,
     now: DateTime<Utc>,
-) -> Result<f64> {
+) -> Result<(f64, Option<chrono::NaiveDate>)> {
     let starting_at = month_start_rfc3339(now);
     let mut total = 0.0;
     let mut page: Option<String> = None;
     let mut seen_pages: Vec<String> = Vec::new();
+    let mut covered_through = None;
 
     for _ in 0..MAX_PAGES {
         let mut req = client
@@ -281,12 +310,13 @@ async fn fetch_live(
             "cost_report running total",
             total + page_dollars(&report)?,
         )?;
+        covered_through = covered_through.max(page_covered_through(&report)?);
 
         // A partial total is indistinguishable from a genuinely smaller spend
         // once cached, so every way pagination can go wrong is an error rather
         // than an early `break` with whatever was summed so far.
         match (report.has_more, report.next_page) {
-            (false, _) => return Ok(total),
+            (false, _) => return Ok((total, covered_through)),
             (true, None) => {
                 return Err(AppError::Schema(
                     "anthropic-api cost_report: has_more is true but next_page is missing; \
@@ -347,7 +377,8 @@ mod tests {
             .match_query(mockito::Matcher::Any)
             .with_status(200)
             .with_body(
-                r#"{"data":[{"results":[{"amount":"100.0","currency":"USD"},
+                r#"{"data":[{"ending_at":"2026-07-19T00:00:00Z",
+                    "results":[{"amount":"100.0","currency":"USD"},
                     {"amount":"34.0","currency":"USD"}]}],
                     "has_more":false,"next_page":null}"#,
             )
@@ -372,6 +403,10 @@ mod tests {
         // 134 cents = $1.34
         assert!((out.snapshot.spent - 1.34).abs() < 1e-9);
         assert_eq!(out.snapshot.limit, Some(1000.0));
+        assert_eq!(
+            out.snapshot.covered_through,
+            Some(chrono::NaiveDate::from_ymd_opt(2026, 7, 18).unwrap())
+        );
         assert!(!out.stale);
     }
 

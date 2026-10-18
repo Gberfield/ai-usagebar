@@ -344,8 +344,11 @@ The default executable is `$GROK_HOME/bin/grok`, or `~/.grok/bin/grok` when
 
 ## Anthropic API
 
-`{aapi_headline}`, `{aapi_spent}`, `{aapi_limit}`, `{aapi_pct}` report
-month-to-date spend from the Admin API `cost_report`.
+`{aapi_headline}`, `{aapi_spent}`, `{aapi_limit}`, `{aapi_pct}`, and
+`{aapi_through}` report
+spend from completed daily buckets in the Admin API `cost_report`.
+`{aapi_through}` is the last fully covered UTC date in `YYYY-MM-DD` form (or
+empty when the report has no dated bucket).
 
 - With a positive finite `monthly_limit`, the headline looks like
   `$1.34 / $1000 · 0%`.

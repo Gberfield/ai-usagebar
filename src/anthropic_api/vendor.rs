@@ -50,6 +50,12 @@ pub fn build_placeholders(snap: &AnthropicApiSnapshot) -> HashMap<&'static str, 
         ("aapi_headline", headline(snap)),
         ("aapi_spent", usd(snap.spent)),
         (
+            "aapi_through",
+            snap.covered_through
+                .map(|date| date.to_string())
+                .unwrap_or_default(),
+        ),
+        (
             "aapi_limit",
             snap.limit
                 .map(|l| format!("${l:.0}"))
@@ -126,7 +132,8 @@ fn render_tooltip(
     lines.push(TooltipLine::Body("".into()));
 
     lines.push(TooltipLine::Body(format!(
-        " <span foreground='{fg}'>  󰉹  Spend this month</span>"
+        " <span foreground='{fg}'>  󰉹  {}</span>",
+        escape(&snap.coverage_label())
     )));
     lines.push(TooltipLine::Body(format!(
         "   <span font_weight='bold' foreground='{color}'>{spent}</span>",
@@ -211,7 +218,11 @@ mod tests {
     use crate::usage::AnthropicApiSnapshot;
 
     fn outcome(spent: f64, limit: Option<f64>) -> (AnthropicApiSnapshot, VendorOutcome) {
-        let snap = AnthropicApiSnapshot { spent, limit };
+        let snap = AnthropicApiSnapshot {
+            spent,
+            limit,
+            covered_through: Some(chrono::NaiveDate::from_ymd_opt(2026, 10, 17).unwrap()),
+        };
         let o = VendorOutcome {
             snapshot: crate::usage::VendorSnapshot::AnthropicApi(snap.clone()),
             stale: false,
@@ -245,6 +256,17 @@ mod tests {
         let out = render(&o, &snap, &Theme::default(), &opts(), Utc::now());
         assert!(out.text.contains("$1.34/mo"));
         assert!(out.tooltip.contains("no monthly limit set"));
+        assert!(out.tooltip.contains("Month to date (through Oct 17)"));
+    }
+
+    #[test]
+    fn an_undated_report_does_not_claim_to_include_the_live_day() {
+        let snap = AnthropicApiSnapshot {
+            spent: 1.34,
+            limit: None,
+            covered_through: None,
+        };
+        assert_eq!(snap.coverage_label(), "Completed daily buckets this month");
     }
 
     #[test]
@@ -252,21 +274,24 @@ mod tests {
         assert_eq!(
             severity(&AnthropicApiSnapshot {
                 spent: 950.0,
-                limit: Some(1000.0)
+                limit: Some(1000.0),
+                covered_through: None,
             }),
             PaceSeverity::Critical
         );
         assert_eq!(
             severity(&AnthropicApiSnapshot {
                 spent: 1.0,
-                limit: Some(1000.0)
+                limit: Some(1000.0),
+                covered_through: None,
             }),
             PaceSeverity::Low
         );
         assert_eq!(
             severity(&AnthropicApiSnapshot {
                 spent: 500.0,
-                limit: None
+                limit: None,
+                covered_through: None,
             }),
             PaceSeverity::Low
         );
