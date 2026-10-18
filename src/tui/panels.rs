@@ -2626,17 +2626,21 @@ mod tests {
 
     #[test]
     fn nous_sections_render_credit_rows_as_usd() {
-        let sections = nous_sections(&nous_snapshot(), now(), DisplayPrefs::default()).build();
+        let sections = sections_with_metadata_for(
+            &ready(VendorSnapshot::NousResearch(nous_snapshot())),
+            now(),
+            5,
+        );
         assert!(sections.iter().any(|s| matches!(
-            s,
+            &s.section,
             Section::Text { label, value } if label == "Subscription credits" && value == "$0.00 remaining"
         )));
         assert!(sections.iter().any(|s| matches!(
-            s,
+            &s.section,
             Section::Text { label, value } if label == "Top-up credits" && value == "$12.93 remaining"
         )));
         assert!(sections.iter().any(|s| matches!(
-            s,
+            &s.section,
             Section::Text { label, value } if label == "Total usable credits" && value == "$12.93"
         )));
     }
