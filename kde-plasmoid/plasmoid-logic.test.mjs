@@ -9,10 +9,11 @@ import {
     DEFAULT_BINARY, DEFAULT_TIMEOUT_SECS,
     detailRows, entryFor, errorMessage, EXIT_KILLED, EXIT_TIMED_OUT, formatDuration,
     headline, isAlarming, MAX_TIMEOUT_SECS, MIN_TIMEOUT_SECS,
-    metricDetail, nextVendor, paletteFromTheme, panelCells, parseReport,
+    metricChoices, metricDetail, metricKeys, nextVendor, paletteFromTheme, panelCells,
+    parseHiddenMetrics, parseReport,
     resetRemainingMs, safeText, severityColor, severityOf, SEVERITIES, shellQuote,
     shortLabel, shouldStartFetch, TIMEOUT_KILL_GRACE_SECS, timeoutSeconds,
-    updatedAgeMs, vendorTabs,
+    updatedAgeMs, vendorTabs, visibleEntry,
 } from './package/contents/code/plasmoid-logic.mjs';
 
 const at = rel => fileURLToPath(new URL(rel, import.meta.url));
@@ -120,6 +121,12 @@ assert.match(mainQml, /sourceName\s*!==\s*root\.pendingCommand/,
     'a completed command must be matched to the exact in-flight command');
 assert.match(mainQml, /Logic\.panelCells\(root\.entry, \{max: 2\}\)/,
     'the compact view must not pretend a removed weekly toggle selects metrics');
+assert.match(mainQml, /Logic\.visibleEntry\(/,
+    'the selected KDE entry must apply persisted metric visibility before every projection');
+assert.match(mainQml, /Logic\.cardModel\(root\.report, root\.hiddenMetrics\)/,
+    'the all-provider card layout must apply the same metric visibility');
+assert.match(configUi, /Logic\.metricChoices\(/,
+    'Configure must derive metric switches from the report rather than a vendor table');
 assert.match(readFileSync(at('./package/contents/ui/UsageRow.qml'), 'utf8'),
     /item\.row\.headline\s*===\s*["']value["']/,
     'UsageRow must honor headline === "value" before falling back to the percentage');
@@ -358,6 +365,51 @@ assert.equal(panelCells(anthropic, {max: 2})[1].severity, 'critical');
 // confident 0%.
 assert.deepEqual(panelCells(zai).map(c => c.text), ['⚠']);
 assert.deepEqual(panelCells(null), []);
+
+// Per-applet metric visibility is data-driven and affects every projection
+// through visibleEntry. Unknown/malformed preferences cannot blank the panel.
+const hiddenWeekly = {anthropic: ['Weekly (7d)']};
+const sessionOnly = visibleEntry(anthropic, hiddenWeekly);
+assert.deepEqual(detailRows(sessionOnly).map(row => row.label), ['Session (5h)']);
+assert.equal(headline(sessionOnly).text, '62%');
+assert.deepEqual(panelCells(sessionOnly).map(cell => cell.text), ['62%']);
+assert.deepEqual(cardFor(sessionOnly).windows.map(row => row.label), ['Session (5h)']);
+assert.equal(metricChoices(anthropic, hiddenWeekly)[1].checked, false);
+assert.equal(metricChoices(anthropic, hiddenWeekly)[0].canToggle, false,
+    'the final visible metric is locked');
+assert.equal(metricChoices(anthropic, hiddenWeekly)[1].canToggle, true,
+    'a hidden metric can always be restored');
+assert.equal(visibleEntry(anthropic, {anthropic: ['Session (5h)', 'Weekly (7d)']}), anthropic,
+    'stale preferences that hide every metric are ignored');
+assert.deepEqual(parseHiddenMetrics('not json'), {});
+assert.deepEqual(parseHiddenMetrics('{"anthropic":["Weekly (7d)"]}'), hiddenWeekly);
+assert.deepEqual(parseHiddenMetrics('{"__proto__":["Weekly (7d)"]}'), {},
+    'reserved object-property names cannot alter the preferences object prototype');
+assert.deepEqual(parseHiddenMetrics('{"v":[" Pool ","Pool","Pool"]}'), {v: ['Pool']},
+    'hand-edited preferences are trimmed and deduplicated');
+
+const repeated = parseReport(JSON.stringify({entries: [{id: 'v', sections: [
+    {type: 'metric', label: 'Pool', percent: 1},
+    {type: 'metric', label: 'Pool', percent: 2},
+    {type: 'metric', group: 'Breakdown', label: 'Pool', percent: 3},
+]}]})).entries[0];
+assert.deepEqual(metricKeys(repeated).filter(Boolean).map(item => item.key),
+    ['Pool', 'Pool #2', 'Breakdown / Pool']);
+assert.deepEqual(cardModel({entries: [anthropic]}, hiddenWeekly)[0].windows.map(row => row.label),
+    ['Session (5h)']);
+const grouped = parseReport(JSON.stringify({entries: [{id: 'custom', sections: [
+    {type: 'metric', label: 'Loose', percent: 1},
+    {type: 'spacer'},
+    {type: 'text', label: 'Subscription', value: ''},
+    {type: 'metric', label: 'Fast', percent: 2},
+    {type: 'spacer'},
+    {type: 'text', label: 'Notes', value: 'kept'},
+]}]})).entries[0];
+assert.deepEqual(metricKeys(grouped).filter(Boolean).map(item => item.key),
+    ['Loose', 'Subscription / Fast']);
+assert.deepEqual(visibleEntry(grouped, {custom: ['Subscription / Fast']}).sections,
+    [grouped.sections[0], grouped.sections[4], grouped.sections[5]],
+    'a hidden custom-provider group takes its heading without losing unrelated text data');
 // A vendor whose only section is a block has no percentage to plot.
 assert.deepEqual(panelCells(openai), []);
 // Grouped session rows take no panel cell while a quota window can fill it

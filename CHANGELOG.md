@@ -32,6 +32,11 @@
 
 ### Added
 
+- **KDE Plasma can hide individual metrics per provider.** Configure now lists
+  each provider's reported metrics. A disabled metric leaves the popup, compact
+  panel, tooltip, headline and card severity, while the final visible metric
+  stays locked so an applet cannot become blank (#460).
+
 - **Custom providers can format metric footnotes and text rows as money.** An
   optional `currency` setting on `[[custom.metrics]]` and `[[custom.texts]]`
   accepts a three-letter uppercase currency code (such as `"USD"` or `"EUR"`) and

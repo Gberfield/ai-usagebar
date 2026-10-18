@@ -28,6 +28,12 @@
       <default>anthropic</default>
     </entry>
 
+    <!-- JSON object: provider id to hidden metric keys. A string keeps the
+         per-provider map in this applet instance without a parallel file. -->
+    <entry name="hiddenMetrics" type="String">
+      <default>{}</default>
+    </entry>
+
     <!-- One report covers every configured provider. The binary cache handles
          shorter provider TTLs between these aggregate refreshes. -->
     <entry name="interval" type="Int">

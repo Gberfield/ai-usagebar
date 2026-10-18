@@ -76,9 +76,11 @@ never appears in the chooser.
 
 Right-click the widget → *Configure*. One page: which vendors are in the scroll
 ring (each listed with its plan or its error, straight from the report), the
-current vendor, the popup layout, refresh interval, command timeout, left-click
-action, compact percentage and bar toggles, bar width, and the five severity
-colours.
+current vendor, per-provider metric switches, the popup layout, refresh
+interval, command timeout, left-click action, compact percentage and bar
+toggles, bar width, and the five severity colours. Hidden metrics leave both
+popup layouts, the compact panel, the tooltip, and headline/severity selection.
+The final visible metric is locked to keep the applet usable.
 
 The GNOME prefs window has a second "Vendors" page listing per-vendor login
 status. There is no equivalent page here because the report already carries
@@ -198,6 +200,8 @@ page — is still exercised by hand against the checklist below.
 4. Running `ai-usagebar --cycle-next` in a terminal does **not** move the
    widget — the proof it is independent of the shared state file.
 5. Hover shows every quota row, and the countdowns tick between fetches.
+   Hide one metric in Configure and confirm it leaves the popup, compact panel
+   and tooltip, then survives a plasmashell restart.
 6. Click opens the popup; the refresh and TUI buttons are visible and work
    (they were once clipped by a zero-height root).
 7. Breeze Light ↔ Dark ↔ a third-party scheme recolours without a restart, and

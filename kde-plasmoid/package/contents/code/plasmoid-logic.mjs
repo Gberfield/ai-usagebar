@@ -337,6 +337,125 @@ export function detailRows(entry) {
     return entry.sections.filter(s => s.type !== 'spacer');
 }
 
+// Metric visibility is stored per applet as JSON because KConfigXT has no map
+// type. Treat malformed or stale values as empty preferences, never as a
+// reason to blank the panel.
+export function parseHiddenMetrics(value) {
+    let parsed;
+    try {
+        parsed = JSON.parse(String(value ?? '{}'));
+    } catch (e) {
+        return {};
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        return {};
+    const clean = {};
+    for (const id of Object.keys(parsed).slice(0, 64)) {
+        if (!Array.isArray(parsed[id]))
+            continue;
+        const providerId = safeText(id, 60);
+        // These names have special meaning on ordinary JavaScript objects.
+        // Provider identifiers never use them, and ignoring them keeps a
+        // hand-edited configuration from mutating the preferences object's
+        // prototype.
+        if (!providerId || ['__proto__', 'constructor', 'prototype'].includes(providerId))
+            continue;
+        const keys = [];
+        for (const rawKey of parsed[id].slice(0, 32)) {
+            const key = safeText(rawKey, 220).trim();
+            if (key && keys.indexOf(key) === -1)
+                keys.push(key);
+        }
+        if (keys.length)
+            clean[providerId] = keys;
+    }
+    return clean;
+}
+
+function isHeadingRow(section) {
+    return section && section.type === 'text' && section.label && !section.value;
+}
+
+export function metricKeys(entry) {
+    if (!entry)
+        return [];
+    const counts = {};
+    let heading = '';
+    return entry.sections.map((section, index) => {
+        if (isHeadingRow(section)) {
+            heading = section.label.trim();
+            return null;
+        }
+        if (section.type !== 'metric')
+            return null;
+        const group = section.group.trim() || heading;
+        const base = group ? `${group} / ${section.label}` : section.label;
+        counts[base] = (counts[base] || 0) + 1;
+        return {index: index, key: counts[base] === 1 ? base : `${base} #${counts[base]}`};
+    });
+}
+
+export function visibleEntry(entry, hiddenByProvider) {
+    if (!entry)
+        return null;
+    const hidden = (hiddenByProvider && hiddenByProvider[entry.id]) || [];
+    const keys = metricKeys(entry);
+    const metrics = keys.filter(Boolean);
+    const visibleCount = metrics.filter(item => hidden.indexOf(item.key) === -1).length;
+    // A stale preference cannot hide every metric. This matches the settings
+    // UI, which locks the final visible switch.
+    if (visibleCount === 0)
+        return entry;
+    const sections = [];
+    let block = null;
+    const closeBlock = () => {
+        if (block && block.metrics > 0 && block.kept === 0) {
+            const hasLeadingSpacer = block.start > 0 && sections[block.start - 1].type === 'spacer';
+            sections.splice(hasLeadingSpacer ? block.start - 1 : block.start, hasLeadingSpacer ? 2 : 1);
+        }
+        block = null;
+    };
+    entry.sections.forEach((section, index) => {
+        if (isHeadingRow(section)) {
+            closeBlock();
+            block = {start: sections.length, metrics: 0, kept: 0};
+        }
+        if (keys[index]) {
+            if (block)
+                block.metrics++;
+            if (hidden.indexOf(keys[index].key) !== -1) {
+                const next = entry.sections[index + 1];
+                const endsRun = !next || next.type === 'spacer' || isHeadingRow(next);
+                if (endsRun && sections.length && sections[sections.length - 1].type === 'spacer')
+                    sections.pop();
+                return;
+            }
+            if (block)
+                block.kept++;
+        }
+        sections.push(section);
+    });
+    closeBlock();
+    return {...entry, sections: sections};
+}
+
+export function metricChoices(entry, hiddenByProvider) {
+    if (!entry)
+        return [];
+    const hidden = ((hiddenByProvider && hiddenByProvider[entry.id]) || []);
+    const keys = metricKeys(entry).filter(Boolean);
+    const visibleCount = keys.filter(item => hidden.indexOf(item.key) === -1).length;
+    return keys.map(item => {
+        const checked = hidden.indexOf(item.key) === -1;
+        return {
+            key: item.key,
+            label: entry.sections[item.index].label,
+            checked: checked,
+            canToggle: !checked || visibleCount > 1,
+        };
+    });
+}
+
 // The panel cells. Each carries its own severity so the compact representation
 // colours per cell rather than by the entry's worst value.
 export function panelCells(entry, options) {
@@ -444,9 +563,9 @@ export function cardFor(entry) {
     };
 }
 
-export function cardModel(report) {
+export function cardModel(report, hiddenByProvider) {
     const entries = (report && report.entries) || [];
-    return entries.map(cardFor);
+    return entries.map(entry => cardFor(visibleEntry(entry, hiddenByProvider)));
 }
 
 // "Session (5h)" -> "5h", "Weekly (7d)" -> "7d". The panel is width
