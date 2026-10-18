@@ -258,6 +258,14 @@ mod tests {
         }
     }
 
+    fn text(label: &str, value: &str) -> CustomTextSpec {
+        CustomTextSpec {
+            label: label.into(),
+            value: value.into(),
+            ..CustomTextSpec::default()
+        }
+    }
+
     fn spec(metrics: Vec<CustomMetricSpec>, texts: Vec<CustomTextSpec>) -> CustomProviderConfig {
         CustomProviderConfig {
             id: "mytool".into(),
@@ -409,26 +417,11 @@ mod tests {
     #[test]
     fn text_values_render_strings_numbers_and_booleans() {
         let texts = vec![
-            CustomTextSpec {
-                label: "Tier".into(),
-                value: "/tier".into(),
-            },
-            CustomTextSpec {
-                label: "Seats".into(),
-                value: "/seats".into(),
-            },
-            CustomTextSpec {
-                label: "Spend".into(),
-                value: "/spend".into(),
-            },
-            CustomTextSpec {
-                label: "Active".into(),
-                value: "/active".into(),
-            },
-            CustomTextSpec {
-                label: "Account".into(),
-                value: "/account".into(),
-            },
+            text("Tier", "/tier"),
+            text("Seats", "/seats"),
+            text("Spend", "/spend"),
+            text("Active", "/active"),
+            text("Account", "/account"),
         ];
         let spec = spec(vec![], texts);
         let body = json!({
@@ -446,13 +439,7 @@ mod tests {
 
     #[test]
     fn a_null_or_missing_text_value_is_a_schema_error() {
-        let spec = spec(
-            vec![],
-            vec![CustomTextSpec {
-                label: "Tier".into(),
-                value: "/tier".into(),
-            }],
-        );
+        let spec = spec(vec![], vec![text("Tier", "/tier")]);
         let err = project(&json!({"tier": null}), &spec).unwrap_err();
         assert!(err.to_string().contains("/tier is null"), "{err}");
         let err = project(&json!({}), &spec).unwrap_err();
@@ -461,13 +448,7 @@ mod tests {
 
     #[test]
     fn text_values_are_sanitized_and_capped() {
-        let spec = spec(
-            vec![],
-            vec![CustomTextSpec {
-                label: "Tier".into(),
-                value: "/tier".into(),
-            }],
-        );
+        let spec = spec(vec![], vec![text("Tier", "/tier")]);
         let snap = project(&json!({"tier": "\u{1b}[31mred\u{7}\nline"}), &spec).unwrap();
         assert_eq!(snap.texts[0].value, "[31mred line");
 
@@ -518,10 +499,7 @@ mod tests {
                 resets_at: Some("/reset".into()),
                 ..metric("Requests", "/used", "/limit")
             }],
-            vec![CustomTextSpec {
-                label: "Tier".into(),
-                value: "/tier".into(),
-            }],
+            vec![text("Tier", "/tier")],
         );
         let body = json!({"used": 1, "limit": 4, "reset": 1_767_225_600, "tier": "Pro"});
         let snap = project(&body, &spec).unwrap();
