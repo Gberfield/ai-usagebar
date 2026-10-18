@@ -1350,7 +1350,7 @@ fn nous_sections(
         let (label, value_label, footnote) = match headline {
             MetricHeadline::Value => (
                 "Credits remaining".into(),
-                format!("{:.2}", balance.unwrap_or_default()),
+                usd(balance.unwrap_or_default()),
                 "usable now".into(),
             ),
             MetricHeadline::Percent => ("Usage".into(), format!("{pct}%"), "current period".into()),
@@ -1371,19 +1371,19 @@ fn nous_sections(
     if let Some(remaining) = s.credits_remaining {
         sections.push(Section::Text {
             label: "Subscription credits".into(),
-            value: format!("{remaining:.2} remaining"),
+            value: format!("{} remaining", usd(remaining)),
         });
     }
     if let Some(purchased) = s.purchased_credits_remaining {
         sections.push(Section::Text {
             label: "Top-up credits".into(),
-            value: format!("{purchased:.2} remaining"),
+            value: format!("{} remaining", usd(purchased)),
         });
     }
     if let Some(total_usable) = s.total_usable_credits {
         sections.push(Section::Text {
             label: "Total usable credits".into(),
-            value: format!("{total_usable:.2}"),
+            value: usd(total_usable),
         });
     }
     if let Some(period_end) = s.current_period_end {
@@ -2618,10 +2618,31 @@ mod tests {
                 pct, value_label, ..
             } => {
                 assert_eq!(*pct, 100);
-                assert_eq!(value_label, "12.93");
+                assert_eq!(value_label, "$12.93");
             }
             _ => unreachable!(),
         }
+    }
+
+    #[test]
+    fn nous_sections_render_credit_rows_as_usd() {
+        let sections = sections_with_metadata_for(
+            &ready(VendorSnapshot::NousResearch(nous_snapshot())),
+            now(),
+            5,
+        );
+        assert!(sections.iter().any(|s| matches!(
+            &s.section,
+            Section::Text { label, value } if label == "Subscription credits" && value == "$0.00 remaining"
+        )));
+        assert!(sections.iter().any(|s| matches!(
+            &s.section,
+            Section::Text { label, value } if label == "Top-up credits" && value == "$12.93 remaining"
+        )));
+        assert!(sections.iter().any(|s| matches!(
+            &s.section,
+            Section::Text { label, value } if label == "Total usable credits" && value == "$12.93"
+        )));
     }
 
     /// Only a rolling window has a length a frontend can pace against. The
