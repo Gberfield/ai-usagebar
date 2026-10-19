@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Added
+
+- **The Linux Mint tray icon shows the leading provider's usage.** The XApp
+  status icon carries that provider's percentage as its label, and its tooltip
+  lists the same provider lines as the menu, so quota is visible on hover
+  without opening the dashboard. A leading provider with no percentage (a
+  balance) leaves the label blank; before the first report arrives the tooltip
+  keeps its "open dashboard" hint.
+
 ## [1.41.0] — 2026-10-18
 
 ### Changed
