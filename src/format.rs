@@ -187,8 +187,14 @@ pub fn reset_credit_lines(credits: &ResetCredits, now: DateTime<Utc>) -> Vec<Str
         .iter()
         .map(|credit| reset_credit_line(credit, now))
         .collect();
-    if lines.is_empty() && credits.available > 0 {
-        lines.push(reset_credits(credits));
+    if lines.is_empty() {
+        // A stated zero still gets a row: an empty block reads as missing
+        // data rather than "you hold none".
+        lines.push(if credits.available > 0 {
+            reset_credits(credits)
+        } else {
+            "None available".to_string()
+        });
     }
     lines
 }

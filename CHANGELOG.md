@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+### Changed
+
+- **A Codex account with no banked resets says so.** When the usage response
+  states `available_count: 0`, the account now shows "Reset credits: None
+  available" in the tooltip and TUI, `reset_credits: {"available": 0}` in
+  `usage --json`, and a "Rate Limit Resets · 0 available" row in the popover,
+  instead of dropping the section. Before, an account with none looked the same
+  as one whose figures never arrived. A response that omits the block still
+  shows nothing, and Claude and SuperGrok are unchanged (#466).
+
 ## [1.41.0] — 2026-10-18
 
 ### Changed

@@ -1901,6 +1901,29 @@ assert.equal(resolvedTheme('system'), 'light');
 }
 
 {
+  // A stated zero (Codex) is a row reading "0 available", not a missing one,
+  // and its "Reset credits" text block becomes that row rather than a block.
+  const payload = parseHostPayload({
+    entries: [{
+      id: 'openai',
+      display_name: 'Codex',
+      reset_credits: { available: 0, credits: [] },
+      sections: [
+        { type: 'metric', label: 'Weekly', percent: 10, reset_at: '2026-10-01T00:00:00Z' },
+        { type: 'block', label: 'Reset credits', body: ['None available'] },
+      ],
+    }],
+  });
+  const [card] = projectCards(payload, 0);
+  assert.equal(card.resetCredits.available, 0);
+  const resets = card.rows.filter((row) => row.kind === 'resetCredits');
+  assert.equal(resets.length, 1);
+  assert.equal(resets[0].available, 0);
+  assert.equal(resets[0].credits.length, 0);
+  assert.ok(!card.rows.some((row) => row.kind !== 'resetCredits' && /reset credits/i.test(row.label || '')));
+}
+
+{
   assert.equal(isHttpUrl('https://status.anthropic.com/'), true);
   assert.equal(isHttpUrl('javascript:alert(1)'), false);
   const claude = providerLinks('anthropic');
