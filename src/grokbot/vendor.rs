@@ -429,6 +429,26 @@ mod tests {
         assert!(!values["gbt_weekly_reset"].is_empty());
     }
 
+    /// Grok Bot has no session window, so the cross-provider session aliases
+    /// are empty, as Devin's are, rather than left in a shared format as
+    /// literal text (#474).
+    #[test]
+    fn a_shared_format_leaves_no_literal_session_placeholder() {
+        let snap = sample_snap();
+        let values = build_placeholders(&snap, now());
+        for key in ["session_pct", "session_reset", "session_elapsed"] {
+            assert_eq!(values.get(key).map(String::as_str), Some(""), "{key}");
+        }
+        let shared = RenderOpts {
+            format: Some("{vendor_short} {session_pct} {weekly_pct}%".into()),
+            ..opts()
+        };
+        let outcome = sample_outcome(snap.clone());
+        let out = render(&outcome, &snap, &Theme::default(), &shared, now());
+        assert!(!out.text.contains('{'), "{}", out.text);
+        assert!(out.text.contains("42%"), "{}", out.text);
+    }
+
     #[test]
     fn no_allowance_renders_empty_weekly_placeholders_not_a_zero() {
         let snap = GrokbotSnapshot {
