@@ -3197,6 +3197,18 @@ mod tests {
         assert!(parse_lsof_pcn("").is_empty());
     }
 
+    /// Discovery runs on every macOS fetch, and the menu bar app starts
+    /// `ai-usagebar` with `~/.cargo/bin`, `~/.local/bin` and Homebrew ahead of
+    /// the system directories on `PATH`. A bare `lsof` or `ps` would run
+    /// whichever comes first there, so both are spawned by path (#472).
+    #[test]
+    fn macos_discovery_spawns_lsof_and_ps_by_path() {
+        let code = crate::guard::production_code(include_str!("fetch.rs"));
+        for bare in [r#"Command::new("lsof")"#, r#"Command::new("ps")"#] {
+            assert!(!code.contains(bare), "{bare} looks the tool up on PATH");
+        }
+    }
+
     /// First run with Antigravity closed: no cache to serve, so the user must
     /// be told what to start — not "no usable cache", which says nothing.
     #[test]
