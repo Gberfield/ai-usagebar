@@ -66,6 +66,11 @@ fn build_placeholders_with_tolerance(
         ("vendor_short", VendorId::Grokbot.short_name().to_string()),
         // Cross-vendor aliases.
         ("plan", snap.plan.clone()),
+        // There is no session window. Empty values, as Devin returns, keep a
+        // format shared across providers from printing these literally (#474).
+        ("session_pct", String::new()),
+        ("session_reset", String::new()),
+        ("session_elapsed", String::new()),
         ("weekly_pct", allowance(snap.weekly_pct.to_string())),
         ("weekly_reset", allowance(reset.clone())),
         ("weekly_elapsed", allowance(elapsed.clone())),
