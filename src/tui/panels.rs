@@ -2554,6 +2554,36 @@ mod tests {
         assert_eq!(cells[0].0, "$42.50");
     }
 
+    /// The spend row's label is its name to the notification dedupe key, the
+    /// popover's stars and hidden rows and Omarchy's pick of a balance row, so
+    /// it stays put while the covered day moves on a row of its own (#470).
+    #[test]
+    fn anthropic_api_spend_row_keeps_its_label_as_the_covered_day_moves() {
+        fn rows(limit: Option<f64>, covered_through: Option<chrono::NaiveDate>) -> Vec<String> {
+            let snapshot = VendorSnapshot::AnthropicApi(crate::usage::AnthropicApiSnapshot {
+                spent: 1.34,
+                limit,
+                covered_through,
+            });
+            sections_for(&ready(snapshot), now(), 5)
+                .into_iter()
+                .filter_map(|section| match section {
+                    Section::Metric { label, .. } => Some(label),
+                    Section::Text { label, value } if !label.is_empty() => {
+                        Some(format!("{label} {value}"))
+                    }
+                    _ => None,
+                })
+                .collect()
+        }
+        let oct = |day| chrono::NaiveDate::from_ymd_opt(2026, 10, day);
+        assert_eq!(rows(Some(1000.0), oct(17)), ["Spend (mo)", "Through Oct 17"]);
+        assert_eq!(rows(Some(1000.0), oct(18)), ["Spend (mo)", "Through Oct 18"]);
+        assert_eq!(rows(None, oct(18)), ["Spend (mo) $1.34", "Through Oct 18"]);
+        // A report with no dated bucket names no day.
+        assert_eq!(rows(None, None), ["Spend (mo) $1.34"]);
+    }
+
     fn ready(snapshot: VendorSnapshot) -> TabState {
         ready_with(snapshot, DisplayPrefs::default())
     }
