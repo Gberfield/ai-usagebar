@@ -11,6 +11,14 @@
 
 ### Fixed
 
+- **The Anthropic API spend row keeps its name from one day to the next.**
+  1.41.0 put the last covered day in the row's label, and the label is how
+  notifications, the popover's stars and hidden rows, and Omarchy's bar find
+  the row. A spend over the threshold notified again every day, a starred or
+  hidden row was forgotten each morning, and without a `monthly_limit` the
+  Omarchy bar read `Ready` instead of the spend. The row is `Spend (mo)` again,
+  and the covered day sits on a `Through` row of its own (#470).
+
 - **A Codex account with no banked resets says so.** When the usage response
   states `available_count: 0`, the account now shows "Reset credits: None
   available" in the tooltip and TUI, `reset_credits: {"available": 0}` in

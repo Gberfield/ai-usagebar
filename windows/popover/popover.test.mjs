@@ -1616,6 +1616,41 @@ assert.equal(resolvedTheme('system'), 'light');
 }
 
 {
+  // 1.41.0 put Anthropic API's changing coverage date in persisted row keys.
+  // Loading that layout migrates every variant to the stable spend row,
+  // deduplicates it, and frees the second star slot.
+  const restored = normalizeLayout({
+    stars: {
+      anthropic_api: [
+        'metric:Month to date (through Oct 17)',
+        'metric:Month to date (through Oct 18)',
+      ],
+      'anthropic_api@work': ['text:Completed daily buckets this month'],
+    },
+    rows: {
+      anthropic_api: {
+        always: ['metric:Month to date (through Oct 17)', 'metric:Spend (mo)'],
+        demand: ['text:Completed daily buckets this month', 'text:Other'],
+        off: {
+          'metric:Month to date (through Oct 18)': true,
+          'text:Completed daily buckets this month': true,
+        },
+      },
+    },
+  });
+  assert.deepEqual(restored.stars.anthropic_api, ['metric:Spend (mo)']);
+  assert.deepEqual(restored.stars['anthropic_api@work'], ['text:Spend (mo)']);
+  assert.deepEqual(restored.rows.anthropic_api, {
+    always: ['metric:Spend (mo)'],
+    demand: ['text:Spend (mo)', 'text:Other'],
+    off: { 'metric:Spend (mo)': true, 'text:Spend (mo)': true },
+  });
+  const added = toggleStar(restored.stars, 'anthropic_api', 'metric:Requests');
+  assert.equal(added.error, '');
+  assert.deepEqual(added.stars.anthropic_api, ['metric:Spend (mo)', 'metric:Requests']);
+}
+
+{
   const payload = parseHostPayload({
     entries: [{
       id: 'anthropic',

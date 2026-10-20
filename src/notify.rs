@@ -154,6 +154,7 @@ pub fn decide(
     state: &mut NotifyState,
     now: DateTime<Utc>,
 ) -> Vec<Notification> {
+    migrate_anthropic_api_spend_key(input, state);
     let mut fired = Vec::new();
     let threshold = threshold as i32;
     let rearm_below = threshold - HYSTERESIS_PCT;
@@ -206,6 +207,47 @@ pub fn decide(
         );
     }
     fired
+}
+
+/// Version 1.41.0 used the last covered day as Anthropic API's spend-window
+/// identity. Collapse those daily keys into the stable row before deciding so
+/// an upgrade neither repeats a notification nor leaves unbounded stale state.
+fn migrate_anthropic_api_spend_key(input: &RefreshInput, state: &mut NotifyState) {
+    if input.entry_id != "anthropic_api" && !input.entry_id.starts_with("anthropic_api@") {
+        return;
+    }
+    let prefix = format!("{}::", input.entry_id);
+    let stable = format!("{prefix}Spend (mo)");
+    let legacy: Vec<String> = state
+        .entries
+        .keys()
+        .filter(|key| {
+            let Some(label) = key.strip_prefix(&prefix) else {
+                return false;
+            };
+            label == "Completed daily buckets this month"
+                || (label.starts_with("Month to date (through ") && label.ends_with(')'))
+        })
+        .cloned()
+        .collect();
+    if legacy.is_empty() {
+        return;
+    }
+    // An already-stable record is authoritative. Otherwise keep the newest
+    // daily record, since it represents the most recent delivered crossing.
+    let mut chosen = state.entries.get(&stable).cloned();
+    if chosen.is_none() {
+        chosen = legacy
+            .iter()
+            .filter_map(|key| state.entries.get(key).cloned())
+            .max_by_key(|record| record.notified_at);
+    }
+    for key in legacy {
+        state.entries.remove(&key);
+    }
+    if let Some(record) = chosen {
+        state.entries.insert(stable, record);
+    }
 }
 
 /// `true` when `current` is a later reset than `snapshot` — a `None → Some`
@@ -1029,6 +1071,90 @@ mod tests {
         drop(dir);
     }
 
+    #[test]
+    fn anthropic_api_daily_notification_keys_migrate_without_refiring() {
+        let (dir, path) = state_path();
+        let old = at(17, 9, 0);
+        let newest = at(18, 9, 0);
+        let mut state = NotifyState::default();
+        for (label, notified_at) in [
+            ("Month to date (through Sep 17)", old),
+            ("Month to date (through Sep 18)", newest),
+            ("Completed daily buckets this month", old),
+        ] {
+            state.entries.insert(
+                format!("anthropic_api::{label}"),
+                KeyRecord {
+                    notified_at,
+                    reset_at_snapshot: None,
+                },
+            );
+        }
+        state.write_to(&path).unwrap();
+        let input = RefreshInput {
+            entry_id: "anthropic_api".into(),
+            vendor: "Anthropic API".into(),
+            account: None,
+            rows: vec![row("Spend (mo)", 98, None)],
+            credits: Vec::new(),
+        };
+        let mut sink = RecorderSink::default();
+        run_at(
+            &input,
+            97,
+            &path,
+            Duration::from_secs(2),
+            &mut sink,
+            at(19, 9, 0),
+        );
+
+        assert!(sink.delivered.is_empty(), "the existing crossing remains notified");
+        let migrated = NotifyState::read_from(&path);
+        assert_eq!(migrated.entries.len(), 1);
+        assert_eq!(
+            migrated.entries["anthropic_api::Spend (mo)"].notified_at,
+            newest
+        );
+        assert!(
+            migrated
+                .entries
+                .keys()
+                .all(|key| !key.contains("Month to date") && !key.contains("Completed daily"))
+        );
+        drop(dir);
+    }
+
+    #[test]
+    fn an_existing_stable_anthropic_api_notification_record_wins_migration() {
+        let stable_at = at(16, 9, 0);
+        let mut state = NotifyState::default();
+        for (label, notified_at) in [
+            ("Spend (mo)", stable_at),
+            ("Month to date (through Sep 18)", at(18, 9, 0)),
+        ] {
+            state.entries.insert(
+                format!("anthropic_api@work::{label}"),
+                KeyRecord {
+                    notified_at,
+                    reset_at_snapshot: None,
+                },
+            );
+        }
+        let input = RefreshInput {
+            entry_id: "anthropic_api@work".into(),
+            vendor: "Anthropic API".into(),
+            account: Some("work".into()),
+            rows: Vec::new(),
+            credits: Vec::new(),
+        };
+        assert!(decide(&input, 97, &mut state, at(19, 9, 0)).is_empty());
+        assert_eq!(state.entries.len(), 1);
+        assert_eq!(
+            state.entries["anthropic_api@work::Spend (mo)"].notified_at,
+            stable_at
+        );
+    }
+
     // — Orchestration ————————————————————————————————
 
     #[test]
@@ -1478,6 +1604,37 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A window's identity must not depend on the day of the fetch either. An
+    /// Anthropic API spend row named after its covered day got a new key every
+    /// morning, so one crossing of the threshold notified again each day (#470).
+    #[test]
+    fn a_spend_over_the_threshold_notifies_once_as_the_covered_day_moves() {
+        use crate::tui::app::{ReadyTab, TabId, TabState};
+        use crate::usage::{AnthropicApiSnapshot, VendorSnapshot};
+
+        let tab = TabId::vendor(crate::vendor::VendorId::AnthropicApi);
+        let mut notify_state = NotifyState::default();
+        let fired: Vec<usize> = (17..=19)
+            .map(|day| {
+                let state = TabState::Ready(Box::new(ReadyTab {
+                    snapshot: VendorSnapshot::AnthropicApi(AnthropicApiSnapshot {
+                        spent: 98.0,
+                        limit: Some(100.0),
+                        covered_through: chrono::NaiveDate::from_ymd_opt(2026, 9, day),
+                    }),
+                    stale: false,
+                    last_error: None,
+                    fetched_at: None,
+                    display: Default::default(),
+                }));
+                let now = at(day + 1, 9, 0);
+                let input = RefreshInput::from_tab(&tab, &state, now).expect("ready tab projects");
+                decide(&input, 97, &mut notify_state, now).len()
+            })
+            .collect();
+        assert_eq!(fired, [1, 0, 0]);
     }
 
     /// Heading context applies to unique labels too, survives spacers, and

@@ -635,17 +635,20 @@ impl AnthropicApiSnapshot {
     }
 
     pub fn coverage_label(&self) -> String {
-        let Some(date) = self.covered_through else {
-            return "Completed daily buckets this month".into();
-        };
+        match self.covered_through_day() {
+            Some(day) => format!("Month to date (through {day})"),
+            None => "Completed daily buckets this month".into(),
+        }
+    }
+
+    /// The last fully covered UTC day as the card prints it, `Oct 17`.
+    pub fn covered_through_day(&self) -> Option<String> {
+        let date = self.covered_through?;
         const MONTHS: [&str; 12] = [
             "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
         ];
         let month = MONTHS[chrono::Datelike::month0(&date) as usize];
-        format!(
-            "Month to date (through {month} {})",
-            chrono::Datelike::day(&date)
-        )
+        Some(format!("{month} {}", chrono::Datelike::day(&date)))
     }
 }
 

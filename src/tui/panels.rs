@@ -805,12 +805,16 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
         left: "Anthropic API".into(),
         right: None,
     }]);
+    // The label is the row's name to everything that reads it: the
+    // notification dedupe key, the popover's stars and hidden rows, Omarchy's
+    // pick of a balance row. The covered day changes daily, so it gets a row of
+    // its own instead (#470).
     match (s.limit.filter(|l| *l > 0.0), s.pct()) {
         (Some(limit), Some(pct)) => {
             let p = pct.clamp(0, 100) as u16;
             v.push_metric(
                 Section::Metric {
-                    label: s.coverage_label(),
+                    label: "Spend (mo)".into(),
                     pct: p,
                     severity: severity_for(pct),
                     value_label: format!("{} of ${:.0}", usd(s.spent), limit),
@@ -821,10 +825,16 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
         }
         _ => {
             v.push(Section::Text {
-                label: s.coverage_label(),
+                label: "Spend (mo)".into(),
                 value: usd(s.spent),
             });
         }
+    }
+    if let Some(day) = s.covered_through_day() {
+        v.push(Section::Text {
+            label: "Through".into(),
+            value: day,
+        });
     }
     v.push(Section::Spacer);
     v.push(Section::Text {
@@ -2555,6 +2565,42 @@ mod tests {
         assert_eq!(headline_pct(&snapshot), None);
         let (_, cells) = compact_cells(&snapshot);
         assert_eq!(cells[0].0, "$42.50");
+    }
+
+    /// The spend row's label is its name to the notification dedupe key, the
+    /// popover's stars and hidden rows and Omarchy's pick of a balance row, so
+    /// it stays put while the covered day moves on a row of its own (#470).
+    #[test]
+    fn anthropic_api_spend_row_keeps_its_label_as_the_covered_day_moves() {
+        fn rows(limit: Option<f64>, covered_through: Option<chrono::NaiveDate>) -> Vec<String> {
+            let snapshot = VendorSnapshot::AnthropicApi(crate::usage::AnthropicApiSnapshot {
+                spent: 1.34,
+                limit,
+                covered_through,
+            });
+            sections_for(&ready(snapshot), now(), 5)
+                .into_iter()
+                .filter_map(|section| match section {
+                    Section::Metric { label, .. } => Some(label),
+                    Section::Text { label, value } if !label.is_empty() => {
+                        Some(format!("{label} {value}"))
+                    }
+                    _ => None,
+                })
+                .collect()
+        }
+        let oct = |day| chrono::NaiveDate::from_ymd_opt(2026, 10, day);
+        assert_eq!(
+            rows(Some(1000.0), oct(17)),
+            ["Spend (mo)", "Through Oct 17"]
+        );
+        assert_eq!(
+            rows(Some(1000.0), oct(18)),
+            ["Spend (mo)", "Through Oct 18"]
+        );
+        assert_eq!(rows(None, oct(18)), ["Spend (mo) $1.34", "Through Oct 18"]);
+        // A report with no dated bucket names no day.
+        assert_eq!(rows(None, None), ["Spend (mo) $1.34"]);
     }
 
     fn ready(snapshot: VendorSnapshot) -> TabState {
