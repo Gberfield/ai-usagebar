@@ -2,6 +2,10 @@
 
 ### Security
 
+- **TLS certificate verification uses the patched WebPKI trust data.** Updated
+  `rustls-webpki` and `webpki-roots` to exclude distrusted intermediates
+  (RUSTSEC-2026-0382 and RUSTSEC-2026-0381).
+
 - **macOS launches fixed system tools by their trusted paths.** Antigravity
   discovery and the desktop launch/browser helpers previously resolved
   `lsof`, `ps`, `open`, `osascript`, and `bash` through the inherited `PATH`.
