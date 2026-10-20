@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Security
+
+- **Antigravity's macOS discovery runs the system `lsof` and `ps`.** Both were
+  looked up on `PATH`, and the menu bar app starts `ai-usagebar` with
+  `~/.cargo/bin`, `~/.local/bin` and Homebrew ahead of the system directories,
+  so a binary of either name there ran on every Antigravity refresh. They are
+  now `/usr/sbin/lsof` and `/bin/ps`, like every other `ps` and `security` the
+  macOS code runs (#472).
+
 ## [1.41.0] — 2026-10-18
 
 ### Changed
