@@ -600,12 +600,17 @@ enabled = false
 # keeps the meter, the severity colour and the detail line either way.
 # headline = "amount"
 
-# OpenCode Go — usage from /zen/go/v1/usage. Opt in only after exporting the
-# API key under this variable; the key itself is never written to this example.
+# OpenCode Go — usage from /zen/go/v1/usage. Opt in after signing into the
+# official OpenCode CLI or configuring an API key.
 [opencode-go]
 enabled = false
 api_key_env = "OPENCODE_GO_API_KEY"
-# api_key = "[REDACTED]"  # optional inline fallback; prefer the environment
+# Without an explicit key, reads auth.json, then OpenCode 2's opencode.db,
+# under $XDG_DATA_HOME/opencode or ~/.local/share/opencode (read-only).
+# Only the active opencode database row is used (key or unexpired OAuth).
+# OpenCode owns refresh; renew an expired OAuth session in the CLI.
+# api_key = "..."            # or export OPENCODE_GO_API_KEY; wins over CLI stores
+# auth_paths = ["/custom/opencode/opencode.db"]  # replaces the search list
 
 # Command Code (commandcode.ai). Leave disabled if you do not use it. To opt in,
 # set enabled = true; the OAuth credential written by the official `commandcode`

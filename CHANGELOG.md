@@ -26,6 +26,11 @@
 
 ### Fixed
 
+- **OpenCode Go recognizes OpenCode 2 logins.** It can read the active API key
+  or unexpired OAuth access token from the CLI's `opencode.db` without
+  modifying the database or refreshing credentials. Explicit keys and the
+  legacy `auth.json` retain precedence; `auth_paths` can name either store.
+
 - **The Anthropic API spend row keeps its name from one day to the next.**
   1.41.0 put the last covered day in the row's label, and the label is how
   notifications, the popover's stars and hidden rows, and Omarchy's bar find
