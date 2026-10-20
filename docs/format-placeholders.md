@@ -262,7 +262,8 @@ instead. On legacy-shape accounts the monthly placeholders render empty.
 These cover the desktop app's weekly included-usage pool from
 `api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus`
 (Linux and macOS). The default format is `{gbt_weekly_pct}%`. Generic
-aliases are `{plan}` and `{weekly_pct}` / `{weekly_reset}`.
+aliases are `{plan}` and `{weekly_pct}` / `{weekly_reset}`. There is no 5-hour
+session, so `{session_pct}` and its related placeholders remain empty.
 `{weekly_elapsed}` aliases `{gbt_weekly_elapsed}`, the elapsed percentage of
 the reported period. The period length comes from `currentPeriodStart` and
 `nextResetTimestampUtc`; it is never assumed to be seven days.
