@@ -1193,7 +1193,9 @@ fn ide_ls_pids(pids: std::collections::HashSet<u32>) -> std::collections::HashSe
         .map(u32::to_string)
         .collect::<Vec<_>>()
         .join(",");
-    let Ok(output) = std::process::Command::new("ps")
+    // By path, like every other `ps` here: the menu bar app puts user
+    // directories ahead of the system ones on `PATH` (#472).
+    let Ok(output) = std::process::Command::new("/bin/ps")
         .args(["-o", "pid=,comm=", "-p", &list])
         .output()
     else {
@@ -1427,7 +1429,8 @@ pub(crate) fn discover_ls_ports() -> Vec<(u32, u16)> {
 /// listening TCP sockets by `-iTCP -sTCP:LISTEN`.
 #[cfg(target_os = "macos")]
 pub(crate) fn discover_ls_ports() -> Vec<(u32, u16)> {
-    let Ok(output) = std::process::Command::new("lsof")
+    // By path, for the reason `ide_ls_pids` gives for `ps` (#472).
+    let Ok(output) = std::process::Command::new("/usr/sbin/lsof")
         .args(["-nP", "-iTCP", "-sTCP:LISTEN", "-F", "pcn"])
         .output()
     else {
