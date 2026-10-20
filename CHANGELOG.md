@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Security
+
+- **macOS launches fixed system tools by their trusted paths.** Antigravity
+  discovery and the desktop launch/browser helpers previously resolved
+  `lsof`, `ps`, `open`, `osascript`, and `bash` through the inherited `PATH`.
+  A same-named executable in a user-writable directory could therefore run
+  during refresh, sign-in, or UI actions. These calls now use macOS's fixed
+  `/usr/sbin`, `/usr/bin`, and `/bin` locations (#472).
+
 ### Added
 
 - **The Linux Mint tray icon shows the leading provider's usage.** The XApp

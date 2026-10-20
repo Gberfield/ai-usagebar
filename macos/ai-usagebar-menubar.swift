@@ -1559,7 +1559,7 @@ func runInTerminal(_ script: String) {
     let tmp = NSTemporaryDirectory() + "ai-usagebar-\(UUID().uuidString).sh"
     try? script.write(toFile: tmp, atomically: true, encoding: .utf8)
     try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: tmp)
-    let osa = "tell application \"Terminal\" to do script \"bash '\(tmp)'; rm -f '\(tmp)'\"\n" +
+    let osa = "tell application \"Terminal\" to do script \"/bin/bash '\(tmp)'; rm -f '\(tmp)'\"\n" +
         "tell application \"Terminal\" to activate"
     let p = Process()
     p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")

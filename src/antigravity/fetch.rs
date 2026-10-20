@@ -1193,7 +1193,9 @@ fn ide_ls_pids(pids: std::collections::HashSet<u32>) -> std::collections::HashSe
         .map(u32::to_string)
         .collect::<Vec<_>>()
         .join(",");
-    let Ok(output) = std::process::Command::new("ps")
+    // By path, like every other `ps` here: the menu bar app puts user
+    // directories ahead of the system ones on `PATH` (#472).
+    let Ok(output) = std::process::Command::new("/bin/ps")
         .args(["-o", "pid=,comm=", "-p", &list])
         .output()
     else {
@@ -1427,7 +1429,8 @@ pub(crate) fn discover_ls_ports() -> Vec<(u32, u16)> {
 /// listening TCP sockets by `-iTCP -sTCP:LISTEN`.
 #[cfg(target_os = "macos")]
 pub(crate) fn discover_ls_ports() -> Vec<(u32, u16)> {
-    let Ok(output) = std::process::Command::new("lsof")
+    // By path, for the reason `ide_ls_pids` gives for `ps` (#472).
+    let Ok(output) = std::process::Command::new("/usr/sbin/lsof")
         .args(["-nP", "-iTCP", "-sTCP:LISTEN", "-F", "pcn"])
         .output()
     else {
@@ -3192,6 +3195,39 @@ mod tests {
         let output = "p1\ncagy\nf3\nn127.0.0.1:9000\nf4\nn127.0.0.1:9000\n";
         assert_eq!(parse_lsof_pcn(output), vec![(1, 9000)]);
         assert!(parse_lsof_pcn("").is_empty());
+    }
+
+    /// The menu bar puts user-writable directories before the macOS system
+    /// directories. Every fixed system tool in the refresh and desktop-action
+    /// boundary is therefore spawned by its canonical path (#472).
+    #[test]
+    fn macos_system_tools_are_pinned_to_trusted_paths() {
+        let sources = [
+            crate::guard::production_code(include_str!("fetch.rs")),
+            crate::guard::production_code(include_str!("../tray/tui_launch_macos.rs")),
+            crate::guard::production_code(include_str!("../tray/browse.rs")),
+            crate::guard::production_code(include_str!("../nous/oauth.rs")),
+            crate::guard::production_code(include_str!("../../macos/ai-usagebar-menubar.swift")),
+        ];
+        let code = sources.join("\n");
+        for bare in [
+            r#"Command::new("lsof")"#,
+            r#"Command::new("ps")"#,
+            r#"Command::new("open")"#,
+            r#"Command::new("osascript")"#,
+            r#"do script \"bash "#,
+        ] {
+            assert!(!code.contains(bare), "{bare} looks the tool up on PATH");
+        }
+        for pinned in [
+            r#"Command::new("/usr/sbin/lsof")"#,
+            r#"Command::new("/bin/ps")"#,
+            r#"Command::new("/usr/bin/open")"#,
+            r#"Command::new("/usr/bin/osascript")"#,
+            r#"do script \"/bin/bash "#,
+        ] {
+            assert!(code.contains(pinned), "missing trusted system path: {pinned}");
+        }
     }
 
     /// First run with Antigravity closed: no cache to serve, so the user must

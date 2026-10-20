@@ -14,12 +14,12 @@ pub fn run_in_terminal(line: &str) {
     let Ok(tmp) = write_terminal_script(line) else {
         return;
     };
-    let command = format!("bash {}; true", quote(&tmp.to_string_lossy()));
+    let command = format!("/bin/bash {}; true", quote(&tmp.to_string_lossy()));
     let script = format!(
         "tell application \"Terminal\" to do script \"{}\"\ntell application \"Terminal\" to activate",
         apple_script_string(&command)
     );
-    if Command::new("osascript")
+    if Command::new("/usr/bin/osascript")
         .args(["-e", &script])
         .spawn()
         .is_err()

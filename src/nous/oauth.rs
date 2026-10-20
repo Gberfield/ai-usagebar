@@ -81,7 +81,7 @@ impl BrowserOpener for SystemBrowserOpener {
         }
         #[cfg(target_os = "macos")]
         {
-            let _child = Command::new("open").arg(url).spawn()?;
+            let _child = Command::new("/usr/bin/open").arg(url).spawn()?;
             Ok(())
         }
         #[cfg(target_os = "windows")]
