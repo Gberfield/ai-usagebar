@@ -805,12 +805,16 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
         left: "Anthropic API".into(),
         right: None,
     }]);
+    // The label is the row's name to everything that reads it: the
+    // notification dedupe key, the popover's stars and hidden rows, Omarchy's
+    // pick of a balance row. The covered day changes daily, so it gets a row of
+    // its own instead (#470).
     match (s.limit.filter(|l| *l > 0.0), s.pct()) {
         (Some(limit), Some(pct)) => {
             let p = pct.clamp(0, 100) as u16;
             v.push_metric(
                 Section::Metric {
-                    label: s.coverage_label(),
+                    label: "Spend (mo)".into(),
                     pct: p,
                     severity: severity_for(pct),
                     value_label: format!("{} of ${:.0}", usd(s.spent), limit),
@@ -821,10 +825,16 @@ fn anthropic_api_sections(s: &crate::usage::AnthropicApiSnapshot) -> SectionBuil
         }
         _ => {
             v.push(Section::Text {
-                label: s.coverage_label(),
+                label: "Spend (mo)".into(),
                 value: usd(s.spent),
             });
         }
+    }
+    if let Some(day) = s.covered_through_day() {
+        v.push(Section::Text {
+            label: "Through".into(),
+            value: day,
+        });
     }
     v.push(Section::Spacer);
     v.push(Section::Text {
