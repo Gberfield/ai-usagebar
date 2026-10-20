@@ -1260,13 +1260,13 @@ mod tests {
                 additional_limits: Vec::new(),
                 unavailable_models: Vec::new(),
                 credits: None,
-                reset_credits: ResetCredits {
+                reset_credits: Some(ResetCredits {
                     available: 2,
                     credits: vec![ResetCredit {
                         title: Some("Full reset".into()),
                         expires_at: Some(at(25, 0, 0)),
                     }],
-                },
+                }),
                 source: crate::usage::OpenAiSource::CodexOauth,
             }),
             stale: false,

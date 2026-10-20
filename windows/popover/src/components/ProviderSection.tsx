@@ -222,7 +222,10 @@ function ResetCreditsRow({ condensedTop, demand, layout, nowMs, row }: ResetCred
       <span className="min-w-[var(--gap-controls)] flex-1" />
       <ResetPopover hidden={details.hidden} items={details.items}>
         <Chip aria-label={`${row.available} ${noun}; ${m.show_expiry_dates()}`} variant="compact">
-          <span aria-hidden="true" className="size-[var(--dot-sm)] rounded-full bg-meter-yellow" />
+          <span
+            aria-hidden="true"
+            className={cn("size-[var(--dot-sm)] rounded-full", row.available > 0 ? "bg-meter-yellow" : "bg-muted-foreground")}
+          />
           <span className="tabular-nums">{row.available} {row.available === 1 ? m.available_singular() : m.available()}</span>
         </Chip>
       </ResetPopover>

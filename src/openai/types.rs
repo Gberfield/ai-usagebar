@@ -282,21 +282,18 @@ impl UsageResponse {
             approx_local_messages: range_from_vec(c.approx_local_messages),
             approx_cloud_messages: range_from_vec(c.approx_cloud_messages),
         });
-        let reset_credits = self
-            .rate_limit_reset_credits
-            .map(|credits| ResetCredits {
-                available: credits.available_count,
-                credits: credits
-                    .credits
-                    .into_iter()
-                    .filter(|credit| credit.status == "available")
-                    .map(|credit| BankedReset {
-                        title: checked_reset_title(credit.title),
-                        expires_at: credit.expires_at,
-                    })
-                    .collect(),
-            })
-            .unwrap_or_default();
+        let reset_credits = self.rate_limit_reset_credits.map(|credits| ResetCredits {
+            available: credits.available_count,
+            credits: credits
+                .credits
+                .into_iter()
+                .filter(|credit| credit.status == "available")
+                .map(|credit| BankedReset {
+                    title: checked_reset_title(credit.title),
+                    expires_at: credit.expires_at,
+                })
+                .collect(),
+        });
 
         let additional_limits = self
             .additional_rate_limits
@@ -600,9 +597,9 @@ mod tests {
         let body = r#"{"plan_type":"plus","rate_limit_reset_credits":{"available_count":2}}"#;
         let s: UsageResponse = serde_json::from_str(body).unwrap();
         let s = s.into_snapshot(None).unwrap();
-        assert_eq!(s.reset_credits.available, 2);
-        assert!(s.reset_credits.credits.is_empty());
-        assert!(!s.reset_credits.is_empty());
+        assert_eq!(s.reset_credits.as_ref().unwrap().available, 2);
+        assert!(s.reset_credits.as_ref().unwrap().credits.is_empty());
+        assert!(!s.reset_credits.as_ref().unwrap().is_empty());
     }
 
     /// A redeemed credit still appears in the detail list. Its expiry is not a
@@ -621,25 +618,42 @@ mod tests {
         }"#;
         let s: UsageResponse = serde_json::from_str(body).unwrap();
         let s = s.into_snapshot(None).unwrap();
-        assert_eq!(s.reset_credits.available, 1);
-        assert_eq!(s.reset_credits.credits.len(), 2);
+        assert_eq!(s.reset_credits.as_ref().unwrap().available, 1);
+        assert_eq!(s.reset_credits.as_ref().unwrap().credits.len(), 2);
         assert_eq!(
-            s.reset_credits.credits[0].title.as_deref(),
+            s.reset_credits.as_ref().unwrap().credits[0]
+                .title
+                .as_deref(),
             Some("Full reset (Weekly + 5 hr)")
         );
         assert_eq!(
-            s.reset_credits.next_expiry(),
+            s.reset_credits.as_ref().unwrap().next_expiry(),
             Some("2026-07-17T00:00:00Z".parse::<DateTime<Utc>>().unwrap())
         );
     }
 
-    /// Every other vendor's absent block means "none". This one is load-bearing
-    /// in the same way: a response from an account with no banked resets, or
-    /// from a Codex build that predates them, reports none rather than failing.
+    /// A response from a Codex build that predates banked resets omits the
+    /// block. That reports nothing rather than failing, and stays distinct
+    /// from a stated zero (below).
     #[test]
     fn an_absent_reset_block_is_no_credits_rather_than_an_error() {
         let s: UsageResponse = serde_json::from_str(r#"{"plan_type":"plus"}"#).unwrap();
-        assert!(s.into_snapshot(None).unwrap().reset_credits.is_empty());
+        assert!(s.into_snapshot(None).unwrap().reset_credits.is_none());
+    }
+
+    /// An account with no banked resets states `available_count: 0`. That is
+    /// an answer, not missing data, so it survives as an empty block that the
+    /// report renders as "None available".
+    #[test]
+    fn a_stated_zero_reset_block_stays_distinct_from_an_absent_one() {
+        let s: UsageResponse = serde_json::from_str(
+            r#"{"plan_type":"pro","rate_limit_reset_credits":{"available_count":0,"credits":[]}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            s.into_snapshot(None).unwrap().reset_credits,
+            Some(ResetCredits::default())
+        );
     }
 
     #[test]
@@ -1042,7 +1056,7 @@ mod tests {
         assert_eq!(snap.weekly.as_ref().unwrap().utilization_pct, 64);
         assert!(snap.additional_limits.is_empty());
         assert!(snap.unavailable_models.is_empty());
-        assert_eq!(snap.reset_credits.available, 3);
-        assert!(snap.reset_credits.credits.is_empty());
+        assert_eq!(snap.reset_credits.as_ref().unwrap().available, 3);
+        assert!(snap.reset_credits.as_ref().unwrap().credits.is_empty());
     }
 }

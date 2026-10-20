@@ -338,8 +338,10 @@ function normalizeEntry(raw) {
 
 function normalizeResetCredits(raw) {
   if (!isPlainObject(raw)) return null;
-  const available = Math.max(0, Math.min(10_000, Math.floor(finiteNumber(raw.available))));
-  if (available === 0) return null;
+  if (typeof raw.available !== "number" || !Number.isFinite(raw.available)) return null;
+  // The host only sends a zero when the provider states it (Codex), so it
+  // stays a row reading "0 available" instead of disappearing.
+  const available = Math.max(0, Math.min(10_000, Math.floor(raw.available)));
   const source = Array.isArray(raw.credits) ? raw.credits : [];
   const credits = [];
   for (let i = 0; i < source.length && i < 64; i++) {

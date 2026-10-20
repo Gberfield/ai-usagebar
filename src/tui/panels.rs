@@ -969,7 +969,9 @@ fn openai_sections(
             body,
         });
     }
-    push_reset_credits(&mut v, &s.reset_credits, now);
+    if let Some(credits) = &s.reset_credits {
+        push_reset_block(&mut v, credits, now);
+    }
     v
 }
 
@@ -1963,6 +1965,17 @@ fn push_reset_credits(
     if credits.is_empty() {
         return;
     }
+    push_reset_block(v, credits, now);
+}
+
+/// The "Reset credits" block itself. Codex calls it directly whenever its
+/// usage response states a count, so a zero reads "None available" instead
+/// of dropping the block.
+fn push_reset_block(
+    v: &mut SectionBuilder,
+    credits: &crate::usage::ResetCredits,
+    now: DateTime<Utc>,
+) {
     v.push(Section::Spacer);
     v.push(Section::Block {
         label: "Reset credits".into(),
@@ -3121,7 +3134,7 @@ mod tests {
             additional_limits: Vec::new(),
             unavailable_models: Vec::new(),
             credits: None,
-            reset_credits: ResetCredits::default(),
+            reset_credits: None,
             source: OpenAiSource::CodexOauth,
         };
         let sections = sections_for(&ready(VendorSnapshot::Openai(snap)), now(), 5);
@@ -3195,7 +3208,7 @@ mod tests {
                 approx_local_messages: Some((100, 200)),
                 approx_cloud_messages: Some((30, 50)),
             }),
-            reset_credits: ResetCredits::default(),
+            reset_credits: None,
             source: OpenAiSource::CodexOauth,
         };
         let sections = sections_for(&ready(VendorSnapshot::Openai(snap)), now(), 5);
@@ -3220,7 +3233,7 @@ mod tests {
             additional_limits: Vec::new(),
             unavailable_models: Vec::new(),
             credits: None,
-            reset_credits: ResetCredits::default(),
+            reset_credits: None,
             source: OpenAiSource::CodexOauth,
         };
         let sections = sections_for(&ready(VendorSnapshot::Openai(snap)), now(), 5);
@@ -3262,7 +3275,7 @@ mod tests {
             additional_limits: Vec::new(),
             unavailable_models: Vec::new(),
             credits: None,
-            reset_credits: credits.clone(),
+            reset_credits: Some(credits.clone()),
             source: OpenAiSource::CodexOauth,
         };
         let supergrok = crate::usage::SuperGrokSnapshot {
@@ -3325,13 +3338,34 @@ mod tests {
             additional_limits: Vec::new(),
             unavailable_models: Vec::new(),
             credits: None,
-            reset_credits: ResetCredits::default(),
+            reset_credits: None,
             source: OpenAiSource::CodexOauth,
         };
         let sections = sections_for(&ready(VendorSnapshot::Openai(snap)), now(), 5);
         assert!(!sections.iter().any(|section| matches!(
             section,
             Section::Block { label, .. } if label == "Reset credits"
+        )));
+    }
+
+    #[test]
+    fn a_codex_account_that_states_zero_resets_shows_none_available() {
+        let snap = OpenAiSnapshot {
+            plan: "ChatGPT Pro".into(),
+            session: None,
+            weekly: None,
+            code_review: None,
+            additional_limits: Vec::new(),
+            unavailable_models: Vec::new(),
+            credits: None,
+            reset_credits: Some(ResetCredits::default()),
+            source: OpenAiSource::CodexOauth,
+        };
+        let sections = sections_for(&ready(VendorSnapshot::Openai(snap)), now(), 5);
+        assert!(sections.iter().any(|section| matches!(
+            section,
+            Section::Block { label, body }
+                if label == "Reset credits" && body == &vec!["None available".to_string()]
         )));
     }
 

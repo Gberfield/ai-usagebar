@@ -499,11 +499,10 @@ fn entry_from_antigravity_account(
 }
 
 fn reset_credits_for(state: &TabState) -> Option<crate::usage::ResetCredits> {
-    let credits = match state {
-        TabState::Ready(ready) => ready.snapshot.reset_credits()?,
-        _ => return None,
-    };
-    (!credits.is_empty()).then(|| credits.clone())
+    match state {
+        TabState::Ready(ready) => ready.snapshot.reset_credits().cloned(),
+        _ => None,
+    }
 }
 
 /// #255: surface the opt-in context monitor's recent Claude Code sessions on
@@ -1916,13 +1915,13 @@ mod tests {
                 additional_limits: Vec::new(),
                 unavailable_models: Vec::new(),
                 credits: None,
-                reset_credits: ResetCredits {
+                reset_credits: Some(ResetCredits {
                     available: 2,
                     credits: vec![ResetCredit {
                         title: Some("Full reset".into()),
                         expires_at: Some(expiry),
                     }],
-                },
+                }),
                 source: OpenAiSource::CodexOauth,
             }),
             stale: false,
@@ -1946,6 +1945,56 @@ mod tests {
                 section["type"] == "block" && section["label"] == "Reset credits"
             })
         );
+    }
+
+    /// A Codex account that states it holds no banked resets reports
+    /// `{"available": 0}` and a "None available" block, so a frontend can tell
+    /// it from a response that never mentioned resets (`null`, no block).
+    #[test]
+    fn json_tells_a_stated_zero_from_an_absent_reset_block() {
+        let entry_for = |reset_credits: Option<ResetCredits>| {
+            let state = TabState::Ready(Box::new(ReadyTab {
+                snapshot: VendorSnapshot::Openai(OpenAiSnapshot {
+                    plan: "ChatGPT Pro".into(),
+                    session: None,
+                    weekly: None,
+                    code_review: None,
+                    additional_limits: Vec::new(),
+                    unavailable_models: Vec::new(),
+                    credits: None,
+                    reset_credits,
+                    source: OpenAiSource::CodexOauth,
+                }),
+                stale: false,
+                last_error: None,
+                fetched_at: None,
+                display: Default::default(),
+            }));
+            let projected = entry_from_state(&TabId::vendor(VendorId::Openai), &state, Utc::now());
+            let value: serde_json::Value =
+                serde_json::from_str(&render_json_for_primary(&[projected], None)).unwrap();
+            value["entries"][0].clone()
+        };
+        let reset_block = |entry: &serde_json::Value| {
+            entry["sections"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|section| section["type"] == "block" && section["label"] == "Reset credits")
+                .cloned()
+        };
+
+        let zero = entry_for(Some(ResetCredits::default()));
+        assert_eq!(zero["reset_credits"]["available"], 0);
+        assert_eq!(zero["reset_credits"]["credits"], serde_json::json!([]));
+        assert_eq!(
+            reset_block(&zero).unwrap()["body"],
+            serde_json::json!(["None available"])
+        );
+
+        let absent = entry_for(None);
+        assert!(absent["reset_credits"].is_null());
+        assert!(reset_block(&absent).is_none());
     }
 
     /// The sidebar reads `reset_credits` off the entry, so Claude's grant has
