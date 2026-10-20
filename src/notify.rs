@@ -1480,6 +1480,37 @@ mod tests {
         }
     }
 
+    /// A window's identity must not depend on the day of the fetch either. An
+    /// Anthropic API spend row named after its covered day got a new key every
+    /// morning, so one crossing of the threshold notified again each day (#470).
+    #[test]
+    fn a_spend_over_the_threshold_notifies_once_as_the_covered_day_moves() {
+        use crate::tui::app::{ReadyTab, TabId, TabState};
+        use crate::usage::{AnthropicApiSnapshot, VendorSnapshot};
+
+        let tab = TabId::vendor(crate::vendor::VendorId::AnthropicApi);
+        let mut notify_state = NotifyState::default();
+        let fired: Vec<usize> = (17..=19)
+            .map(|day| {
+                let state = TabState::Ready(Box::new(ReadyTab {
+                    snapshot: VendorSnapshot::AnthropicApi(AnthropicApiSnapshot {
+                        spent: 98.0,
+                        limit: Some(100.0),
+                        covered_through: chrono::NaiveDate::from_ymd_opt(2026, 9, day),
+                    }),
+                    stale: false,
+                    last_error: None,
+                    fetched_at: None,
+                    display: Default::default(),
+                }));
+                let now = at(day + 1, 9, 0);
+                let input = RefreshInput::from_tab(&tab, &state, now).expect("ready tab projects");
+                decide(&input, 97, &mut notify_state, now).len()
+            })
+            .collect();
+        assert_eq!(fired, [1, 0, 0]);
+    }
+
     /// Heading context applies to unique labels too, survives spacers, and
     /// ends at a non-heading row. Unscoped metrics keep their bare names.
     #[test]
