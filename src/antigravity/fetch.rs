@@ -3226,7 +3226,10 @@ mod tests {
             r#"Command::new("/usr/bin/osascript")"#,
             r#"do script \"/bin/bash "#,
         ] {
-            assert!(code.contains(pinned), "missing trusted system path: {pinned}");
+            assert!(
+                code.contains(pinned),
+                "missing trusted system path: {pinned}"
+            );
         }
     }
 

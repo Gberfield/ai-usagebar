@@ -168,6 +168,9 @@ pub enum Command {
         json: bool,
     },
 
+    /// Serve read-only usage and provider tools over local MCP stdio.
+    Mcp,
+
     /// Turn on vendors whose credentials already exist on this machine
     /// (local files, keychains, saved keys, env vars; never the network).
     Detect {
@@ -645,6 +648,13 @@ mod tests {
     fn usage_subcommand_parses_machine_readable_mode() {
         let cli = Cli::parse_from(["ai-usagebar", "usage", "--json"]);
         assert!(matches!(cli.command, Some(Command::Usage { json: true })));
+    }
+
+    #[test]
+    fn mcp_subcommand_parses_without_widget_flags() {
+        let cli = Cli::parse_from(["ai-usagebar", "mcp"]);
+        assert!(matches!(cli.command, Some(Command::Mcp)));
+        assert!(Cli::try_parse_from(["ai-usagebar", "--pretty", "mcp"]).is_err());
     }
 
     #[test]

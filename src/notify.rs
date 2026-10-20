@@ -1108,7 +1108,10 @@ mod tests {
             at(19, 9, 0),
         );
 
-        assert!(sink.delivered.is_empty(), "the existing crossing remains notified");
+        assert!(
+            sink.delivered.is_empty(),
+            "the existing crossing remains notified"
+        );
         let migrated = NotifyState::read_from(&path);
         assert_eq!(migrated.entries.len(), 1);
         assert_eq!(

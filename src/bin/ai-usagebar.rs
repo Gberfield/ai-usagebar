@@ -59,6 +59,20 @@ fn main() {
         };
         std::process::exit(code);
     }
+    if matches!(&cli.command, Some(Command::Mcp)) {
+        let rt = match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            Ok(rt) => rt,
+            Err(error) => {
+                // stdout belongs exclusively to MCP framing.
+                eprintln!("ai-usagebar mcp: failed to create runtime: {error}");
+                std::process::exit(1);
+            }
+        };
+        std::process::exit(rt.block_on(ai_usagebar::mcp::run()));
+    }
     let rt = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

@@ -311,6 +311,13 @@ fn keychain_has_claude_for(_config_dir: &Path) -> bool {
 }
 
 /// `vendors --json`: the catalog as one JSON document.
+pub fn collect_json() -> Result<String, String> {
+    let cfg = Config::load().map_err(|error| error.user_message())?;
+    serde_json::to_string(&serde_json::json!({"vendors": statuses(&cfg)}))
+        .map_err(|error| error.to_string())
+}
+
+/// `vendors --json`: the catalog as one JSON document.
 pub fn run(json: bool) -> i32 {
     let cfg = match Config::load() {
         Ok(cfg) => cfg,

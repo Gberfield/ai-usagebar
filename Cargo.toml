@@ -85,6 +85,10 @@ ratatui-bubbletea-theme = "0.2"
 rusqlite = { version = "0.40", default-features = false, features = ["bundled"] }
 unicode-width = "0.2"
 getrandom = "0.4.3"
+# Official Model Context Protocol SDK. Only the local stdio server surface is
+# enabled: no HTTP transport, client, OAuth, sampling, or remote listener.
+rmcp = { version = "3.6.0", default-features = false, features = ["server", "transport-io", "macros"] }
+schemars = "1.2.3"
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1", features = ["process"] }

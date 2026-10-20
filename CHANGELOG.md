@@ -11,6 +11,12 @@
 
 ### Added
 
+- **AI clients can query usage through a built-in MCP server.** Run
+  `ai-usagebar mcp` as a local stdio server to expose read-only `get_usage`
+  and `list_providers` tools. Usage can be narrowed to a provider or named
+  account and reuses the existing report, credential, cache, and backoff paths;
+  it cannot change accounts or configuration (#468).
+
 - **The Linux Mint tray icon shows the leading provider's usage.** The XApp
   status icon carries that provider's percentage as its label, and its tooltip
   lists the same provider lines as the menu, so quota is visible on hover

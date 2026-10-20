@@ -701,6 +701,34 @@ ai-usagebar --vendor openrouter --watch 5
 ai-usagebar-tui
 ```
 
+### MCP clients
+
+`ai-usagebar mcp` runs a local stdio MCP server for Claude Code, Codex, Cursor,
+Gemini CLI, and other compatible clients. Configure the client to launch this
+command:
+
+```json
+{
+  "command": "ai-usagebar",
+  "args": ["mcp"]
+}
+```
+
+It exposes two read-only tools:
+
+- `get_usage` returns the same versioned report as `usage --json`. With no
+  arguments it queries every enabled provider. `provider` accepts a built-in
+  slug such as `anthropic` or `openai` (or `custom:<id>`); optional `account`
+  narrows it to one named account.
+- `list_providers` returns the local `vendors --json` catalog without making
+  network requests or exposing credential values.
+
+`get_usage` uses the normal credential readers, cache, and backoff policy, so
+it may read configured credentials and contact only the providers selected by
+the call. The MCP interface cannot sign in, switch accounts, force a refresh,
+or change configuration. Standard output is reserved for protocol messages;
+server diagnostics go to standard error.
+
 The JSON report has two views of each provider:
 
 - `metrics` contains percentage gauges only.
