@@ -2577,8 +2577,14 @@ mod tests {
                 .collect()
         }
         let oct = |day| chrono::NaiveDate::from_ymd_opt(2026, 10, day);
-        assert_eq!(rows(Some(1000.0), oct(17)), ["Spend (mo)", "Through Oct 17"]);
-        assert_eq!(rows(Some(1000.0), oct(18)), ["Spend (mo)", "Through Oct 18"]);
+        assert_eq!(
+            rows(Some(1000.0), oct(17)),
+            ["Spend (mo)", "Through Oct 17"]
+        );
+        assert_eq!(
+            rows(Some(1000.0), oct(18)),
+            ["Spend (mo)", "Through Oct 18"]
+        );
         assert_eq!(rows(None, oct(18)), ["Spend (mo) $1.34", "Through Oct 18"]);
         // A report with no dated bucket names no day.
         assert_eq!(rows(None, None), ["Spend (mo) $1.34"]);
