@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Fixed
+
+- **A format shared across providers no longer prints `{session_pct}` for Grok
+  Bot.** Grok Bot has no session window and never defined the session aliases,
+  so `{session_pct}`, `{session_reset}` and `{session_elapsed}` stayed on the
+  bar as literal text while it was selected. They now expand to empty strings,
+  as Devin's do (#474).
+
 ## [1.41.0] — 2026-10-18
 
 ### Changed
