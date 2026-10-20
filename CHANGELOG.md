@@ -2,7 +2,7 @@
 
 ### Security
 
-- **The popover build uses Vite 8.2.4.** This fixes Windows command-argument
+- **The popover build uses Vite 8.3.4.** This fixes Windows command-argument
   escaping in the development server (GHSA-698v-4r3x-3vcv).
 
 - **TLS certificate verification uses the patched WebPKI trust data.** Updated
