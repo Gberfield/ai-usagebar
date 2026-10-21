@@ -41,9 +41,11 @@ const RENEW_TIMEOUT: Duration = Duration::from_secs(25);
 const COOLDOWN_SECS: i64 = 600;
 const ATTEMPT_FILE: &str = "agy_renew_attempt";
 
-/// `agy -p "/quota"` answers in about five seconds; well past that it is stuck
-/// or asking for a login.
-const QUOTA_TIMEOUT: Duration = Duration::from_secs(20);
+/// `agy -p "/quota"` answers in about five seconds once warm, but a cold start
+/// took 65 s and 32 s on an M-series Mac (`agy` 1.4.3) before settling at
+/// 5 s, and a run killed at 20 s was a failure that cost ten minutes of
+/// readings. Well past a minute and a half it is stuck or asking for a login.
+const QUOTA_TIMEOUT: Duration = Duration::from_secs(90);
 /// Each reading starts `agy` and costs about three seconds of CPU, so it is
 /// taken at most this often, however short the cache TTL. `agy` refreshes its
 /// own figures on about the same cadence while it works.
