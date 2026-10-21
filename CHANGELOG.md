@@ -33,6 +33,18 @@
 
 ### Fixed
 
+- **Antigravity keeps `agy`'s last reading when `agy` cannot answer, instead
+  of showing the Cloud Code API's 0%.** With only the `agy` CLI signed in, a
+  cold `agy` start ran past the reading's 20 s timeout, the failure held the
+  next attempt off for ten minutes, and the Cloud Code API filled the gap with
+  the other tracker #450 describes — an untouched week, Gemini 0% / 0%, reset
+  times anchored on the moment of the request — shown as current while `agy`
+  itself read 90% used. While `agy` is installed, a reading it gave earlier is
+  now served stale rather than replaced; the Cloud Code API answers only when
+  there is no reading of `agy`'s own to keep (a first run, or `agy` never
+  signed in). A reading is also given 90 s to come back, which covers the
+  cold starts measured (65 s, 32 s) without changing the warm 5 s case.
+
 - **A format shared across providers no longer prints `{session_pct}` for Grok
   Bot.** Grok Bot has no session window and never defined the session aliases,
   so `{session_pct}`, `{session_reset}` and `{session_elapsed}` stayed on the
