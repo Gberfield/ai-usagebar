@@ -95,7 +95,23 @@ rather than argv or the environment. Leave a field blank to keep its current
 value, or use its clear button to remove an inline key. Saving a new key also
 enables that provider, matching the terminal overlay.
 
-The **Providers** section lists every known provider with an on/off switch
+The **Providers** section first chooses which entries appear on the top bar.
+It includes custom report entries and individual named accounts. The badge counts
+the display switches in this list. All built-ins, including inactive providers,
+remain available in the advanced fetching section with their own enabled count.
+Display changes take effect immediately and persist as exact entry IDs in the
+widget's `hiddenBarEntries` setting in `shell.json`. Hidden entries remain
+available in the usage panel and keep refreshing. Hiding every entry leaves a
+generic usage icon so the panel and settings remain reachable. In single-entry
+mode, a hidden panel selection falls back to the first entry still shown.
+
+To enable an inactive built-in, expand **Advanced: provider fetching**, switch it
+on and choose Save; normal credentials are still required. That section retains
+the original controls
+for enabling or disabling fetching independently from top-bar visibility.
+
+The advanced fetching section lists every known built-in provider with an on/off
+switch
 (the per-vendor `enabled` in config.toml). Turning a provider off removes it
 from the bar, panel and reports; turning one on takes effect on the next
 refresh. The switch only ever names built-in providers, and travels over the

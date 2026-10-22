@@ -18,6 +18,13 @@
 
 ### Added
 
+- **Omarchy can hide individual providers from the top bar.** The Providers
+  settings include custom entries and named accounts, with a count of entries
+  selected for display. Inactive built-ins remain in the advanced fetching list.
+  Visibility saves immediately
+  in the widget settings without removing an entry from the usage panel.
+  Fetching controls remain available in a separate advanced section.
+
 - **AI clients can query usage through a built-in MCP server.** Run
   `ai-usagebar mcp` as a local stdio server to expose read-only `get_usage`
   and `list_providers` tools. Usage can be narrowed to a provider or named

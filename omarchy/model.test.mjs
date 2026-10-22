@@ -290,17 +290,17 @@ assert.match(panelSource, /Model\.isAlarming\(item\)/);
 // A failed or cached refresh alone cannot activate the bar, but a report that
 // never arrived has nothing else to show there.
 assert.match(panelSource, /readonly property bool reportMissing:\s*loadError\s*!==\s*""\s*&&\s*entries\.length\s*===\s*0/);
-assert.match(panelSource, /\(showAll\s*\?\s*shownAnyAlarming\(\)\s*:\s*entryAlarming\)[\s\S]{0,40}reportMissing/);
+assert.match(panelSource, /\(showAll\s*\?\s*shownAnyAlarming\(\)\s*:\s*entryIsAlarming\(barEntry\)\)[\s\S]{0,40}reportMissing/);
 assert.doesNotMatch(panelSource, /chipAlarm\s*=\s*rows\[i\]\.status\s*===\s*"error"/);
 assert.match(panelSource, /function shownAnyAlarming\(\)/);
 assert.doesNotMatch(panelSource, /Model\.anyAlarming\(visibleEntries\)/);
 assert.doesNotMatch(panelSource, /autoSummary/);
 assert.match(panelSource, /function\s+setBarWindow\s*\(/);
 assert.match(panelSource, /onBarWindowRequested/);
-assert.match(panelSource, /showProvider\s*\?\s*Model\.providerShort\(entry\)\s*:\s*""/);
+assert.match(panelSource, /showProvider\s*\?\s*Model\.providerShort\(barEntry\)\s*:\s*""/);
 assert.match(panelSource, /Model\.barStrip\([\s\S]*?barWindow/);
 assert.match(panelSource, /Model\.barChips\([\s\S]*?barWindow/);
-assert.match(panelSource, /Model\.providerIcon\(entry\)/);
+assert.match(panelSource, /Model\.providerIcon\(barEntry\)/);
 assert.match(panelSource, /BrandMark\s*\{/);
 assert.match(panelSource, /Model\.brandIconFile\(root\.entry\)/);
 
@@ -2046,7 +2046,7 @@ assert.equal(model.cursorPoolOf(null), '');
   assert.doesNotMatch(panel, /metricEye|hideable|hasHideableMetrics|metric\.hidden_hint/, 'rows carry no switch; the choice lives in Settings');
   assert.match(panel, /onShowAsRequested:\s*function\(value\)\s*\{\s*root\.setShowAs\(value\)\s*\}/);
   assert.match(panel, /function shownAlarming\(\) \{\s*return entryIsAlarming\(shapedEntry\)/, 'the alert reads the entry without hidden metrics');
-  assert.match(panel, /entryIsAlarming\(shapedEntries\[i\]\)/);
+  assert.match(panel, /entryIsAlarming\(barEntries\[i\]\)/);
   assert.match(panel, /readonly property var valueView:\s*Model\.metricValueView\(row,\s*root\.showAs\)/);
   assert.match(settingsForm, /property string openSection:\s*"display"/);
   assert.match(settingsForm, /function toggleSection\(id\) \{\s*openSection = openSection === id \? "" : id\s*\}/);
@@ -2085,6 +2085,55 @@ assert.equal(model.cursorPoolOf(null), '');
   assert.equal(showAsSchema.type, 'enum');
   assert.deepEqual(showAsSchema.options, ['used', 'left']);
   assert.equal(showAsSchema.defaultValue, 'used');
+}
+
+// Display choices are per entry, including custom providers and named accounts.
+{
+  const entries = [{id:'custom:sample',name:'Sample',checked:true},
+    {id:'openai',name:'Codex',checked:true},{id:'openai@work',name:'Codex work',checked:true}];
+  const ids = rows => Array.from(rows, row => row.id);
+  assert.deepEqual(ids(model.barVisibleEntries(entries, null)), ids(entries));
+  const hidden = model.toggleBarEntry([], 'custom:sample');
+  assert.deepEqual(ids(model.barVisibleEntries(entries, hidden)), ['openai','openai@work']);
+  assert.deepEqual(ids(model.barVisibleEntries(entries, model.toggleBarEntry(hidden,'custom:sample'))), ids(entries));
+  assert.deepEqual(ids(model.barVisibleEntries(entries,['openai'])), ['custom:sample','openai@work']);
+  assert.equal(model.barVisibleEntries(entries,ids(entries)).length,0);
+  assert.equal(entries.length,3,'display filtering must not remove panel entries');
+  assert.deepEqual(Array.from(model.toggleBarEntry(['unavailable-entry'],'openai')),['unavailable-entry','openai']);
+  const saved=model.settingsWithOverrides({id:'test',unknownSetting:42},'test',{hiddenBarEntries:hidden});
+  assert.equal(saved.unknownSetting,42);
+  assert.deepEqual(ids(model.barVisibleEntries(entries,saved.hiddenBarEntries)),['openai','openai@work']);
+  assert.equal(model.providerDisplaySummary(entries),'3/3');
+  assert.equal(model.providerDisplaySummary([{...entries[0],checked:false},entries[1],entries[2]]),'2/3');
+
+}
+
+{
+  const panel=fs.readFileSync(new URL('./Panel.qml',import.meta.url),'utf8');
+  const form=fs.readFileSync(new URL('./SettingsView.qml',import.meta.url),'utf8');
+  assert.match(panel, /barProviderChoices: visibleEntries\.map/);
+  assert.match(form, /model: root\.snapshot\.vendors/, 'every built-in fetching switch remains available');
+  assert.match(form, /badge: Model\.providerDisplaySummary\(root\.barProviderChoices\)/);
+  assert.match(form, /badge: root\.vendorSummary\(\)/, 'fetching retains its independent enabled count');
+  assert.match(form, /property bool fetchingOpen: false/);
+  assert.match(form, /onClicked: root\.barProviderToggleRequested\(modelData.id\)/);
+  const chips=model.barChips([],null,true,true,true,false,false,false,'auto','used',true);
+  assert.equal(chips.length,1,'all hidden retains a generic clickable icon');
+  assert.equal(chips[0].label,'');
+}
+{
+  const reports=model.parseReport(JSON.stringify({entries:[
+    {id:'custom:sample',display_name:'Example custom',sections:[{type:'metric',label:'Weekly',percent:99}]},
+    {id:'openai@work',display_name:'Codex work',sections:[{type:'metric',label:'Weekly',percent:10}]}
+  ]})).entries;
+  const shown=model.barVisibleEntries(reports,['custom:sample']);
+  const chips=model.barChips(shown,reports[0],true,true,false,false,false,false,'auto','used',true);
+  assert.deepEqual(Array.from(chips,chip=>chip.id),['openai@work']);
+  assert.equal(chips[0].alarming,false,'a hidden critical entry must not alarm the visible chip');
+  const single=model.barChips(shown,reports[0],false,true,false,false,false,false,'auto','used',true);
+  assert.equal(single[0].id,'openai@work','single-entry mode falls back when the selected panel entry is hidden');
+  const prefs=JSON.parse(JSON.stringify({hiddenBarEntries:['custom:sample']}));
+  assert.deepEqual(Array.from(model.barVisibleEntries(reports,prefs.hiddenBarEntries),entry=>entry.id),['openai@work']);
 }
 
 console.log('Omarchy model tests passed');

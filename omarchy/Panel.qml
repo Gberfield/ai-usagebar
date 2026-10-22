@@ -84,6 +84,17 @@ Panel {
       cursorPoolFlags(),
       antigravityPoolFlags())
   })
+  readonly property var hiddenBarEntries: setting("hiddenBarEntries", [])
+  readonly property var barEntries: Model.barVisibleEntries(shapedEntries, hiddenBarEntries)
+  readonly property var barEntry: {
+    for (var i = 0; i < barEntries.length; i++)
+      if (barEntries[i].id === selectedEntryId) return barEntries[i]
+    return barEntries.length > 0 ? barEntries[0] : null
+  }
+  readonly property var barProviderChoices: visibleEntries.map(function(item) {
+    return { id: item.id, name: Model.providerName(item),
+      checked: !Array.isArray(hiddenBarEntries) || hiddenBarEntries.indexOf(item.id) < 0 }
+  })
   readonly property var shapedEntry: entryIndex >= 0 ? shapedEntries[entryIndex] : null
   readonly property var summary: Model.headline(shapedEntry, barWindow, showAs)
   // barWindow pins the bar value and its echoes (hero detail, tooltip).
@@ -111,7 +122,7 @@ Panel {
   // A cached or failed provider response stays a status line, but a report
   // that never arrived has nothing else to show on the bar.
   readonly property bool reportMissing: loadError !== "" && entries.length === 0
-  readonly property bool alarming: (showAll ? shownAnyAlarming() : entryAlarming)
+  readonly property bool alarming: (showAll ? shownAnyAlarming() : entryIsAlarming(barEntry))
     || reportMissing
 
   function tr(key, params) {
@@ -242,6 +253,10 @@ Panel {
     var next = enabled === true
     if (next === showProvider) return
     persistWidgetSettings({ showProvider: next })
+  }
+
+  function toggleBarProvider(entryId) {
+    persistWidgetSettings({ hiddenBarEntries: Model.toggleBarEntry(hiddenBarEntries, entryId) })
   }
 
   function setShowAll(enabled) {
@@ -451,8 +466,8 @@ Panel {
   }
 
   function shownAnyAlarming() {
-    for (var i = 0; i < shapedEntries.length; i++)
-      if (entryIsAlarming(shapedEntries[i])) return true
+    for (var i = 0; i < barEntries.length; i++)
+      if (entryIsAlarming(barEntries[i])) return true
     return false
   }
 
@@ -715,16 +730,15 @@ Panel {
   }
 
   function shownEntries() {
-    if (showAll) return shapedEntries
-    if (shapedEntry) return [shapedEntry]
-    return shapedEntries.length > 0 ? [shapedEntries[0]] : []
+    if (showAll) return barEntries
+    return barEntry ? [barEntry] : []
   }
 
   readonly property var barChips: labeledChips()
 
   function labeledChips() {
     var chips = Model.barChips(
-      shapedEntries, shapedEntry, showAll, showValue, showProvider, loading, alarming, vertical,
+      barEntries, barEntry, showAll, showValue, showProvider, loading, alarming, vertical,
       barWindow, showAs, brandIcons)
     if (!showValue || vertical) return chips
     var rows = shownEntries()
@@ -788,12 +802,12 @@ Panel {
 
   function barText() {
     if (showAll)
-      return Model.barStrip(shapedEntries, alarming, vertical, showValue, showProvider, loading,
+      return Model.barStrip(barEntries, alarming, vertical, showValue, showProvider, loading,
         barWindow, showAs)
-    var value = shapedEntry ? usageText(shapedEntry, false) : summary.text
+    var value = barEntry ? usageText(barEntry, false) : ""
     return Model.barLabel(alarming, vertical, showValue, loading,
-      entry !== null, value, showProvider ? Model.providerShort(entry) : "",
-      Model.providerIcon(entry))
+      barEntry !== null, value, showProvider ? Model.providerShort(barEntry) : "",
+      Model.providerIcon(barEntry))
   }
 
   function tooltipLines(item) {
@@ -845,10 +859,10 @@ Panel {
       return [{ text: single, severity: sev }]
     }
 
-    if (showAll && shapedEntries.length > 0) {
+    if (showAll && barEntries.length > 0) {
       var chips = []
-      for (var e = 0; e < shapedEntries.length; e++) {
-        var chunk = rowsFor(shapedEntries[e])
+      for (var e = 0; e < barEntries.length; e++) {
+        var chunk = rowsFor(barEntries[e])
         for (var c = 0; c < chunk.length; c++) chips.push(chunk[c])
       }
       return chips
@@ -857,7 +871,7 @@ Panel {
       var msg = Model.autoTextSafe(statusMessage() || root.tr("app.name"))
       return msg !== "" ? [{ text: msg, severity: "" }] : []
     }
-    return rowsFor(shapedEntry)
+    return barEntry ? rowsFor(barEntry) : [{ text: root.tr("providers.none_shown"), severity: "" }]
   }
 
   readonly property var ragTooltipRows: tooltipRows()
@@ -1088,6 +1102,8 @@ Panel {
             barWindow: root.barWindow
             showAs: root.showAs
             brandIcons: root.brandIcons
+            barProviderChoices: root.barProviderChoices
+            onBarProviderToggleRequested: function(entryId) { root.toggleBarProvider(entryId) }
             metricEntries: root.metricEntries
             onSaved: root.startRefresh()
             onShowValueRequested: function(enabled) { root.setShowValue(enabled) }

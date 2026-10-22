@@ -24,9 +24,11 @@ Column {
   property string barWindow: "auto"
   property string showAs: "used"
   property bool brandIcons: true
+  property var barProviderChoices: []
   property var metricEntries: []
   property string openMetricEntry: ""
   property string openSection: "display"
+  property bool fetchingOpen: false
   property int keyPendingCount: 0
   readonly property color dim: Qt.darker(foreground, 1.45)
 
@@ -63,6 +65,7 @@ Column {
   signal barWindowRequested(string value)
   signal showAsRequested(string value)
   signal brandIconsRequested(bool enabled)
+  signal barProviderToggleRequested(string entryId)
   signal metricToggleRequested(string entryId, string key)
   signal closeRequested()
 
@@ -665,13 +668,13 @@ Column {
   }
 
   Column {
-    visible: !root.loading && root.snapshot.vendors.length > 0
+    visible: !root.loading && (root.snapshot.vendors.length > 0 || root.barProviderChoices.length > 0)
     width: parent.width
     spacing: Style.space(8)
 
     Disclosure {
       text: root.tr("section.providers")
-      badge: root.vendorSummary()
+      badge: Model.providerDisplaySummary(root.barProviderChoices)
       expanded: root.openSection === "providers"
       onToggled: root.toggleSection("providers")
     }
@@ -680,9 +683,14 @@ Column {
       width: parent.width
       spacing: Style.space(8)
 
+      PanelSectionHeader {
+        text: root.tr("providers.bar_title")
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+      }
       Text {
         width: parent.width
-        text: root.tr("providers.help")
+        text: root.tr("providers.bar_help")
         textFormat: Text.PlainText
         color: root.dim
         font.family: root.fontFamily
@@ -690,25 +698,58 @@ Column {
         wrapMode: Text.WordWrap
       }
       Repeater {
-        model: root.snapshot.vendors
-
+        model: root.barProviderChoices
         Toggle {
           required property var modelData
           width: parent.width
-          label: root.safe(modelData.label)
-          description: {
-            var pending = root.vendorOverrides[modelData.id]
-            var effective = pending === true || pending === false ? pending : modelData.enabled
-            return effective ? root.tr("status.vendor_on") : root.tr("status.vendor_off")
-          }
-          checked: {
-            var pending = root.vendorOverrides[modelData.id]
-            return pending === true || pending === false ? pending : modelData.enabled
-          }
+          label: root.safe(modelData.name)
+          description: modelData.checked ? root.tr("providers.shown") : root.tr("providers.hidden")
+          checked: modelData.checked
           foreground: root.foreground
           fontFamily: root.fontFamily
-          enabled: !root.saving
-          onClicked: root.setVendorOverride(modelData.id, !checked)
+          onClicked: root.barProviderToggleRequested(modelData.id)
+        }
+      }
+      Disclosure {
+        text: root.tr("providers.fetch_title")
+        badge: root.vendorSummary()
+        expanded: root.fetchingOpen
+        onToggled: root.fetchingOpen = !root.fetchingOpen
+      }
+      Column {
+        width: parent.width
+        visible: root.fetchingOpen
+        spacing: Style.space(8)
+        Text {
+          width: parent.width
+          text: root.tr("providers.help")
+          textFormat: Text.PlainText
+          color: root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          wrapMode: Text.WordWrap
+        }
+        Repeater {
+          model: root.snapshot.vendors
+
+          Toggle {
+            required property var modelData
+            width: parent.width
+            label: root.safe(modelData.label)
+            description: {
+              var pending = root.vendorOverrides[modelData.id]
+              var effective = pending === true || pending === false ? pending : modelData.enabled
+              return effective ? root.tr("status.vendor_on") : root.tr("status.vendor_off")
+            }
+            checked: {
+              var pending = root.vendorOverrides[modelData.id]
+              return pending === true || pending === false ? pending : modelData.enabled
+            }
+            foreground: root.foreground
+            fontFamily: root.fontFamily
+            enabled: !root.saving
+            onClicked: root.setVendorOverride(modelData.id, !checked)
+          }
         }
       }
     }

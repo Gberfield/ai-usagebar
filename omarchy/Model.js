@@ -1796,3 +1796,24 @@ function parseSettingsApplyResult(raw) {
     return false
   }
 }
+
+// Display-only entry choices. Keep exact ids so named accounts are independent.
+function barVisibleEntries(entries, hidden) {
+  var ids = Array.isArray(hidden) ? hidden : []
+  return (Array.isArray(entries) ? entries : []).filter(function(entry) {
+    return ids.indexOf(entry.id) < 0
+  })
+}
+
+function toggleBarEntry(hidden, id) {
+  var ids = Array.isArray(hidden) ? hidden : []
+  return ids.indexOf(id) >= 0
+    ? ids.filter(function(value) { return value !== id })
+    : ids.concat([id])
+}
+
+function providerDisplaySummary(rows) {
+  var on = 0
+  for (var i = 0; i < rows.length; i++) if (rows[i].checked) on++
+  return on + "/" + rows.length
+}
