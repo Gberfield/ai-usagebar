@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Added
+
+- **Omarchy can hide individual providers from the top bar.** The Providers
+  settings include custom entries and named accounts, with a count of entries
+  selected for display. Inactive built-ins remain in the advanced fetching list.
+  Visibility saves immediately in the widget settings without removing an entry
+  from the usage panel.
+  Fetching controls remain available in a separate advanced section.
+
+## [1.42.0] — 2026-10-22
+
 ### Security
 
 - **The popover build uses Vite 8.3.4.** This fixes Windows command-argument
@@ -18,12 +29,12 @@
 
 ### Added
 
-- **Omarchy can hide individual providers from the top bar.** The Providers
-  settings include custom entries and named accounts, with a count of entries
-  selected for display. Inactive built-ins remain in the advanced fetching list.
-  Visibility saves immediately
-  in the widget settings without removing an entry from the usage panel.
-  Fetching controls remain available in a separate advanced section.
+- **GNOME's provider menu is now a tabbed usage panel.** The selected provider
+  gets a branded header, plan and highest-usage badge, horizontally scrollable
+  provider tabs, full metric bars and resets, refresh/settings actions, and an
+  update timestamp. Existing bars/values, icon, and compact-spacing preferences
+  still apply, and SuperGrok can now be selected for the top bar (GNOME
+  extension 0.5.0).
 
 - **AI clients can query usage through a built-in MCP server.** Run
   `ai-usagebar mcp` as a local stdio server to expose read-only `get_usage`
@@ -39,6 +50,29 @@
   keeps its "open dashboard" hint.
 
 ### Fixed
+
+- **Cline API-key refreshes now honor the cache TTL and rate-limit backoff.**
+  The resolved account target is paired with a one-way credential fingerprint,
+  so a warm cache no longer calls the identity endpoint on every poll. Identity
+  failures now use the same redacted error and HTTP 429 policy as quota calls,
+  without persisting the API key or risking cross-account cached figures (#485).
+
+- **Synthetic keeps its last good quota when a response contains invalid
+  values.** A zero limit, negative request count, or invalid renewal timestamp
+  now follows the shared stale-cache fallback and records the schema error,
+  instead of discarding the displayed quota despite a usable cache.
+
+- **Antigravity keeps `agy`'s last reading when `agy` cannot answer, instead
+  of showing the Cloud Code API's 0%.** With only the `agy` CLI signed in, a
+  cold `agy` start ran past the reading's 20 s timeout, the failure held the
+  next attempt off for ten minutes, and the Cloud Code API filled the gap with
+  the other tracker #450 describes — an untouched week, Gemini 0% / 0%, reset
+  times anchored on the moment of the request — shown as current while `agy`
+  itself read 90% used. While `agy` is installed, a reading it gave earlier is
+  now served stale rather than replaced; the Cloud Code API answers only when
+  there is no reading of `agy`'s own to keep (a first run, or `agy` never
+  signed in). A reading is also given 90 s to come back, which covers the
+  cold starts measured (65 s, 32 s) without changing the warm 5 s case.
 
 - **A format shared across providers no longer prints `{session_pct}` for Grok
   Bot.** Grok Bot has no session window and never defined the session aliases,
@@ -4716,7 +4750,8 @@ vendors. Highlights:
 - Live API smoke test suite (`make smoke`) that exercises the real
   undocumented endpoints to detect schema drift before users do.
 
-[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.41.0...HEAD
+[Unreleased]: https://github.com/akitaonrails/ai-usagebar/compare/v1.42.0...HEAD
+[1.42.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.41.0...v1.42.0
 [1.41.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.1...v1.41.0
 [1.40.1]: https://github.com/akitaonrails/ai-usagebar/compare/v1.40.0...v1.40.1
 [1.40.0]: https://github.com/akitaonrails/ai-usagebar/compare/v1.39.1...v1.40.0

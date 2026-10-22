@@ -28,6 +28,14 @@
 //! Cloud Code request cannot reproduce for an `agy` account (#450). Only when
 //! `agy` cannot answer does the saved session go to the Cloud Code API.
 //!
+//! `agy` not answering *now* is not the same as having nothing of its own to
+//! show. A cold `agy` start runs past the reading's timeout, and the failure
+//! holds the next attempt off for ten minutes; the Cloud Code figure that
+//! filled that gap is the other tracker — an untouched week, 0% used — shown
+//! as current. So while `agy` is installed, a reading it gave earlier is kept,
+//! stale, for as long as the cache would serve it anyway, and the Cloud Code
+//! API answers only when there is no reading of `agy`'s own to keep.
+//!
 //! That ranking has one sharp edge (#405): a signed-out product's 401/403 is
 //! actionable, so it outranks the `agy` answer that would unlock the fallback
 //! — the running product masks a working saved session. When that product is
@@ -251,7 +259,11 @@ pub async fn fetch_snapshot_at(
                 agy: &remote.agy,
                 credential: remote.credential,
             };
-            fetch_remote(client, cache, oauth, endpoints, token, renewal, now).await
+            match fetch_remote(client, cache, oauth, endpoints, token, renewal, now).await {
+                Ok(RemoteReading::Live(snap)) => Ok(snap),
+                Ok(RemoteReading::Kept(outcome)) => return Ok(outcome),
+                Err(e) => Err(e),
+            }
         }
     };
 
@@ -669,13 +681,31 @@ impl Renewal<'_> {
     }
 }
 
+/// What the remote path produced: a reading taken on this poll, to be cached
+/// as fresh, or `agy`'s earlier one served in place of a Cloud Code figure,
+/// already an outcome because it is stale by construction.
+enum RemoteReading {
+    Live(AntigravitySnapshot),
+    Kept(FetchOutcome),
+}
+
 /// Quota as the signed-in Google account: `agy`'s own reading when it can
-/// give one, else the Cloud Code API.
+/// give one, its last one when it cannot, else the Cloud Code API.
 ///
 /// `agy` answers first (#450). It reads as the saved session's account — the
 /// session is `agy`'s own login — so its snapshot is attributed the same way.
 /// Its output names no plan; a plan is looked up only with a token that is
 /// still good, never at the price of a refresh.
+///
+/// When `agy` is installed but gives no reading on this poll — it ran past
+/// its timeout, exited nonzero, or a failure a moment ago is still holding
+/// the next attempt off — the reading it gave last is served stale rather
+/// than replaced: the Cloud Code figure is another tracker for an `agy`
+/// account, and a 65 s `agy` start had turned into ten minutes of "0% used".
+/// Only a reading of `agy`'s own is kept, from the same account, and only
+/// while [`parse_cache_at`] still accepts it: one whose session window has
+/// rolled over is refused there, so a persistently silent `agy` yields to
+/// the Cloud Code API within five hours.
 ///
 /// On the Cloud Code path, a rejected token gets one refresh and one retry,
 /// unless it was refreshed a moment ago — then the rejection is Google's
@@ -692,18 +722,26 @@ async fn fetch_remote(
     token: Result<StoredToken>,
     renewal: Renewal<'_>,
     now: DateTime<Utc>,
-) -> Result<AntigravitySnapshot> {
+) -> Result<RemoteReading> {
     let mut token = token?;
     let oauth_path = cloud::oauth_cache_path(cache);
-    if let Some(mut snap) = super::agy::quota_snapshot(renewal.agy, cache, now).await {
-        snap.plan = match current_access_token(&oauth_path, &token, now) {
-            Some(access) => cloud::fetch_plan(client, endpoints, &access).await,
-            None => None,
+    match super::agy::quota_snapshot(renewal.agy, cache, now).await {
+        Some(mut snap) => {
+            snap.plan = match current_access_token(&oauth_path, &token, now) {
+                Some(access) => cloud::fetch_plan(client, endpoints, &access).await,
+                None => None,
+            }
+            .unwrap_or_else(|| DEFAULT_PLAN.to_string());
+            snap.account = remote_account(&token.fingerprint);
+            snap.source = AntigravitySource::Agy;
+            return Ok(RemoteReading::Live(snap));
         }
-        .unwrap_or_else(|| DEFAULT_PLAN.to_string());
-        snap.account = remote_account(&token.fingerprint);
-        snap.source = AntigravitySource::Agy;
-        return Ok(snap);
+        None if renewal.agy.is_available() => {
+            if let Some(kept) = kept_agy_reading(cache, &remote_account(&token.fingerprint), now) {
+                return Ok(RemoteReading::Kept(kept));
+            }
+        }
+        None => {}
     }
     let mut access =
         match resolve_access_token(client, oauth, endpoints, &oauth_path, &token, now).await {
@@ -756,7 +794,26 @@ async fn fetch_remote(
     let mut snap = parse_quota_summary(&quota, plan)?;
     snap.account = remote_account(&token.fingerprint);
     snap.source = AntigravitySource::Remote;
-    Ok(snap)
+    Ok(RemoteReading::Live(snap))
+}
+
+/// `agy`'s last reading for `account`, served stale, or `None` when the cache
+/// holds nothing of the kind: no payload, one past [`MAX_STALE`], another
+/// account's, one whose window has rolled over, or a Cloud Code figure — the
+/// very thing this exists not to repeat. The caller then goes on to the Cloud
+/// Code API as before, so the error this hands the shared policy is never
+/// shown; it only names the branch.
+///
+/// [`MAX_STALE`]: crate::cache::MAX_STALE
+fn kept_agy_reading(cache: &Cache, account: &str, now: DateTime<Utc>) -> Option<FetchOutcome> {
+    let not_agys = || AppError::Other("Antigravity: no reading of `agy`'s own to keep".into());
+    crate::outcome::fallback(cache, None, not_agys(), |bytes| {
+        let snap = parse_cache_at(bytes, Some(account), now)?;
+        (snap.source == AntigravitySource::Agy)
+            .then_some(snap)
+            .ok_or_else(not_agys)
+    })
+    .ok()
 }
 
 /// Identity of the signed-in account, fingerprinted rather than stored in
@@ -4307,6 +4364,108 @@ mod tests {
         }
         quota.assert_async().await;
         assert_eq!(std::fs::read_to_string(runs).unwrap().lines().count(), 1);
+    }
+
+    /// Move the payload past the reading floor without discarding it, as the
+    /// clock would: the next poll fetches, and the payload is still there to
+    /// fall back on.
+    #[cfg(unix)]
+    fn age_past_reading_floor(cache: &Cache) {
+        let aged = std::time::SystemTime::now() - super::super::agy::QUOTA_INTERVAL * 2;
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(cache.payload_path())
+            .unwrap()
+            .set_times(std::fs::FileTimes::new().set_modified(aged))
+            .unwrap();
+    }
+
+    /// `agy` answered once, then cannot — a cold start past the timeout, and
+    /// the cooldown that follows. Its reading is kept, stale, rather than
+    /// replaced by the Cloud Code API's other tracker (#450): unpinned, the
+    /// entry read "0% used" for ten minutes at a time while `agy` read 90%.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn when_agy_stops_answering_its_last_reading_is_kept_over_the_cloud_code_api() {
+        let mut server = mockito::Server::new_async().await;
+        let eps = endpoints(&server);
+        let quota = quota_mock(&mut server, "KEYRING-AT")
+            .expect(0)
+            .create_async()
+            .await;
+        let _plan = server
+            .mock("POST", "/daily/plan")
+            .with_status(200)
+            .with_body(r#"{"currentTier":{"name":"google_ai_pro"}}"#)
+            .create_async()
+            .await;
+        let blob = keyring_blob(VALID, true);
+        let (td, cache) = fixture();
+        let runs = td.path().join("runs");
+        let agy = agy_reading(td.path(), &runs);
+        let remote = || RemoteOverride {
+            agy: super::super::agy::AgyCommand::At(agy.clone()),
+            ..remote(&blob, &eps)
+        };
+
+        let first = run(&cache, remote(), Duration::ZERO)
+            .await
+            .expect("agy answered");
+        assert_eq!(first.snapshot.source, AntigravitySource::Agy);
+        assert!(!first.stale);
+
+        // The floor passes, and `agy` stops answering.
+        age_past_reading_floor(&cache);
+        super::super::agy::test_support::write_script(
+            &agy,
+            &format!("echo \"$@\" >> '{}'\nexit 1", runs.display()),
+        );
+
+        for _ in 0..2 {
+            let out = run(&cache, remote(), Duration::ZERO)
+                .await
+                .expect("agy's reading is kept");
+            assert_eq!(out.snapshot.source, AntigravitySource::Agy);
+            assert_eq!(out.snapshot.weekly.as_ref().unwrap().utilization_pct, 37);
+            assert_eq!(out.snapshot.plan, "Pro");
+            assert!(out.stale, "a kept reading is not passed off as current");
+            age_past_reading_floor(&cache);
+        }
+        quota.assert_async().await;
+        // One reading, one failed attempt: the cooldown held the second poll's
+        // attempt off, and the kept reading answered it all the same.
+        assert_eq!(std::fs::read_to_string(runs).unwrap().lines().count(), 2);
+    }
+
+    /// Only a reading of `agy`'s own is kept. A Cloud Code figure is the one
+    /// to replace, so with that in the cache the Cloud Code API is asked again.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_cloud_code_figure_is_not_kept_in_agys_place() {
+        let mut server = mockito::Server::new_async().await;
+        let eps = endpoints(&server);
+        let quota = quota_mock(&mut server, "KEYRING-AT")
+            .expect(2)
+            .create_async()
+            .await;
+        let blob = keyring_blob(VALID, true);
+        let (td, cache) = fixture();
+        let agy = td.path().join("agy");
+        super::super::agy::test_support::write_script(&agy, "exit 1");
+        let remote = || RemoteOverride {
+            agy: super::super::agy::AgyCommand::At(agy.clone()),
+            ..remote(&blob, &eps)
+        };
+
+        for _ in 0..2 {
+            let out = run(&cache, remote(), Duration::ZERO)
+                .await
+                .expect("the Cloud Code API answered");
+            assert_eq!(out.snapshot.source, AntigravitySource::Remote);
+            assert!(!out.stale);
+            age_past_reading_floor(&cache);
+        }
+        quota.assert_async().await;
     }
 
     /// A reading starts a process, so it is taken at most every

@@ -291,7 +291,9 @@ vendor's response shape drifts:
   `agy -p "/quota" --output-format json` (`agy.rs`) is the reading `agy`'s own
   Models & Quota page shows, which the Cloud Code request cannot reproduce for
   an `agy` account (#450); it starts a process, so it runs at most every
-  `agy::QUOTA_INTERVAL`. A refreshed token goes to the vendor cache's
+  `agy::QUOTA_INTERVAL`, and when it gives no reading its last one is kept,
+  stale, rather than replaced by the Cloud Code figure (`kept_agy_reading`).
+  A refreshed token goes to the vendor cache's
   `oauth.json`, keyed by a fingerprint of the refresh token, never back to
   the keyring. The OAuth client that refresh needs is config-only.
   Tests must never probe `/proc`, `lsof`, the keyring, the CLI token file, Google or the wall

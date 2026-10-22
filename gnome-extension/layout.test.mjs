@@ -54,4 +54,19 @@ assert.doesNotMatch(source, /this\._icon\.gicon\s*=/,
 assert.match(source, /this\._icon\.icon_name = 'application-x-executable-symbolic'/,
     'the no-mark fallback icon stays');
 
+// The tabbed menu supersedes provider submenus, but the three existing menu
+// appearance settings remain live upgrade-compatible controls.
+for (const key of ['menu-summary-style', 'menu-show-icons', 'menu-compact']) {
+    assert.match(source, new RegExp(`get_(?:string|boolean)\\('${key}'\\)`),
+        `${key} must still affect the tabbed menu`);
+    assert.match(source, new RegExp(`'${key}'`),
+        `${key} must trigger an immediate redraw`);
+}
+assert.match(source, /entries\.find\(e => e\.id === this\._tab\) \|\| entries\[0\]/,
+    'the selected provider tab must survive report redraws and fall back safely');
+
+const prefsSource = readFileSync(new URL('./prefs.js', import.meta.url), 'utf8');
+assert.match(prefsSource, /vendorList = \[[^\]]*'supergrok'/s,
+    'SuperGrok must be available in the top-bar provider switches');
+
 console.log('GNOME layout compatibility tests passed');
