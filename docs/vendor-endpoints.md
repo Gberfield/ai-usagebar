@@ -67,6 +67,7 @@ or stored, and no vendor asks the user to paste a session cookie.
 | Codex | Undocumented ChatGPT usage endpoint used by the official `codex` CLI. Windows are identified by duration instead of response position. |
 | GitHub Copilot | Private endpoint used by VS Code. It requires a GitHub OAuth token and VS Code-compatible client headers; ai-usagebar gets it from the official `gh auth token` command after `gh auth login --web`. A non-empty `GITHUB_COPILOT_TOKEN` is an optional explicit override. GitHub CLI/editor/browser credentials are never parsed, copied, or stored. |
 | Z.AI | Reverse-engineered from a third-party plugin. Treat this as the most fragile integration. |
+| Synthetic | Documented `/v2/quotas` endpoint. Invalid limits, request counts, or renewal timestamps are schema errors and follow the shared stale-cache fallback; invalid responses never replace the last good quota. |
 | Kimi | Community-confirmed `/coding/v1/usages` route used by third-party quota tools. Drift is possible. The refresh grant is the Kimi Code CLI's own documented-by-behaviour device-flow token endpoint, using the CLI's public client id. |
 | Cursor | Undocumented endpoint called by Cursor's dashboard, behind Vercel's WAF: the request sends the full browser header set (client hints, `sec-fetch-*`), and a 403 there can be an edge block on a non-browser TLS fingerprint rather than a credential verdict (#410). Its shape may change with Cursor pricing. |
 | MiniMax | The Token Plan route is official, but no formal response schema is published. |
