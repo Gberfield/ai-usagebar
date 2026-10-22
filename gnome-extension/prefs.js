@@ -311,7 +311,7 @@ export default class AiUsageBarPrefs extends ExtensionPreferences {
 
         // One switch per provider; each one switched on gets its own top bar
         // indicator, in this order. Stored as the comma-separated `vendor` list.
-        const vendorList = ['anthropic', 'openai', 'zai', 'openrouter', 'deepseek', 'antigravity'];
+        const vendorList = ['anthropic', 'openai', 'zai', 'openrouter', 'deepseek', 'antigravity', 'supergrok'];
         const vendors = new Adw.ExpanderRow({
             title: _('Top bar vendors'),
             subtitle: _('One indicator per provider switched on. The menu lists every enabled provider.'),

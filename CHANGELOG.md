@@ -18,6 +18,13 @@
 
 ### Added
 
+- **GNOME's provider menu is now a tabbed usage panel.** The selected provider
+  gets a branded header, plan and highest-usage badge, horizontally scrollable
+  provider tabs, full metric bars and resets, refresh/settings actions, and an
+  update timestamp. Existing bars/values, icon, and compact-spacing preferences
+  still apply, and SuperGrok can now be selected for the top bar (GNOME
+  extension 0.5.0).
+
 - **AI clients can query usage through a built-in MCP server.** Run
   `ai-usagebar mcp` as a local stdio server to expose read-only `get_usage`
   and `list_providers` tools. Usage can be narrowed to a provider or named

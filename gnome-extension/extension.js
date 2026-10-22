@@ -20,7 +20,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {barMarkup, colorForDelta, colorForPct, disambiguateTags, field, FIELD, FORMAT, hasUsageWindows, integer,
     isGrouped, MARKER, markerElapsed, paceGlyph, plainTextFromPango, selectPools,
     splitFormatOutput} from './marker-logic.js';
-import {commandFailure, errorLine, parseReport, summarize} from './report-model.js';
+import {commandFailure, errorLine, parseReport} from './report-model.js';
 
 const ROLE = 'ai-usagebar';
 
@@ -49,7 +49,7 @@ function wrappedLabel(text, styleClass) {
 }
 
 // The detail bar fits inside the menu's bounded content width.
-const DETAIL_BAR_W = 280;
+const PANEL_BAR_W = 320;
 
 // A bar built from St widgets rather than █ cells: a track, a fill in the
 // severity color, and an optional pace marker at the elapsed share of the
@@ -128,7 +128,8 @@ class AiUsageBarIndicator extends PanelMenu.Button {
         this._data = null;          // parsed snapshot for redraws
         this._report = null;        // parsed `usage --json` for the menu
         this._panelError = '';      // why the top bar shows ⚠, shown in the menu
-        this._providerItems = new Map();
+        this._tab = null;           // selected provider tab (entry id)
+        this._reportAt = 0;
         this._destroyed = false;
         this._timer = 0;
         // The top bar (`--vendor --format`) and the menu (`usage --json`) are
@@ -195,44 +196,14 @@ class AiUsageBarIndicator extends PanelMenu.Button {
     }
 
     _buildMenu() {
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem('Providers'));
-        this._providers = new PopupMenu.PopupMenuSection();
-        // Keep the section's box and menu relationships; wrap only its actor
-        // so a long provider list can scroll as well as an expanded submenu.
-        this._providers.actor = new St.ScrollView({
-            style_class: 'aiub-providers',
-            hscrollbar_policy: St.PolicyType.NEVER,
-            vscrollbar_policy: St.PolicyType.AUTOMATIC,
-            child: this._providers.box,
-        });
-        this._providers.actor._delegate = this._providers;
-        this.menu.addMenuItem(this._providers);
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addAction('Refresh now', () => {
-            this._refresh();
-            this._refreshReport();
-        });
+        // One non-reactive row hosts the whole tabbed panel: header, provider
+        // tabs, the selected provider's metrics, and a footer.
+        this._panel = verticalBox({style_class: 'aiub-panel', x_expand: true});
+        const host = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        host.add_child(this._panel);
+        this.menu.addMenuItem(host);
         this.menu.addAction('Open TUI', () => this._openTui());
-        this.menu.addAction('Settings', () => this._openPrefs());
         this._paintReport(null);
-    }
-
-    _message(menu, text, styleClass = 'aiub-detail') {
-        const section = new PopupMenu.PopupMenuSection();
-        section.actor.add_child(wrappedLabel(text, styleClass));
-        menu.addMenuItem(section);
-    }
-
-    _metricRow(row, colors) {
-        const item = verticalBox({x_expand: true, style_class: 'aiub-metric'});
-        item.add_child(wrappedLabel(`${row.label}: ${row.valueText}`, 'aiub-heading'));
-        item.add_child(barWidget(row.percent, DETAIL_BAR_W, 6,
-            colors[row.severity] || colors.low, row.elapsed));
-        const reset = row.reset === 'now' ? 'Resets now' : row.reset ? `Resets in ${row.reset}` : '';
-        const detail = [reset, row.detail].filter(Boolean).join(' · ');
-        if (detail)
-            item.add_child(wrappedLabel(detail, 'aiub-detail'));
-        return item;
     }
 
     _markIcon(brand) {
@@ -245,127 +216,134 @@ class AiUsageBarIndicator extends PanelMenu.Button {
         return this._marks.get(brand);
     }
 
-    _overview(summary, colors) {
-        const box = verticalBox({x_expand: true, style_class: 'aiub-overview'});
-        const bars = this._settings.get_string('menu-summary-style') === 'bars';
-        for (const row of summary.rows) {
-            const line = new St.BoxLayout({x_expand: true, style_class: 'aiub-overview-row'});
-            line.add_child(new St.Label({text: row.label, x_expand: true,
-                y_align: Clutter.ActorAlign.CENTER}));
-            if (bars && row.headline !== 'value')
-                line.add_child(barWidget(row.percent, 56, 4, colors[row.severity] || colors.low, null));
-            line.add_child(new St.Label({text: row.valueText, style_class: 'aiub-overview-value',
-                y_align: Clutter.ActorAlign.CENTER}));
-            box.add_child(line);
-        }
-        if (summary.remaining)
-            box.add_child(new St.Label({text: `+${summary.remaining} more`, style_class: 'aiub-detail'}));
-        return box;
+    _iconButton(iconName, label, onClick) {
+        const button = new St.Button({
+            style_class: 'aiub-icon-button',
+            can_focus: true,
+            accessible_name: label,
+            child: new St.Icon({icon_name: iconName, icon_size: 16}),
+        });
+        button.connect('clicked', onClick);
+        return button;
     }
 
-    _providerMenu(entry, colors) {
-        const status = entry.error ? ' · Error' : entry.stale ? ' · cached' : '';
-        const title = entry.title + (entry.plan ? ` · ${entry.plan}` : '') + status;
-        const icons = this._settings.get_boolean('menu-show-icons');
-        const item = new PopupMenu.PopupSubMenuMenuItem(title, icons);
-        item.add_style_class_name('aiub-provider');
-        if (this._settings.get_boolean('menu-compact'))
-            item.add_style_class_name('aiub-compact');
-        // The content takes the available width so value columns align
-        // across providers; the native expander no longer needs to stretch.
-        const expander = item.get_children().find(actor =>
-            actor.has_style_class_name('popup-menu-item-expander'));
-        if (expander)
-            expander.x_expand = false;
-        if (icons) {
-            const mark = this._markIcon(entry.brand);
-            if (mark)
-                item.icon.gicon = mark;
-            else
-                item.icon.icon_name = 'application-x-executable-symbolic';
-            item.icon.y_align = Clutter.ActorAlign.START;
-        }
-        item.label.x_expand = true;
-        item.label.clutter_text.ellipsize = Pango.EllipsizeMode.END;
-        item.label.add_style_class_name('aiub-heading');
-        // Keep the native submenu's label, arrow and keyboard handling; only
-        // extend its content with an always-visible report preview.
-        const content = verticalBox({x_expand: true, style_class: 'aiub-provider-content'});
-        item.remove_child(item.label);
-        content.add_child(item.label);
-        const summary = summarize(entry.error ? [] : entry.rows);
-        if (summary.rows.length)
-            content.add_child(this._overview(summary, colors));
-        else if (!entry.error)
-            content.add_child(new St.Label({text: entry.rows.length ? 'Details available' : 'No usage data reported',
-                style_class: 'aiub-detail'}));
-        item.insert_child_at_index(content, icons ? 2 : 1);
-        item.accessible_name = [title, ...summary.rows.map(row => `${row.label}: ${row.valueText}`),
-            summary.remaining ? `+${summary.remaining} more` : ''].filter(Boolean).join('. ');
-        const section = new PopupMenu.PopupMenuSection();
-        const details = verticalBox({x_expand: true, style_class: 'aiub-details'});
-        section.actor.add_child(details);
-        item.menu.addMenuItem(section);
+    _header(entry) {
+        const header = new St.BoxLayout({x_expand: true, style_class: 'aiub-header'});
+        const mark = this._settings.get_boolean('menu-show-icons')
+            ? this._markIcon(entry.brand)
+            : null;
+        if (mark)
+            header.add_child(new St.Icon({gicon: mark, icon_size: 28, style_class: 'aiub-header-icon',
+                y_align: Clutter.ActorAlign.CENTER}));
+        const titles = verticalBox({x_expand: true, y_align: Clutter.ActorAlign.CENTER});
+        titles.add_child(new St.Label({text: entry.title, style_class: 'aiub-title'}));
         if (entry.plan)
-            details.add_child(wrappedLabel(entry.plan, 'aiub-heading'));
+            titles.add_child(new St.Label({text: entry.plan.toUpperCase(), style_class: 'aiub-plan'}));
+        header.add_child(titles);
+        const pcts = entry.rows.filter(r => r.type === 'metric' && Number.isFinite(r.percent)).map(r => r.percent);
+        if (pcts.length) {
+            header.add_child(new St.Label({text: `${Math.round(Math.max(...pcts))}%`, style_class: 'aiub-pill',
+                y_align: Clutter.ActorAlign.CENTER}));
+        }
+        header.add_child(this._iconButton('view-refresh-symbolic', 'Refresh now', () => {
+            this._refresh();
+            this._refreshReport();
+        }));
+        header.add_child(this._iconButton('emblem-system-symbolic', 'Settings', () => {
+            this.menu.close();
+            this._openPrefs();
+        }));
+        return header;
+    }
+
+    _tabs(entries, selectedId) {
+        const tabs = new St.BoxLayout({x_expand: true, style_class: 'aiub-tabs'});
+        for (const e of entries) {
+            const tab = new St.Button({
+                label: e.title,
+                can_focus: true,
+                style_class: 'aiub-tab' + (e.id === selectedId ? ' aiub-tab-active' : ''),
+            });
+            tab.connect('clicked', () => {
+                this._tab = e.id;
+                this._paintReport(this._report);
+            });
+            tabs.add_child(tab);
+        }
+        return new St.ScrollView({
+            hscrollbar_policy: St.PolicyType.AUTOMATIC,
+            vscrollbar_policy: St.PolicyType.NEVER,
+            overlay_scrollbars: true,
+            child: tabs,
+        });
+    }
+
+    _entryBody(entry, colors) {
+        const body = verticalBox({x_expand: true, style_class: 'aiub-body'});
+        body.add_child(new St.Label({text: 'USAGE & BALANCE', style_class: 'aiub-section'}));
         if (entry.error)
-            details.add_child(wrappedLabel(entry.error, 'aiub-detail'));
+            body.add_child(wrappedLabel(entry.error, 'aiub-detail'));
         for (const row of entry.rows) {
             if (row.type === 'metric') {
-                details.add_child(this._metricRow(row, colors));
+                const box = verticalBox({x_expand: true, style_class: 'aiub-metric'});
+                const top = new St.BoxLayout({x_expand: true});
+                top.add_child(new St.Label({text: row.label, x_expand: true, style_class: 'aiub-heading'}));
+                top.add_child(new St.Label({text: row.valueText, style_class: 'aiub-value'}));
+                box.add_child(top);
+                if (this._settings.get_string('menu-summary-style') === 'bars') {
+                    box.add_child(barWidget(row.percent, PANEL_BAR_W, 5,
+                        colors[row.severity] || colors.low, row.elapsed));
+                }
+                const reset = row.reset === 'now' ? 'Resets now' : row.reset ? `Resets in ${row.reset}` : '';
+                const detail = [reset, row.detail].filter(Boolean).join(' · ');
+                if (detail)
+                    box.add_child(wrappedLabel(detail, 'aiub-detail'));
+                body.add_child(box);
             } else if (row.type === 'block') {
                 if (row.label)
-                    details.add_child(wrappedLabel(row.label, 'aiub-heading'));
+                    body.add_child(wrappedLabel(row.label, 'aiub-heading'));
                 for (const line of row.body)
-                    details.add_child(wrappedLabel(line, 'aiub-detail'));
+                    body.add_child(wrappedLabel(line, 'aiub-detail'));
             } else {
                 const text = row.value ? `${row.label ? row.label + ': ' : ''}${row.value}` : row.label;
-                details.add_child(wrappedLabel(text, row.value ? 'aiub-detail' : 'aiub-heading'));
+                body.add_child(wrappedLabel(text, row.value ? 'aiub-detail' : 'aiub-heading'));
             }
         }
         if (!entry.error && entry.rows.length === 0)
-            details.add_child(wrappedLabel('No usage data reported', 'aiub-detail'));
-        return item;
+            body.add_child(wrappedLabel('No usage data reported', 'aiub-detail'));
+        return body;
+    }
+
+    _updatedAgo() {
+        if (!this._reportAt)
+            return '';
+        const mins = Math.floor((Date.now() - this._reportAt) / 60000);
+        return `Updated ${mins < 1 ? 'just now' : `${mins}m ago`}`;
     }
 
     _paintReport(report) {
-        const focus = global.stage.get_key_focus();
-        let focusedId = null;
-        let openId = null;
-        for (const [id, item] of this._providerItems) {
-            if (focus && (item === focus || item.menu.actor.contains(focus)))
-                focusedId = id;
-            if (item.menu.isOpen)
-                openId = id;
-            // Propagate the focus change before destroying the row. Parent
-            // sections otherwise retain a reference to the disposed item.
-            item.active = false;
-        }
-        const adjustment = this._providers.box.vadjustment;
-        const scroll = adjustment.value;
-        this._providers.removeAll();
-        this._providerItems.clear();
-        const monitor = Main.layoutManager.findMonitorForActor(this) || Main.layoutManager.primaryMonitor;
-        this._providers.actor.style = `max-height: ${Math.floor((monitor?.height || 800) * 0.6)}px;`;
+        const panel = this._panel;
+        panel.set_style_class_name('aiub-panel' +
+            (this._settings.get_boolean('menu-compact') ? ' aiub-compact' : ''));
+        panel.destroy_all_children();
         if (this._panelError)
-            this._message(this._providers, `Top bar: ${this._panelError}`);
-        if (!report?.ok) {
-            this._message(this._providers, report?.error || 'Loading…');
-        } else if (report.entries.length === 0) {
-            this._message(this._providers, 'No providers enabled');
-        } else {
-            const colors = this._colors();
-            for (const entry of report.entries) {
-                const item = this._providerMenu(entry, colors);
-                this._providers.addMenuItem(item);
-                this._providerItems.set(entry.id, item);
-                if (entry.id === openId)
-                    item.menu.open(false);
-            }
+            panel.add_child(wrappedLabel(`Top bar: ${this._panelError}`, 'aiub-detail'));
+        if (!report?.ok || report.entries.length === 0) {
+            panel.add_child(wrappedLabel(!report ? 'Loading…' : report.ok ? 'No providers enabled' : report.error,
+                'aiub-detail'));
+            return;
         }
-        if (focusedId !== null)
-            this._providerItems.get(focusedId)?.grab_key_focus();
-        adjustment.value = scroll;
+        const entries = report.entries;
+        const entry = entries.find(e => e.id === this._tab) || entries[0];
+        this._tab = entry.id;
+        panel.add_child(this._header(entry));
+        if (entries.length > 1)
+            panel.add_child(this._tabs(entries, entry.id));
+        panel.add_child(this._entryBody(entry, this._colors()));
+        const ago = this._updatedAgo();
+        if (ago)
+            panel.add_child(new St.Label({text: ago, style_class: 'aiub-footer',
+                x_align: Clutter.ActorAlign.CENTER}));
     }
 
     _colors() {
@@ -535,6 +513,8 @@ class AiUsageBarIndicator extends PanelMenu.Button {
 
     _showReport(report) {
         this._report = report;
+        if (report?.ok)
+            this._reportAt = Date.now();
         this._paintReport(report);
     }
 

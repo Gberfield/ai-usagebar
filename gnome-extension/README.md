@@ -70,15 +70,15 @@ mkdir -p "$DEST" && cp -r * "$DEST"/      # or: ln -s "$PWD" "$DEST"
 | Pace arrows | off | with bars off, colors each value by pace (usage minus elapsed) and adds `↓` under, `→` on, `↑` ahead; off keeps plain numbers |
 | Bar width | 8 | cells per bar (4–20) |
 | Refresh interval | 30 s | 5–3600 |
-| Top bar vendors | `anthropic` | Top bar only. One switch per provider (Claude, Codex, Z.AI, OpenRouter, DeepSeek, Antigravity); each one on gets its own indicator, marked by its brand icon. Stored as a comma-separated list in `vendor`. The click menu lists every enabled provider from `usage --json`. |
+| Top bar vendors | `anthropic` | Top bar only. One switch per provider (Claude, Codex, Z.AI, OpenRouter, DeepSeek, Antigravity, SuperGrok); each one on gets its own indicator, marked by its brand icon. Stored as a comma-separated list in `vendor`. The click menu lists every enabled provider from `usage --json`. |
 | Panel pools | `both` | two-pool vendors only: `both`, first pool, second pool, or `auto` |
 | Auto threshold | 95 % | `auto` switches pools once the shown one reaches this usage |
 | Binary path | auto | empty = `PATH` then `~/.cargo/bin` |
 | Panel area | `right` | `right` = next to network/clock; also `center`/`left` |
 | Panel index | 0 | order within the area (0 = leftmost) |
-| Provider summary | bars and values | Menu only. Choose values only to hide the mini bars; the overview stays visible. |
-| Show provider icons | on | Menu only. Symbolic marks follow the Shell text colour; providers without an asset use a generic system icon. |
-| Compact spacing | off | Menu only. Reduces spacing without hiding metrics. |
+| Provider summary | bars and values | Menu only. Choose values only to hide the metric bars. |
+| Show provider icons | on | Menu only. Controls the selected provider's symbolic mark; providers without an asset omit it. |
+| Compact spacing | off | Menu only. Reduces panel and metric spacing without hiding data. |
 
 ## How it renders
 
@@ -95,32 +95,22 @@ binary's default One Dark theme and `severity_for()` thresholds (≥90 red · �
 orange · ≥50 yellow · else green), so it matches the Waybar widget.
 
 The **click menu** runs `ai-usagebar usage --json` when opened and at the
-configured interval while it is open. It lists each report entry in report
-order, including named accounts and custom providers. Each collapsed row
-previews up to two metrics in report order, retaining their labels and group
-headings. `+N more` indicates additional metrics available when expanded.
-The summary never merges quotas or guesses window names. A balance uses the
-report's formatted value; entries with no metrics preview up to two text
-values instead. Expand a provider with
-a click, Enter or Right; Left collapses it. The provider list scrolls within
-60% of the monitor height, and report text wraps within a bounded width.
+configured interval while it is open. It shows one provider at a time in a
+tabbed panel, preserving the selected tab while the Shell process remains
+running. Tabs follow report order and include named accounts and custom
+providers without frontend registration. A horizontally scrolling tab strip
+keeps large provider lists usable.
 
-Each submenu shows the report's plan, metric labels and values, bars, reset
-countdowns, text and blocks. The report supplies the severity used for bar
-colors. Absent metrics stay absent; a balance retains its formatted value,
-including a negative sign. Errors appear as messages rather than zero usage,
-and stale entries are marked `cached`. Metrics are not combined or relabelled
-as session or weekly windows.
+The selected tab shows the provider's plan, metric labels and values, bars,
+reset countdowns, text and blocks. The report supplies bar severity. Absent
+metrics stay absent; a balance keeps its formatted value, including a negative
+sign. Errors remain messages rather than becoming zero usage. The header has
+**Refresh now** and **Settings** buttons, and **Open TUI** remains below the
+panel. The footer records when the current report was received.
 
-The menu uses GNOME's submenu navigation and theme, with the existing
-**Refresh now**, **Open TUI**, and **Settings** actions below the provider list.
-Refresh updates the panel and report and closes the menu like a normal menu
-action. Periodic updates preserve expanded providers and keyboard focus.
-The top bar's command failures appear above the provider list.
-
-**Menu appearance** in preferences controls mini bars, icons and spacing
-independently of the top bar. Changes apply immediately and preserve focus
-and the expanded provider. Bar fills reuse the existing severity colours;
+**Menu appearance** controls bars, the selected provider icon, and spacing
+independently of the top bar. Changes apply immediately and preserve the
+selected tab. Bar fills reuse the existing severity colours;
 backgrounds, text and selection follow the Shell theme. Provider artwork is
 reused from the Omarchy integration; see [sources and licences](icons/README.md).
 Assets are optional: a new provider works without adding an icon or editing a
