@@ -373,8 +373,10 @@ outranks the credential file for a machine without the CLI.
 
 A plan with no ClinePass entitlement — pay-as-you-go credits, or an
 organisation seat — reports no limits rather than empty ones. Cache entries are
-tied to the endpoint and a one-way fingerprint of the account id, so changing
-accounts cannot reuse another account's figures.
+tied to the endpoint and a one-way fingerprint of the account id. API-key
+credentials also keep a separate one-way key fingerprint solely to recover that
+account target before the cache/backoff check; the key itself is never cached,
+and changing accounts cannot reuse another account's figures.
 
 ### Command Code
 

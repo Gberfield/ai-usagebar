@@ -33,6 +33,12 @@
 
 ### Fixed
 
+- **Cline API-key refreshes now honor the cache TTL and rate-limit backoff.**
+  The resolved account target is paired with a one-way credential fingerprint,
+  so a warm cache no longer calls the identity endpoint on every poll. Identity
+  failures now use the same redacted error and HTTP 429 policy as quota calls,
+  without persisting the API key or risking cross-account cached figures (#485).
+
 - **Synthetic keeps its last good quota when a response contains invalid
   values.** A zero limit, negative request count, or invalid renewal timestamp
   now follows the shared stale-cache fallback and records the schema error,
