@@ -6,8 +6,8 @@
   settings include custom entries and named accounts, with a count of entries
   selected for display. Inactive built-ins remain in the advanced fetching list.
   Visibility saves immediately in the widget settings without removing an entry
-  from the usage panel.
-  Fetching controls remain available in a separate advanced section.
+  from the usage panel. Fetching controls remain available in a separate
+  advanced section.
 
 ## [1.42.0] — 2026-10-22
 

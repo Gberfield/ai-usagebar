@@ -111,11 +111,10 @@ the original controls
 for enabling or disabling fetching independently from top-bar visibility.
 
 The advanced fetching section lists every known built-in provider with an on/off
-switch
-(the per-vendor `enabled` in config.toml). Turning a provider off removes it
-from the bar, panel and reports; turning one on takes effect on the next
-refresh. The switch only ever names built-in providers, and travels over the
-same stdin patch as everything else.
+switch (the per-vendor `enabled` in `config.toml`). Turning a provider off
+removes it from the bar, panel and reports; turning one on takes effect on the
+next refresh. The switch only ever names built-in providers, and travels over
+the same stdin patch as everything else.
 
 Not every provider has a credential field, and a missing one is not an omission.
 Claude, Codex, GitHub Copilot, Cursor, Kiro, Antigravity, and Command Code
