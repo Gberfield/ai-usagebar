@@ -48,8 +48,7 @@ pub async fn fetch_snapshot(
     }
 
     match request(client, api_key, endpoints).await {
-        Ok(response) => {
-            let snapshot = response.snapshot()?;
+        Ok((response, snapshot)) => {
             cache.write_payload(&serde_json::to_vec(&response)?)?;
             Ok(crate::outcome::Outcome::fresh(snapshot))
         }
@@ -72,7 +71,7 @@ async fn request(
     client: &reqwest::Client,
     api_key: &str,
     endpoints: &Endpoints,
-) -> Result<Response> {
+) -> Result<(Response, SyntheticSnapshot)> {
     let response = tokio::time::timeout(
         HTTP_TIMEOUT,
         client.get(&endpoints.quotas).bearer_auth(api_key).send(),
@@ -87,8 +86,10 @@ async fn request(
             body: String::from_utf8_lossy(&bytes).chars().take(200).collect(),
         });
     }
-    serde_json::from_slice(&bytes)
-        .map_err(|_| AppError::Schema("Synthetic quota response schema mismatch".into()))
+    let response: Response = serde_json::from_slice(&bytes)
+        .map_err(|_| AppError::Schema("Synthetic quota response schema mismatch".into()))?;
+    let snapshot = response.snapshot()?;
+    Ok((response, snapshot))
 }
 
 #[cfg(test)]
@@ -129,6 +130,80 @@ mod tests {
         .unwrap();
         assert_eq!(outcome.snapshot.subscription.utilization_pct, 20);
         assert!(!outcome.stale);
+    }
+
+    const INVALID_QUOTAS: [&str; 3] = [
+        r#"{"subscription":{"limit":0,"requests":0,"renewsAt":"2026-11-01T00:00:00Z"}}"#,
+        r#"{"subscription":{"limit":135,"requests":-1,"renewsAt":"2026-11-01T00:00:00Z"}}"#,
+        r#"{"subscription":{"limit":135,"requests":27,"renewsAt":"not-a-time"}}"#,
+    ];
+
+    #[tokio::test]
+    async fn invalid_quota_values_keep_the_last_good_snapshot_stale() {
+        for body in INVALID_QUOTAS {
+            let mut server = mockito::Server::new_async().await;
+            let request = server
+                .mock("GET", "/v2/quotas")
+                .with_status(200)
+                .with_body(body)
+                .create_async()
+                .await;
+            let (_dir, cache) = cache();
+            let good = br#"{"subscription":{"limit":135,"requests":27,"renewsAt":"2026-11-01T00:00:00Z"}}"#;
+            cache.write_payload(good).unwrap();
+
+            let outcome = fetch_snapshot(
+                &reqwest::Client::new(),
+                "syn-test",
+                &cache,
+                &Endpoints {
+                    quotas: format!("{}/v2/quotas", server.url()),
+                },
+                Duration::ZERO,
+            )
+            .await
+            .expect("invalid wire values should fall back to the good cache");
+
+            assert_eq!(outcome.snapshot.subscription.utilization_pct, 20);
+            assert!(outcome.stale);
+            assert!(!outcome.off_the_wire());
+            let (code, message) = outcome.last_error.expect("schema diagnostic");
+            assert_eq!(code, 0);
+            assert!(message.contains("schema mismatch"));
+            assert_eq!(std::fs::read(cache.payload_path()).unwrap(), good);
+            assert!(cache.is_stale());
+            request.assert_async().await;
+        }
+    }
+
+    #[tokio::test]
+    async fn invalid_quota_values_without_cache_record_the_schema_failure() {
+        let mut server = mockito::Server::new_async().await;
+        let request = server
+            .mock("GET", "/v2/quotas")
+            .with_status(200)
+            .with_body(INVALID_QUOTAS[0])
+            .create_async()
+            .await;
+        let (_dir, cache) = cache();
+
+        let error = fetch_snapshot(
+            &reqwest::Client::new(),
+            "syn-test",
+            &cache,
+            &Endpoints {
+                quotas: format!("{}/v2/quotas", server.url()),
+            },
+            Duration::ZERO,
+        )
+        .await
+        .unwrap_err();
+
+        assert!(matches!(error, AppError::Schema(_)));
+        assert!(!cache.payload_path().exists());
+        assert!(cache.is_stale());
+        assert_eq!(cache.read_last_error(), Some((0, error.to_string())));
+        request.assert_async().await;
     }
 
     #[tokio::test]

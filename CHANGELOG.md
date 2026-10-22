@@ -33,6 +33,11 @@
 
 ### Fixed
 
+- **Synthetic keeps its last good quota when a response contains invalid
+  values.** A zero limit, negative request count, or invalid renewal timestamp
+  now follows the shared stale-cache fallback and records the schema error,
+  instead of discarding the displayed quota despite a usable cache.
+
 - **A format shared across providers no longer prints `{session_pct}` for Grok
   Bot.** Grok Bot has no session window and never defined the session aliases,
   so `{session_pct}`, `{session_reset}` and `{session_elapsed}` stayed on the
